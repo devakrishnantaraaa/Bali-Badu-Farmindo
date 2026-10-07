@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bali Badu Farmindo - Sistem Distribusi Telur</title>
+    <link rel="icon" type="image/jpeg" href="/images/bali-badu-farmindo-logo.jpeg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- LOGIN SCREEN (Shown if no JWT token) -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-slate-900 px-4 w-full">
+        <div class="max-w-md w-full bg-white rounded-2xl p-8 shadow-2xl space-y-6">
+            <div class="text-center space-y-3">
+                <div class="flex justify-center">
+                    <img src="/images/bali-badu-farmindo-logo.jpeg" alt="Bali Badu Farmindo Logo" class="h-28 w-28 object-contain rounded-2xl shadow-md border border-slate-100">
+                </div>
+                <div>
+                    <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Bali Badu Farmindo</h1>
+                    <p class="text-xs text-slate-500 font-medium mt-1">Sistem Distribusi Telur & Back Office</p>
+                </div>
+            </div>
+
+            <div id="loginAlert" class="hidden p-3 rounded-lg text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200"></div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Username</label>
+                    <input type="text" id="loginUsername" required placeholder="admin / sales1 / gudang1" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-lg shadow-sm transition text-sm">
+                    Masuk ke Sistem
+                </button>
+            </form>
+
+            <div class="border-t border-slate-200 pt-4 text-center">
+                <p class="text-[11px] text-slate-500">Gunakan akun awal (Demo / Testing):</p>
+                <div class="mt-2 flex justify-center gap-2 text-[10px] text-slate-600 font-mono">
+                    <span class="bg-slate-100 px-2 py-1 rounded">SUPER_ADMIN</span>
+                    <span class="bg-slate-100 px-2 py-1 rounded">MARKETING</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP DASHBOARD (Shown when logged in) -->
+    <div id="appScreen" class="hidden min-h-screen flex flex-col">
+        <!-- Header Navigation -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img src="/images/bali-badu-farmindo-logo.jpeg" alt="Bali Badu Farmindo" class="h-11 w-11 object-contain rounded-lg border border-slate-200 shadow-sm">
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-900 leading-tight">Bali Badu Farmindo</h1>
+                        <p class="text-xs text-slate-500">Back Office & Sales Management System</p>
+                    </div>
+                </div>
+
+                <!-- User Session & Role Indicator -->
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <div id="userFullName" class="text-sm font-bold text-slate-800">Nama User</div>
+                        <div class="flex justify-end gap-1.5 mt-0.5">
+                            <span id="userRoleBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                ROLE
+                            </span>
+                        </div>
+                    </div>
+                    <button onclick="handleLogout()" class="bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 p-2 rounded-lg border border-slate-200 text-xs font-semibold flex items-center gap-1 transition">
+                        <span>Keluar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container Layout -->
+        <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 w-full">
+            
+            <!-- Left Column: Input Forms -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- Order Input Card (Visible to ADMIN & SALES) -->
+                <div id="cardOrderInput" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Input Penjualan Sales
+                        </h2>
+                        <span class="text-xs bg-amber-50 text-amber-800 px-2.5 py-1 rounded border border-amber-200 font-medium">Gantung Nota Gate</span>
+                    </div>
+
+                    <form id="orderForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pelanggan / Customer</label>
+                            <select id="orderCustomer" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                                <option value="">Pilih Customer...</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Produk Telur</label>
+                            <select id="orderProduct" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                                <option value="">Pilih Produk...</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Jumlah (kg/tray)</label>
+                                <input type="number" id="orderQty" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan (Rp)</label>
+                                <input type="number" id="orderPrice" placeholder="Default harga" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tipe Pembayaran</label>
+                            <select id="orderPaymentType" onchange="toggleDueDate()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                                <option value="CASH">CASH (Tunai Direct)</option>
+                                <option value="TRANSFER">TRANSFER (Bank Direct)</option>
+                                <option value="CREDIT">CREDIT (Gantung Nota / Tempo)</option>
+                            </select>
+                        </div>
+
+                        <div id="dueDateContainer" class="hidden">
+                            <label class="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Jatuh Tempo (Due Date)</label>
+                            <input type="date" id="orderDueDate" class="w-full bg-amber-50 border border-amber-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <button type="button" onclick="submitSalesOrder()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex justify-center items-center gap-2 text-sm">
+                            Proses Transaksi & Deduct Stok
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Barang Masuk Input Card (Visible to ADMIN & GUDANG) -->
+                <div id="cardStockInput" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Barang Masuk (Restock Gudang)
+                    </h2>
+                    <form id="stockForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pilih Produk</label>
+                            <select id="incomingProduct" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white">
+                                <option value="">Pilih Produk...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Jumlah Masuk (kg)</label>
+                            <input type="number" id="incomingQty" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Catatan / Supplier</label>
+                            <input type="text" id="incomingNotes" placeholder="Misal: Penerimaan dari Peternakan Blitar" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white">
+                        </div>
+                        <button type="button" onclick="submitIncomingStock()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition text-sm">
+                            Simpan Barang Masuk
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Dashboards & Reports -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Dynamic Alert Box -->
+                <div id="alertBox" class="hidden p-4 rounded-lg border text-sm font-medium transition-all"></div>
+
+                <!-- Kartu Stok Ledger -->
+                <div id="cardStockLedger" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            📋 Kartu Stok (Real-time Audit Log)
+                        </h3>
+                        <button onclick="loadStockLedger()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">Waktu</th>
+                                    <th class="p-2.5">Produk</th>
+                                    <th class="p-2.5">Tipe</th>
+                                    <th class="p-2.5">Jumlah</th>
+                                    <th class="p-2.5">Sisa Stok</th>
+                                    <th class="p-2.5">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockLedgerBody" class="divide-y divide-slate-100">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Outstanding Debt List (Daftar Gantung Nota) -->
+                <div id="cardDebtList" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            ⚠️ Daftar Customer Gantung Nota (Piutang)
+                        </h3>
+                        <button onclick="loadDebts()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">No Invoice</th>
+                                    <th class="p-2.5">Customer</th>
+                                    <th class="p-2.5">Sisa Tagihan</th>
+                                    <th class="p-2.5">Jatuh Tempo</th>
+                                    <th class="p-2.5">Status</th>
+                                    <th class="p-2.5">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="debtListBody" class="divide-y divide-slate-100">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Admin Validasi Setoran Pembayaran (ADMIN ONLY) -->
+                <div id="cardAdminValidation" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            ✅ Validasi Setoran Pembayaran (Khusus Role Admin)
+                        </h3>
+                        <button onclick="loadPendingPayments()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-52 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">No Setoran</th>
+                                    <th class="p-2.5">Customer</th>
+                                    <th class="p-2.5">Nominal</th>
+                                    <th class="p-2.5">Metode</th>
+                                    <th class="p-2.5">Aksi Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingPaymentsBody" class="divide-y divide-slate-100">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- JS Auth & Role Logic -->
+    <script>
+        const API_BASE = '/api';
+        let authToken = localStorage.getItem('token');
+        let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthSession();
+        });
+
+        function checkAuthSession() {
+            const loginScreen = document.getElementById('loginScreen');
+            const appScreen = document.getElementById('appScreen');
+
+            if (!authToken || !currentUser) {
+                loginScreen.classList.remove('hidden');
+                appScreen.classList.add('hidden');
+            } else {
+                loginScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                setupUserRoleView();
+                loadInitialData();
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const alertBox = document.getElementById('loginAlert');
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                authToken = data.token;
+                currentUser = data.user;
+                localStorage.setItem('token', authToken);
+                localStorage.setItem('user', JSON.stringify(currentUser));
+
+                alertBox.classList.add('hidden');
+                checkAuthSession();
+            } catch (err) {
+                alertBox.innerText = err.message;
+                alertBox.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            authToken = null;
+            currentUser = null;
+            checkAuthSession();
+        }
+
+        function setupUserRoleView() {
+            document.getElementById('userFullName').innerText = currentUser.full_name;
+            const roleBadge = document.getElementById('userRoleBadge');
+            roleBadge.innerText = currentUser.role;
+
+            const cardOrderInput = document.getElementById('cardOrderInput');
+            const cardStockInput = document.getElementById('cardStockInput');
+            const cardAdminValidation = document.getElementById('cardAdminValidation');
+
+            // Role Access Rules:
+            // SUPER_ADMIN: Akses penuh ke semua fitur (Termasuk Validasi Setoran Admin)
+            // MARKETING: Form Penjualan, Kartu Stok, Daftar Piutang Gantung Nota (Tanpa Validasi Admin)
+            if (currentUser.role === 'SUPER_ADMIN') {
+                cardOrderInput.classList.remove('hidden');
+                cardStockInput.classList.remove('hidden');
+                cardAdminValidation.classList.remove('hidden');
+            } else if (currentUser.role === 'MARKETING') {
+                cardOrderInput.classList.remove('hidden');
+                cardStockInput.classList.add('hidden');
+                cardAdminValidation.classList.add('hidden');
+            }
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            };
+        }
+
+        function showAlert(msg, isError = false) {
+            const box = document.getElementById('alertBox');
+            box.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-rose-50', 'text-rose-800', 'border-rose-200');
+            if (isError) {
+                box.classList.add('bg-rose-50', 'text-rose-800', 'border-rose-200');
+            } else {
+                box.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+            }
+            box.innerText = msg;
+        }
+
+        async function loadInitialData() {
+            try {
+                if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MARKETING') {
+                    const cRes = await fetch(`${API_BASE}/customers`, { headers: getAuthHeaders() });
+                    if (cRes.ok) {
+                        const customers = await cRes.json();
+                        document.getElementById('orderCustomer').innerHTML = '<option value="">Pilih Customer...</option>' + 
+                            customers.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
+                    }
+                }
+
+                const pRes = await fetch(`${API_BASE}/products`, { headers: getAuthHeaders() });
+                if (pRes.ok) {
+                    const products = await pRes.json();
+                    const pSelects = [document.getElementById('orderProduct'), document.getElementById('incomingProduct')];
+                    pSelects.forEach(select => {
+                        if (select) {
+                            select.innerHTML = '<option value="">Pilih Produk...</option>' + 
+                                products.map(p => `<option value="${p.id}">${p.name} - Stok: ${p.current_stock} ${p.unit}</option>`).join('');
+                        }
+                    });
+                }
+
+                loadStockLedger();
+                if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MARKETING') loadDebts();
+                if (currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
+            } catch (err) {
+                showAlert('Gagal memuat data awal: ' + err.message, true);
+            }
+        }
+
+        async function submitSalesOrder() {
+            const customer_id = document.getElementById('orderCustomer').value;
+            const product_id = document.getElementById('orderProduct').value;
+            const quantity = document.getElementById('orderQty').value;
+            const unit_price = document.getElementById('orderPrice').value;
+            const payment_type = document.getElementById('orderPaymentType').value;
+            const due_date = document.getElementById('orderDueDate').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/orders`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        customer_id,
+                        payment_type,
+                        due_date,
+                        items: [{ product_id, quantity, unit_price }]
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || data.error);
+                showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
+        async function submitIncomingStock() {
+            const product_id = document.getElementById('incomingProduct').value;
+            const quantity = document.getElementById('incomingQty').value;
+            const notes = document.getElementById('incomingNotes').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/stock/incoming`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ product_id, quantity, notes })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showAlert(`Barang Masuk Berhasil Diinput! Stok Terbaru: ${data.new_stock}`);
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
+        async function loadStockLedger() {
+            const res = await fetch(`${API_BASE}/stock/ledger`, { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+            const body = document.getElementById('stockLedgerBody');
+            body.innerHTML = data.map(item => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 text-slate-500">${new Date(item.created_at).toLocaleTimeString('id-ID')}</td>
+                    <td class="p-2.5 font-semibold text-slate-800">${item.product_name}</td>
+                    <td class="p-2.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.movement_type === 'BARANG_MASUK' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}">
+                            ${item.movement_type}
+                        </span>
+                    </td>
+                    <td class="p-2.5 font-bold text-slate-800">${item.quantity} ${item.unit}</td>
+                    <td class="p-2.5 text-amber-700 font-bold">${item.balance_after}</td>
+                    <td class="p-2.5 text-slate-500">${item.notes || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadDebts() {
+            const res = await fetch(`${API_BASE}/reports/outstanding-debts`, { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+            const body = document.getElementById('debtListBody');
+            body.innerHTML = data.map(debt => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-mono text-blue-700 font-semibold">${debt.invoice_number}</td>
+                    <td class="p-2.5 font-semibold text-slate-800">${debt.customer_name}</td>
+                    <td class="p-2.5 text-rose-600 font-bold">Rp ${Number(debt.remaining_debt).toLocaleString('id-ID')}</td>
+                    <td class="p-2.5 text-slate-600">${new Date(debt.due_date).toLocaleDateString('id-ID')}</td>
+                    <td class="p-2.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${debt.debt_status === 'OVERDUE' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}">
+                            ${debt.debt_status}
+                        </span>
+                    </td>
+                    <td class="p-2.5">
+                        <button onclick="promptSubmitPayment(${debt.invoice_id}, ${debt.remaining_debt})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold px-2.5 py-1 rounded shadow-sm">
+                            Input Setoran
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function promptSubmitPayment(invoice_id, remaining) {
+            const amount = prompt(`Masukkan Nominal Setoran/Bayar (Sisa: Rp ${remaining}):`, remaining);
+            if (!amount) return;
+            const ref = prompt('Masukkan Nomor Referensi / Catatan Transfer:');
+
+            try {
+                const res = await fetch(`${API_BASE}/payments`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        invoice_id,
+                        amount: parseFloat(amount),
+                        payment_method: 'TRANSFER',
+                        reference_number: ref
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showAlert(data.message);
+                loadDebts();
+                if (currentUser.role === 'ADMIN') loadPendingPayments();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
+        async function loadPendingPayments() {
+            const res = await fetch(`${API_BASE}/payments/pending`, { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+            const body = document.getElementById('pendingPaymentsBody');
+            body.innerHTML = data.map(pay => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-mono text-slate-700">${pay.payment_number}</td>
+                    <td class="p-2.5 font-semibold text-slate-800">${pay.customer_name}</td>
+                    <td class="p-2.5 text-emerald-700 font-bold">Rp ${Number(pay.amount).toLocaleString('id-ID')}</td>
+                    <td class="p-2.5 text-slate-600">${pay.payment_method}</td>
+                    <td class="p-2.5">
+                        <button onclick="validatePayment(${pay.payment_id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 py-1 rounded text-[11px] shadow-sm">
+                            Validasi & Unblock
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function validatePayment(payment_id) {
+            try {
+                const res = await fetch(`${API_BASE}/payments/${payment_id}/validate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showAlert(data.message);
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
+        function toggleDueDate() {
+            const type = document.getElementById('orderPaymentType').value;
+            const container = document.getElementById('dueDateContainer');
+            if (type === 'CREDIT') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
