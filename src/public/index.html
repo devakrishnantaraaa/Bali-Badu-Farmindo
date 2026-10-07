@@ -6,14 +6,14 @@
     <title>Bali Badu Farmindo - Sistem Distribusi Telur</title>
     <link rel="icon" type="image/jpeg" href="/images/bali-badu-farmindo-logo.jpeg">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
-    <!-- LOGIN SCREEN (Shown if no JWT token) -->
+    <!-- LOGIN SCREEN -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-slate-900 px-4 w-full">
         <div class="max-w-md w-full bg-white rounded-2xl p-8 shadow-2xl space-y-6">
             <div class="text-center space-y-3">
@@ -31,7 +31,7 @@
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Username</label>
-                    <input type="text" id="loginUsername" required placeholder="admin / sales1 / gudang1" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                    <input type="text" id="loginUsername" required placeholder="admin / marketing1" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Password</label>
@@ -45,69 +45,139 @@
             <div class="border-t border-slate-200 pt-4 text-center">
                 <p class="text-[11px] text-slate-500">Gunakan akun awal (Demo / Testing):</p>
                 <div class="mt-2 flex justify-center gap-2 text-[10px] text-slate-600 font-mono">
-                    <span class="bg-slate-100 px-2 py-1 rounded">SUPER_ADMIN</span>
-                    <span class="bg-slate-100 px-2 py-1 rounded">MARKETING</span>
+                    <span class="bg-slate-100 px-2 py-1 rounded border">SUPER_ADMIN</span>
+                    <span class="bg-slate-100 px-2 py-1 rounded border">MARKETING</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MAIN APP DASHBOARD (Shown when logged in) -->
-    <div id="appScreen" class="hidden min-h-screen flex flex-col">
-        <!-- Header Navigation -->
-        <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <img src="/images/bali-badu-farmindo-logo.jpeg" alt="Bali Badu Farmindo" class="h-11 w-11 object-contain rounded-lg border border-slate-200 shadow-sm">
-                    <div>
-                        <h1 class="text-lg font-bold text-slate-900 leading-tight">Bali Badu Farmindo</h1>
-                        <p class="text-xs text-slate-500">Back Office & Sales Management System</p>
-                    </div>
-                </div>
+    <!-- MAIN APP WITH SIDEBAR LAYOUT -->
+    <div id="appScreen" class="hidden min-h-screen flex">
 
-                <!-- User Session & Role Indicator -->
-                <div class="flex items-center gap-4">
-                    <div class="text-right">
-                        <div id="userFullName" class="text-sm font-bold text-slate-800">Nama User</div>
-                        <div class="flex justify-end gap-1.5 mt-0.5">
-                            <span id="userRoleBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                ROLE
-                            </span>
-                        </div>
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-40 border-r border-slate-800">
+            <!-- Brand Logo Header -->
+            <div class="p-5 border-b border-slate-800 flex items-center gap-3">
+                <img src="/images/bali-badu-farmindo-logo.jpeg" alt="Logo" class="h-10 w-10 object-contain rounded-lg border border-slate-700 bg-white">
+                <div>
+                    <h2 class="text-sm font-bold text-white leading-tight">Bali Badu</h2>
+                    <p class="text-[10px] text-amber-400 font-semibold tracking-wider uppercase">Farmindo System</p>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Navigasi Utama</div>
+
+                <!-- Dashboard Overview -->
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 transition shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    <span>Dashboard Utama</span>
+                </button>
+
+                <!-- Input Sales Order (Marketing & Admin) -->
+                <button onclick="switchTab('sales')" id="nav-sales" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span>Penjualan Sales</span>
+                </button>
+
+                <!-- Barang Masuk / Restock (Super Admin) -->
+                <button onclick="switchTab('stock')" id="nav-stock" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <span>Restock Gudang</span>
+                </button>
+
+                <!-- Kartu Stok Log Audit -->
+                <button onclick="switchTab('ledger')" id="nav-ledger" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Kartu Stok Audit Log</span>
+                </button>
+
+                <!-- Piutang Customer / Gantung Nota -->
+                <button onclick="switchTab('debts')" id="nav-debts" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Piutang & Gantung Nota</span>
+                </button>
+
+                <!-- Validasi Setoran Admin (Super Admin) -->
+                <button onclick="switchTab('validation')" id="nav-validation" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Validasi Setoran Admin</span>
+                </button>
+            </nav>
+
+            <!-- User Session Sidebar Footer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div id="userFullName" class="text-xs font-bold text-white truncate max-w-[120px]">Nama User</div>
+                        <span id="userRoleBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 mt-0.5">
+                            ROLE
+                        </span>
                     </div>
-                    <button onclick="handleLogout()" class="bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 p-2 rounded-lg border border-slate-200 text-xs font-semibold flex items-center gap-1 transition">
-                        <span>Keluar</span>
+                    <button onclick="handleLogout()" class="p-2 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 transition" title="Logout">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                     </button>
                 </div>
             </div>
-        </header>
+        </aside>
 
-        <!-- Main Container Layout -->
-        <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 w-full">
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 ml-64 flex flex-col min-h-screen">
             
-            <!-- Left Column: Input Forms -->
-            <div class="lg:col-span-5 space-y-6">
-                
-                <!-- Order Input Card (Visible to ADMIN & SALES) -->
-                <div id="cardOrderInput" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Input Penjualan Sales
-                        </h2>
-                        <span class="text-xs bg-amber-50 text-amber-800 px-2.5 py-1 rounded border border-amber-200 font-medium">Gantung Nota Gate</span>
+            <!-- Top App Bar -->
+            <header class="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3.5 flex justify-between items-center shadow-sm">
+                <div class="flex items-center gap-2">
+                    <h1 id="pageTitle" class="text-base font-bold text-slate-900">Dashboard Utama</h1>
+                    <span class="text-xs text-slate-400 font-medium">| Sistem Informasi Operasional</span>
+                </div>
+                <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Status: Supabase Realtime Active
+                </div>
+            </header>
+
+            <!-- Dynamic Body Content -->
+            <main class="p-6 flex-1 max-w-7xl w-full mx-auto space-y-6">
+                <!-- Alert Box -->
+                <div id="alertBox" class="hidden p-4 rounded-xl border text-sm font-medium transition-all shadow-sm"></div>
+
+                <!-- TAB: DASHBOARD OVERVIEW -->
+                <div id="tab-dashboard" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs text-slate-500 font-medium mb-1">Total Customer Aktif</div>
+                            <div id="statCustomers" class="text-2xl font-extrabold text-slate-900">-</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs text-slate-500 font-medium mb-1">Stok Telur Ayam Ras Super</div>
+                            <div id="statStock" class="text-2xl font-extrabold text-amber-600">-</div>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-xs text-slate-500 font-medium mb-1">Nota Gantung Aktif (Piutang)</div>
+                            <div id="statDebts" class="text-2xl font-extrabold text-rose-600">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: SALES ORDER INPUT -->
+                <div id="tab-sales" class="hidden max-w-2xl bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+                        <h2 class="text-base font-bold text-slate-900">Form Input Penjualan Sales</h2>
+                        <span class="text-xs bg-amber-50 text-amber-800 px-2.5 py-1 rounded border border-amber-200 font-medium">Credit Gatekeeper</span>
                     </div>
 
                     <form id="orderForm" class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pelanggan / Customer</label>
-                            <select id="orderCustomer" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                            <select id="orderCustomer" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                                 <option value="">Pilih Customer...</option>
                             </select>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Produk Telur</label>
-                            <select id="orderProduct" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                            <select id="orderProduct" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                                 <option value="">Pilih Produk...</option>
                             </select>
                         </div>
@@ -115,17 +185,17 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Jumlah (kg/tray)</label>
-                                <input type="number" id="orderQty" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                                <input type="number" id="orderQty" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan (Rp)</label>
-                                <input type="number" id="orderPrice" placeholder="Default harga" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                                <input type="number" id="orderPrice" placeholder="Default harga" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tipe Pembayaran</label>
-                            <select id="orderPaymentType" onchange="toggleDueDate()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white">
+                            <select id="orderPaymentType" onchange="toggleDueDate()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                                 <option value="CASH">CASH (Tunai Direct)</option>
                                 <option value="TRANSFER">TRANSFER (Bank Direct)</option>
                                 <option value="CREDIT">CREDIT (Gantung Nota / Tempo)</option>
@@ -134,66 +204,199 @@
 
                         <div id="dueDateContainer" class="hidden">
                             <label class="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Jatuh Tempo (Due Date)</label>
-                            <input type="date" id="orderDueDate" class="w-full bg-amber-50 border border-amber-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                            <input type="date" id="orderDueDate" class="w-full bg-amber-50 border border-amber-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800">
                         </div>
 
-                        <button type="button" onclick="submitSalesOrder()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex justify-center items-center gap-2 text-sm">
-                            Proses Transaksi & Deduct Stok
+                        <button type="button" onclick="submitSalesOrder()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm">
+                            Proses Transaksi & Update Stok
                         </button>
                     </form>
                 </div>
 
-                <!-- Barang Masuk Input Card (Visible to ADMIN & GUDANG) -->
-                <div id="cardStockInput" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Barang Masuk (Restock Gudang)
-                    </h2>
+                <!-- TAB: BARANG MASUK / RESTOCK -->
+                <div id="tab-stock" class="hidden max-w-2xl bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <h2 class="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">Input Barang Masuk (Restock Gudang)</h2>
                     <form id="stockForm" class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pilih Produk</label>
-                            <select id="incomingProduct" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white">
+                            <select id="incomingProduct" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
                                 <option value="">Pilih Produk...</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Jumlah Masuk (kg)</label>
-                            <input type="number" id="incomingQty" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white">
+                            <input type="number" id="incomingQty" placeholder="0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Catatan / Supplier</label>
-                            <input type="text" id="incomingNotes" placeholder="Misal: Penerimaan dari Peternakan Blitar" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white">
+                            <input type="text" id="incomingNotes" placeholder="Misal: Penerimaan dari Peternakan Blitar" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
                         </div>
-                        <button type="button" onclick="submitIncomingStock()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition text-sm">
+                        <button type="button" onclick="submitIncomingStock()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm">
                             Simpan Barang Masuk
                         </button>
                     </form>
                 </div>
 
-            </div>
-
-            <!-- Right Column: Dashboards & Reports -->
-            <div class="lg:col-span-7 space-y-6">
-
-                <!-- Dynamic Alert Box -->
-                <div id="alertBox" class="hidden p-4 rounded-lg border text-sm font-medium transition-all"></div>
-
-                <!-- Kartu Stok Ledger -->
-                <div id="cardStockLedger" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            📋 Kartu Stok (Real-time Audit Log)
-                        </h3>
-                        <button onclick="loadStockLedger()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                <!-- TAB: REKAP PENJUALAN HARIAN (Gambar 1: Filter Tanggal & Link Penjualan) -->
+                <div id="tab-daily-sales" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Harian (Per Tgl Nota)</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold text-slate-600">Pilih Tanggal:</label>
+                            <input type="date" id="filterDailySalesDate" onchange="loadDailySalesReport()" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
+                            <button onclick="loadDailySalesReport()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Filter</button>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div class="text-[11px] font-semibold text-slate-500 uppercase">Total Transaksi</div>
+                            <div id="dailySalesCount" class="text-xl font-bold text-slate-900">0 Nota</div>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+                            <div class="text-[11px] font-semibold text-emerald-700 uppercase">Total Omset Harian</div>
+                            <div id="dailySalesRevenue" class="text-xl font-bold text-emerald-800">Rp 0</div>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                            <div class="text-[11px] font-semibold text-amber-700 uppercase">Tanggal Laporan</div>
+                            <div id="dailySalesDateLabel" class="text-base font-bold text-amber-900">-</div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">Waktu</th>
+                                    <th class="p-2.5">No Invoice</th>
+                                    <th class="p-2.5">Customer</th>
+                                    <th class="p-2.5">Tipe Pembayaran</th>
+                                    <th class="p-2.5 text-right">Total Transaksi</th>
+                                    <th class="p-2.5">Status Nota</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailySalesBody" class="divide-y divide-slate-100">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: SETORAN HARIAN (Gambar 2: Rekap Setoran & Pembayaran) -->
+                <div id="tab-daily-deposits" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-900">Rekap Setoran Harian (Cash & Bank Transfer)</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold text-slate-600">Pilih Tanggal:</label>
+                            <input type="date" id="filterDepositDate" onchange="loadDailyDepositsReport()" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
+                            <button onclick="loadDailyDepositsReport()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Filter</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">No Setoran</th>
+                                    <th class="p-2.5">Customer</th>
+                                    <th class="p-2.5">No Invoice</th>
+                                    <th class="p-2.5">Nominal Setoran</th>
+                                    <th class="p-2.5">Metode</th>
+                                    <th class="p-2.5">Referensi / Catatan</th>
+                                    <th class="p-2.5">Status Validasi Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyDepositsBody" class="divide-y divide-slate-100">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: REKAP PENJUALAN BULANAN PIVOT (Gambar 3) -->
+                <div id="tab-monthly-recap" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Bulanan (Pivot Per Tanggal)</h3>
+                        <button onclick="loadMonthlyRecapReport()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                    </div>
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
+                            <thead class="bg-blue-50 text-blue-900 sticky top-0 border-b border-blue-200">
+                                <tr>
+                                    <th class="p-3">Tanggal</th>
+                                    <th class="p-3 text-right">Penjualan (Omset)</th>
+                                    <th class="p-3 text-right text-emerald-700">Lunas</th>
+                                    <th class="p-3 text-right text-rose-700">Pending</th>
+                                    <th class="p-3 text-right">Total Krat/Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyRecapBody" class="divide-y divide-slate-100">
+                                <!-- Rows -->
+                            </tbody>
+                            <tfoot id="monthlyRecapFoot" class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                                <!-- Total row -->
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB: KARTU STOK AUDIT LEDGER & ADUSTMENT (Gambar 5: Rusak, Stok Fisik, Penyesuaian, Keterangan) -->
+                <div id="tab-ledger" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-900">📋 Kartu Stok & Form Penyesuaian Stok (Audit Detail)</h3>
+                        <div class="flex gap-2">
+                            <button onclick="showAdjustmentModal()" class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                + Input Penyesuaian / Stok Fisik / Rusak
+                            </button>
+                            <button onclick="loadStockLedger()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- Adjustment Input Box (Super Admin) -->
+                    <div id="adjustmentFormBox" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                        <div class="font-bold text-xs text-slate-800 uppercase tracking-wider">Form Audit Stok: Rusak, Fisik & Penyesuaian</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Produk</label>
+                                <select id="adjProduct" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                                    <option value="">Pilih Produk...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-rose-600 mb-1">Rusak (Qty)</label>
+                                <input type="number" id="adjDamaged" placeholder="0" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-blue-600 mb-1">Stok Fisik Gudang</label>
+                                <input type="number" id="adjPhysical" placeholder="Hasil Opname" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Penyesuaian (+/-)</label>
+                                <input type="number" id="adjQty" placeholder="0" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Keterangan / Notes</label>
+                            <input type="text" id="adjNotes" placeholder="Misal: Retur telur pecah di pengiriman kandang" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button onclick="hideAdjustmentModal()" class="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded font-medium">Batal</button>
+                            <button onclick="submitStockAdjustment()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-1 rounded shadow-sm">Simpan Audit Stok</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
                         <table class="w-full text-left text-xs text-slate-700 border-collapse">
                             <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
                                 <tr>
                                     <th class="p-2.5">Waktu</th>
                                     <th class="p-2.5">Produk</th>
                                     <th class="p-2.5">Tipe</th>
-                                    <th class="p-2.5">Jumlah</th>
-                                    <th class="p-2.5">Sisa Stok</th>
+                                    <th class="p-2.5">Qty Flow</th>
+                                    <th class="p-2.5 text-rose-700">Rusak</th>
+                                    <th class="p-2.5 text-blue-700">Stok Fisik</th>
+                                    <th class="p-2.5">Penyesuaian</th>
+                                    <th class="p-2.5 font-bold text-amber-700">Sisa Stok</th>
                                     <th class="p-2.5">Keterangan</th>
                                 </tr>
                             </thead>
@@ -204,24 +407,21 @@
                     </div>
                 </div>
 
-                <!-- Outstanding Debt List (Daftar Gantung Nota) -->
-                <div id="cardDebtList" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            ⚠️ Daftar Customer Gantung Nota (Piutang)
-                        </h3>
+                <!-- TAB: DAFTAR PIUTANG & REKAP NOTA PENDING (Gambar 4: Grouped By Customer) -->
+                <div id="tab-debts" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-900">⚠️ Rekap Nota Pending / Piutang Per Customer</h3>
                         <button onclick="loadDebts()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
                     </div>
-                    <div class="overflow-x-auto max-h-60 overflow-y-auto">
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
                         <table class="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                            <thead class="bg-rose-50 text-rose-900 sticky top-0 border-b border-rose-200">
                                 <tr>
-                                    <th class="p-2.5">No Invoice</th>
-                                    <th class="p-2.5">Customer</th>
-                                    <th class="p-2.5">Sisa Tagihan</th>
-                                    <th class="p-2.5">Jatuh Tempo</th>
-                                    <th class="p-2.5">Status</th>
-                                    <th class="p-2.5">Aksi</th>
+                                    <th class="p-3">Nama Customer / Tgl Nota Pending</th>
+                                    <th class="p-3 text-right">No Invoice</th>
+                                    <th class="p-3 text-right">Sisa Pembayaran / Total Piutang</th>
+                                    <th class="p-3 text-center">Status Due Date</th>
+                                    <th class="p-3 text-center">Aksi Setor</th>
                                 </tr>
                             </thead>
                             <tbody id="debtListBody" class="divide-y divide-slate-100">
@@ -231,23 +431,21 @@
                     </div>
                 </div>
 
-                <!-- Admin Validasi Setoran Pembayaran (ADMIN ONLY) -->
-                <div id="cardAdminValidation" class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <!-- TAB: VALIDASI SETORAN ADMIN -->
+                <div id="tab-validation" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            ✅ Validasi Setoran Pembayaran (Khusus Role Admin)
-                        </h3>
+                        <h3 class="text-base font-bold text-slate-900">✅ Validasi Setoran Pembayaran (Khusus Super Admin)</h3>
                         <button onclick="loadPendingPayments()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
                     </div>
-                    <div class="overflow-x-auto max-h-52 overflow-y-auto">
+                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
                         <table class="w-full text-left text-xs text-slate-700 border-collapse">
                             <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
                                 <tr>
-                                    <th class="p-2.5">No Setoran</th>
-                                    <th class="p-2.5">Customer</th>
-                                    <th class="p-2.5">Nominal</th>
-                                    <th class="p-2.5">Metode</th>
-                                    <th class="p-2.5">Aksi Admin</th>
+                                    <th class="p-3">No Setoran</th>
+                                    <th class="p-3">Customer</th>
+                                    <th class="p-3">Nominal</th>
+                                    <th class="p-3">Metode</th>
+                                    <th class="p-3">Aksi Admin</th>
                                 </tr>
                             </thead>
                             <tbody id="pendingPaymentsBody" class="divide-y divide-slate-100">
@@ -257,11 +455,11 @@
                     </div>
                 </div>
 
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
-    <!-- JS Auth & Role Logic -->
+    <!-- JS Logic Sidebar & Tabs -->
     <script>
         const API_BASE = '/api';
         let authToken = localStorage.getItem('token');
@@ -269,7 +467,55 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuthSession();
+            // Default date filters to today
+            const today = new Date().toISOString().split('T')[0];
+            const filterDaily = document.getElementById('filterDailySalesDate');
+            const filterDep = document.getElementById('filterDepositDate');
+            if (filterDaily) filterDaily.value = today;
+            if (filterDep) filterDep.value = today;
         });
+
+        function switchTab(tabName) {
+            const tabs = ['dashboard', 'sales', 'stock', 'daily-sales', 'daily-deposits', 'monthly-recap', 'ledger', 'debts', 'validation'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const nav = document.getElementById(`nav-${t}`);
+                if (el) el.classList.add('hidden');
+                if (nav) {
+                    nav.classList.remove('bg-amber-500', 'text-slate-950');
+                    nav.classList.add('text-slate-400', 'hover:text-slate-100', 'hover:bg-slate-800');
+                }
+            });
+
+            const activeEl = document.getElementById(`tab-${tabName}`);
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            if (activeEl) activeEl.classList.remove('hidden');
+            if (activeNav) {
+                activeNav.classList.remove('text-slate-400', 'hover:text-slate-100', 'hover:bg-slate-800');
+                activeNav.classList.add('bg-amber-500', 'text-slate-950');
+            }
+
+            const titles = {
+                dashboard: 'Dashboard Utama Overview',
+                sales: 'Form Input Penjualan Sales',
+                stock: 'Form Input Barang Masuk Gudang',
+                'daily-sales': 'Rekap Penjualan Harian (Gambar 1)',
+                'daily-deposits': 'Rekap Setoran Harian (Gambar 2)',
+                'monthly-recap': 'Rekap Penjualan Bulanan (Gambar 3)',
+                ledger: 'Kartu Stok Audit Detail (Gambar 5)',
+                debts: 'Rekap Nota Pending / Piutang (Gambar 4)',
+                validation: 'Validasi Setoran Pembayaran Admin'
+            };
+            document.getElementById('pageTitle').innerText = titles[tabName] || 'Dashboard';
+
+            // Trigger specific loads
+            if (tabName === 'daily-sales') loadDailySalesReport();
+            if (tabName === 'daily-deposits') loadDailyDepositsReport();
+            if (tabName === 'monthly-recap') loadMonthlyRecapReport();
+            if (tabName === 'ledger') loadStockLedger();
+            if (tabName === 'debts') loadDebts();
+            if (tabName === 'validation') loadPendingPayments();
+        }
 
         function checkAuthSession() {
             const loginScreen = document.getElementById('loginScreen');
@@ -328,22 +574,18 @@
             const roleBadge = document.getElementById('userRoleBadge');
             roleBadge.innerText = currentUser.role;
 
-            const cardOrderInput = document.getElementById('cardOrderInput');
-            const cardStockInput = document.getElementById('cardStockInput');
-            const cardAdminValidation = document.getElementById('cardAdminValidation');
+            const navStock = document.getElementById('nav-stock');
+            const navValidation = document.getElementById('nav-validation');
 
-            // Role Access Rules:
-            // SUPER_ADMIN: Akses penuh ke semua fitur (Termasuk Validasi Setoran Admin)
-            // MARKETING: Form Penjualan, Kartu Stok, Daftar Piutang Gantung Nota (Tanpa Validasi Admin)
-            if (currentUser.role === 'SUPER_ADMIN') {
-                cardOrderInput.classList.remove('hidden');
-                cardStockInput.classList.remove('hidden');
-                cardAdminValidation.classList.remove('hidden');
-            } else if (currentUser.role === 'MARKETING') {
-                cardOrderInput.classList.remove('hidden');
-                cardStockInput.classList.add('hidden');
-                cardAdminValidation.classList.add('hidden');
+            if (currentUser.role === 'MARKETING') {
+                if (navStock) navStock.classList.add('hidden');
+                if (navValidation) navValidation.classList.add('hidden');
+            } else {
+                if (navStock) navStock.classList.remove('hidden');
+                if (navValidation) navValidation.classList.remove('hidden');
             }
+
+            switchTab('dashboard');
         }
 
         function getAuthHeaders() {
@@ -366,19 +608,21 @@
 
         async function loadInitialData() {
             try {
-                if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MARKETING') {
-                    const cRes = await fetch(`${API_BASE}/customers`, { headers: getAuthHeaders() });
-                    if (cRes.ok) {
-                        const customers = await cRes.json();
-                        document.getElementById('orderCustomer').innerHTML = '<option value="">Pilih Customer...</option>' + 
-                            customers.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
-                    }
+                const cRes = await fetch(`${API_BASE}/customers`, { headers: getAuthHeaders() });
+                if (cRes.ok) {
+                    const customers = await cRes.json();
+                    document.getElementById('statCustomers').innerText = customers.length;
+                    document.getElementById('orderCustomer').innerHTML = '<option value="">Pilih Customer...</option>' + 
+                        customers.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
                 }
 
                 const pRes = await fetch(`${API_BASE}/products`, { headers: getAuthHeaders() });
                 if (pRes.ok) {
                     const products = await pRes.json();
-                    const pSelects = [document.getElementById('orderProduct'), document.getElementById('incomingProduct')];
+                    if (products.length > 0) {
+                        document.getElementById('statStock').innerText = `${products[0].current_stock} ${products[0].unit}`;
+                    }
+                    const pSelects = [document.getElementById('orderProduct'), document.getElementById('incomingProduct'), document.getElementById('adjProduct')];
                     pSelects.forEach(select => {
                         if (select) {
                             select.innerHTML = '<option value="">Pilih Produk...</option>' + 
@@ -388,7 +632,7 @@
                 }
 
                 loadStockLedger();
-                if (currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MARKETING') loadDebts();
+                loadDebts();
                 if (currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
             } catch (err) {
                 showAlert('Gagal memuat data awal: ' + err.message, true);
@@ -443,6 +687,130 @@
             }
         }
 
+        // --- REPORTS LOGIC ---
+        async function loadDailySalesReport() {
+            const date = document.getElementById('filterDailySalesDate').value;
+            const res = await fetch(`${API_BASE}/reports/daily-sales?date=${date}`, { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            document.getElementById('dailySalesCount').innerText = `${data.length} Nota`;
+            const totalRev = data.reduce((sum, row) => sum + Number(row.total_amount), 0);
+            document.getElementById('dailySalesRevenue').innerText = `Rp ${totalRev.toLocaleString('id-ID')}`;
+            document.getElementById('dailySalesDateLabel').innerText = date ? new Date(date).toLocaleDateString('id-ID') : 'Semua Tanggal';
+
+            const body = document.getElementById('dailySalesBody');
+            body.innerHTML = data.map(item => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 text-slate-500">${new Date(item.order_date).toLocaleTimeString('id-ID')}</td>
+                    <td class="p-2.5 font-mono text-blue-700 font-semibold">${item.invoice_number}</td>
+                    <td class="p-2.5 font-semibold text-slate-800">${item.customer_name}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${item.payment_type}</span></td>
+                    <td class="p-2.5 text-right font-bold text-slate-900">Rp ${Number(item.total_amount).toLocaleString('id-ID')}</td>
+                    <td class="p-2.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                            ${item.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ada transaksi pada tanggal ini</td></tr>';
+        }
+
+        async function loadDailyDepositsReport() {
+            const date = document.getElementById('filterDepositDate').value;
+            const res = await fetch(`${API_BASE}/reports/daily-deposits?date=${date}`, { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            const body = document.getElementById('dailyDepositsBody');
+            body.innerHTML = data.map(item => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-2.5 font-mono text-slate-700">${item.payment_number}</td>
+                    <td class="p-2.5 font-semibold text-slate-800">${item.customer_name}</td>
+                    <td class="p-2.5 font-mono text-blue-600">${item.invoice_number}</td>
+                    <td class="p-2.5 font-bold text-emerald-700">Rp ${Number(item.amount).toLocaleString('id-ID')}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">${item.payment_method}</span></td>
+                    <td class="p-2.5 text-slate-500">${item.reference_number || '-'}</td>
+                    <td class="p-2.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.validation_status === 'VALIDATED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            ${item.validation_status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">Tidak ada setoran pada tanggal ini</td></tr>';
+        }
+
+        async function loadMonthlyRecapReport() {
+            const res = await fetch(`${API_BASE}/reports/monthly-recap`, { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            const body = document.getElementById('monthlyRecapBody');
+            body.innerHTML = data.map(item => `
+                <tr class="hover:bg-blue-50/50">
+                    <td class="p-3 font-semibold text-slate-800">${new Date(item.tgl_nota).toLocaleDateString('id-ID')}</td>
+                    <td class="p-3 text-right font-bold text-slate-900">Rp ${Number(item.total_penjualan).toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right font-semibold text-emerald-700">Rp ${Number(item.total_lunas).toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right font-semibold text-rose-700">Rp ${Number(item.total_pending).toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right font-extrabold text-blue-800">${item.total_krat}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data rekap penjualan</td></tr>';
+
+            // Calculate Footers
+            if (data.length > 0) {
+                const sumPenjualan = data.reduce((s, r) => s + Number(r.total_penjualan), 0);
+                const sumLunas = data.reduce((s, r) => s + Number(r.total_lunas), 0);
+                const sumPending = data.reduce((s, r) => s + Number(r.total_pending), 0);
+                const sumKrat = data.reduce((s, r) => s + Number(r.total_krat), 0);
+
+                document.getElementById('monthlyRecapFoot').innerHTML = `
+                    <tr>
+                        <td class="p-3">Grand Total</td>
+                        <td class="p-3 text-right text-slate-900">Rp ${sumPenjualan.toLocaleString('id-ID')}</td>
+                        <td class="p-3 text-right text-emerald-700">Rp ${sumLunas.toLocaleString('id-ID')}</td>
+                        <td class="p-3 text-right text-rose-700">Rp ${sumPending.toLocaleString('id-ID')}</td>
+                        <td class="p-3 text-right text-blue-900">${sumKrat} Krat</td>
+                    </tr>
+                `;
+            }
+        }
+
+        // --- STOCK AUDIT & ADJUSTMENT MODAL ---
+        function showAdjustmentModal() {
+            document.getElementById('adjustmentFormBox').classList.remove('hidden');
+        }
+        function hideAdjustmentModal() {
+            document.getElementById('adjustmentFormBox').classList.add('hidden');
+        }
+
+        async function submitStockAdjustment() {
+            const product_id = document.getElementById('adjProduct').value;
+            const damaged_qty = document.getElementById('adjDamaged').value || 0;
+            const physical_stock = document.getElementById('adjPhysical').value || 0;
+            const adjustment_qty = document.getElementById('adjQty').value || 0;
+            const notes = document.getElementById('adjNotes').value;
+
+            if (!product_id) {
+                alert('Pilih produk terlebih dahulu!');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/stock/adjustment`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ product_id, damaged_qty, physical_stock, adjustment_qty, notes })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showAlert(data.message);
+                hideAdjustmentModal();
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
         async function loadStockLedger() {
             const res = await fetch(`${API_BASE}/stock/ledger`, { headers: getAuthHeaders() });
             if (!res.ok) return;
@@ -450,49 +818,99 @@
             const body = document.getElementById('stockLedgerBody');
             body.innerHTML = data.map(item => `
                 <tr class="hover:bg-slate-50">
-                    <td class="p-2.5 text-slate-500">${new Date(item.created_at).toLocaleTimeString('id-ID')}</td>
+                    <td class="p-2.5 text-slate-500">${new Date(item.created_at).toLocaleString('id-ID')}</td>
                     <td class="p-2.5 font-semibold text-slate-800">${item.product_name}</td>
                     <td class="p-2.5">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.movement_type === 'BARANG_MASUK' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                            item.movement_type === 'BARANG_MASUK' ? 'bg-emerald-100 text-emerald-800' :
+                            item.movement_type === 'PENJUALAN' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800'
+                        }">
                             ${item.movement_type}
                         </span>
                     </td>
                     <td class="p-2.5 font-bold text-slate-800">${item.quantity} ${item.unit}</td>
-                    <td class="p-2.5 text-amber-700 font-bold">${item.balance_after}</td>
+                    <td class="p-2.5 font-bold text-rose-600">${item.damaged_qty || 0}</td>
+                    <td class="p-2.5 font-bold text-blue-600">${item.physical_stock !== null ? item.physical_stock : '-'}</td>
+                    <td class="p-2.5 font-bold ${item.adjustment_qty >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${item.adjustment_qty !== 0 ? item.adjustment_qty : '-'}</td>
+                    <td class="p-2.5 text-amber-700 font-extrabold">${item.balance_after}</td>
                     <td class="p-2.5 text-slate-500">${item.notes || '-'}</td>
                 </tr>
-            `).join('');
+            `).join('') || '<tr><td colspan="9" class="p-4 text-center text-slate-400">Belum ada riwayat pergerakan stok</td></tr>';
         }
 
+        // --- DEBTS (GAMBAR 4 MATCHING: GROUPED BY CUSTOMER) ---
         async function loadDebts() {
             const res = await fetch(`${API_BASE}/reports/outstanding-debts`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
+
+            let totalPiutangGrand = 0;
+            data.forEach(cust => { totalPiutangGrand += Number(cust.total_customer_debt); });
+            document.getElementById('statDebts').innerText = `Rp ${totalPiutangGrand.toLocaleString('id-ID')}`;
+
             const body = document.getElementById('debtListBody');
-            body.innerHTML = data.map(debt => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-2.5 font-mono text-blue-700 font-semibold">${debt.invoice_number}</td>
-                    <td class="p-2.5 font-semibold text-slate-800">${debt.customer_name}</td>
-                    <td class="p-2.5 text-rose-600 font-bold">Rp ${Number(debt.remaining_debt).toLocaleString('id-ID')}</td>
-                    <td class="p-2.5 text-slate-600">${new Date(debt.due_date).toLocaleDateString('id-ID')}</td>
-                    <td class="p-2.5">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${debt.debt_status === 'OVERDUE' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}">
-                            ${debt.debt_status}
-                        </span>
-                    </td>
-                    <td class="p-2.5">
-                        <button onclick="promptSubmitPayment(${debt.invoice_id}, ${debt.remaining_debt})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold px-2.5 py-1 rounded shadow-sm">
-                            Input Setoran
-                        </button>
-                    </td>
+            
+            let html = '';
+            data.forEach(cust => {
+                // Header Row per Customer
+                html += `
+                    <tr class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                        <td colspan="2" class="p-2.5 text-slate-900 uppercase tracking-wide">
+                            📂 ${cust.customer_name}
+                        </td>
+                        <td class="p-2.5 text-right text-rose-700 font-extrabold text-sm">
+                            Rp ${Number(cust.total_customer_debt).toLocaleString('id-ID')}
+                        </td>
+                        <td colspan="2" class="p-2.5 text-center text-slate-500 font-normal text-[11px]">
+                            ${cust.invoices.length} Nota Pending
+                        </td>
+                    </tr>
+                `;
+
+                // Invoices Sub-rows
+                cust.invoices.forEach(inv => {
+                    html += `
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="p-2.5 pl-8 text-slate-600">
+                                📅 Tgl Nota: ${new Date(inv.order_date).toLocaleDateString('id-ID')}
+                            </td>
+                            <td class="p-2.5 text-right font-mono text-blue-700 font-semibold">
+                                ${inv.invoice_number}
+                            </td>
+                            <td class="p-2.5 text-right text-rose-600 font-semibold">
+                                Rp ${Number(inv.remaining_debt).toLocaleString('id-ID')}
+                            </td>
+                            <td class="p-2.5 text-center">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${inv.debt_status === 'OVERDUE' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}">
+                                    ${inv.debt_status}
+                                </span>
+                            </td>
+                            <td class="p-2.5 text-center">
+                                <button onclick="promptSubmitPayment(${inv.invoice_id}, ${inv.remaining_debt})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold px-2.5 py-1 rounded shadow-sm">
+                                    Input Setoran
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+
+            // Grand Total Row
+            html += `
+                <tr class="bg-rose-100 font-extrabold border-t-2 border-rose-400">
+                    <td colspan="2" class="p-3 text-rose-950 text-sm">GRAND TOTAL PIUTANG REKAP NOTA PENDING</td>
+                    <td class="p-3 text-right text-rose-900 text-base">Rp ${totalPiutangGrand.toLocaleString('id-ID')}</td>
+                    <td colspan="2"></td>
                 </tr>
-            `).join('');
+            `;
+
+            body.innerHTML = html || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada nota pending</td></tr>';
         }
 
         async function promptSubmitPayment(invoice_id, remaining) {
             const amount = prompt(`Masukkan Nominal Setoran/Bayar (Sisa: Rp ${remaining}):`, remaining);
             if (!amount) return;
-            const ref = prompt('Masukkan Nomor Referensi / Catatan Transfer:');
+            const ref = prompt('Masukkan Nomor Referensi / Catatan Transfer (Misal: BCA 1468924624):');
 
             try {
                 const res = await fetch(`${API_BASE}/payments`, {
@@ -509,7 +927,7 @@
                 if (!res.ok) throw new Error(data.error);
                 showAlert(data.message);
                 loadDebts();
-                if (currentUser.role === 'ADMIN') loadPendingPayments();
+                if (currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
             } catch (err) {
                 showAlert(err.message, true);
             }
@@ -522,17 +940,17 @@
             const body = document.getElementById('pendingPaymentsBody');
             body.innerHTML = data.map(pay => `
                 <tr class="hover:bg-slate-50">
-                    <td class="p-2.5 font-mono text-slate-700">${pay.payment_number}</td>
-                    <td class="p-2.5 font-semibold text-slate-800">${pay.customer_name}</td>
-                    <td class="p-2.5 text-emerald-700 font-bold">Rp ${Number(pay.amount).toLocaleString('id-ID')}</td>
-                    <td class="p-2.5 text-slate-600">${pay.payment_method}</td>
-                    <td class="p-2.5">
-                        <button onclick="validatePayment(${pay.payment_id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2.5 py-1 rounded text-[11px] shadow-sm">
+                    <td class="p-3 font-mono text-slate-700">${pay.payment_number}</td>
+                    <td class="p-3 font-semibold text-slate-800">${pay.customer_name}</td>
+                    <td class="p-3 text-emerald-700 font-bold">Rp ${Number(pay.amount).toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-slate-600">${pay.payment_method}</td>
+                    <td class="p-3">
+                        <button onclick="validatePayment(${pay.payment_id})" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded text-[11px] shadow-sm">
                             Validasi & Unblock
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada setoran pending validasi</td></tr>';
         }
 
         async function validatePayment(payment_id) {

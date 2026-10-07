@@ -53,10 +53,13 @@ CREATE TABLE stock_movements (
     id SERIAL PRIMARY KEY,
     product_id INT NOT NULL REFERENCES products(id),
     movement_type stock_movement_type NOT NULL,
-    quantity NUMERIC(12, 2) NOT NULL,
+    quantity NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    damaged_qty NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (damaged_qty >= 0), -- RUSAK
+    physical_stock NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (physical_stock >= 0), -- STOK FISIK
+    adjustment_qty NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- PENYESUAIAN (+/-)
     balance_after NUMERIC(12, 2) NOT NULL CHECK (balance_after >= 0),
     reference_id VARCHAR(100),
-    notes TEXT,
+    notes TEXT, -- KETERANGAN
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

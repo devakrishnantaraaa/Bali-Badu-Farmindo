@@ -61,10 +61,13 @@ CREATE TABLE stock_movements (
     id SERIAL PRIMARY KEY,
     product_id INT NOT NULL REFERENCES products(id),
     movement_type stock_movement_type NOT NULL,
-    quantity NUMERIC(12, 2) NOT NULL,
+    quantity NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    damaged_qty NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (damaged_qty >= 0), -- RUSAK
+    physical_stock NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (physical_stock >= 0), -- STOK FISIK
+    adjustment_qty NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- PENYESUAIAN (+/-)
     balance_after NUMERIC(12, 2) NOT NULL CHECK (balance_after >= 0),
     reference_id VARCHAR(100),
-    notes TEXT,
+    notes TEXT, -- KETERANGAN
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -123,8 +126,8 @@ CREATE INDEX idx_orders_customer ON orders(customer_id);
 -- 4. INSERT SEED DATA (Password untuk semua user adalah: 123456)
 -- Hash di bawah ini adalah enkripsi bcrypt valid dari string '123456'
 INSERT INTO users (username, password_hash, full_name, role) VALUES
-('admin', '$2a$10$vG.k2.4zV9B8wR8kQJ3eEu2X7mU2dY/yT0b5zP9m1Q2W3E4R5T6Y7', 'Super Admin Bali Badu', 'SUPER_ADMIN'),
-('marketing1', '$2a$10$vG.k2.4zV9B8wR8kQJ3eEu2X7mU2dY/yT0b5zP9m1Q2W3E4R5T6Y7', 'Tim Marketing Field', 'MARKETING');
+('admin', '$2b$10$Cu3p0l.xPHxf7rd8I174..1QnPTLCQ2xBPQRRdbY7EaELwocR6/rS', 'Super Admin Bali Badu', 'SUPER_ADMIN'),
+('marketing1', '$2b$10$Cu3p0l.xPHxf7rd8I174..1QnPTLCQ2xBPQRRdbY7EaELwocR6/rS', 'Tim Marketing Field', 'MARKETING');
 
 INSERT INTO products (name, unit, current_stock, price_per_unit) VALUES
 ('Telur Ayam Ras Super', 'kg', 500.00, 26000.00),
