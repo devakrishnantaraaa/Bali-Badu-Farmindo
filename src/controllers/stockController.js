@@ -51,13 +51,69 @@ async function recordIncomingGoods(req, res) {
     }
 }
 
+// Record Stock Adjustment (Penyesuaian, Rusak, & Stok Fisik)
+async function recordStockAdjustment(req, res) {
+    const client = await db.getClient();
+    try {
+        const { product_id, damaged_qty, physical_stock, adjustment_qty, notes } = req.body;
+        
+        if (!product_id) {
+            return res.status(400).json({ error: 'product_id is required' });
+        }
+
+        await client.query('BEGIN');
+
+        // Fetch current product stock
+        const pRes = await client.query('SELECT current_stock FROM products WHERE id = $1 FOR UPDATE', [product_id]);
+        if (pRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        const currentStock = parseFloat(pRes.rows[0].current_stock);
+        const damaged = damaged_qty ? parseFloat(damaged_qty) : 0;
+        const adj = adjustment_qty ? parseFloat(adjustment_qty) : 0;
+        
+        // Target balance can be set by physical stock or adjustment math
+        let balanceAfter = physical_stock !== undefined && physical_stock !== '' 
+            ? parseFloat(physical_stock) 
+            : currentStock - damaged + adj;
+
+        if (balanceAfter < 0) balanceAfter = 0;
+
+        // Update product stock
+        await client.query('UPDATE products SET current_stock = $1 WHERE id = $2', [balanceAfter, product_id]);
+
+        // Log movement with damaged_qty, physical_stock, adjustment_qty, and notes
+        const movementRes = await client.query(
+            `INSERT INTO stock_movements (product_id, movement_type, quantity, damaged_qty, physical_stock, adjustment_qty, balance_after, notes)
+             VALUES ($1, 'PENYESUAIAN', $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [product_id, Math.abs(adj), damaged, balanceAfter, adj, balanceAfter, notes || 'Penyesuaian Stok Audit']
+        );
+
+        await client.query('COMMIT');
+        return res.status(201).json({
+            message: 'Stock adjustment saved successfully',
+            movement: movementRes.rows[0],
+            new_stock: balanceAfter
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: error.message });
+    } finally {
+        client.release();
+    }
+}
+
 // Get Kartu Stok Ledger
 async function getStockLedger(req, res) {
     try {
         const { product_id } = req.query;
         let queryText = `
             SELECT sm.id, sm.created_at, p.name AS product_name, p.unit, sm.movement_type, 
-                   sm.quantity, sm.balance_after, sm.reference_id, sm.notes
+                   sm.quantity, sm.damaged_qty, sm.physical_stock, sm.adjustment_qty,
+                   sm.balance_after, sm.reference_id, sm.notes
             FROM stock_movements sm
             JOIN products p ON sm.product_id = p.id
         `;
@@ -89,6 +145,7 @@ async function getProducts(req, res) {
 
 module.exports = {
     recordIncomingGoods,
+    recordStockAdjustment,
     getStockLedger,
     getProducts
 };
