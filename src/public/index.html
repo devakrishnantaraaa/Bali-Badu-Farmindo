@@ -52,17 +52,17 @@
         </div>
     </div>
 
-    <!-- MAIN APP WITH SIDEBAR LAYOUT -->
-    <div id="appScreen" class="hidden min-h-screen flex">
+    <!-- MAIN APP LAYOUT -->
+    <div id="appScreen" class="hidden min-h-screen flex flex-col md:flex-row">
 
-        <!-- SIDEBAR NAVIGATION -->
-        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-40 border-r border-slate-800">
+        <!-- SIDEBAR NAVIGATION (DESKTOP BACK OFFICE) -->
+        <aside id="mainSidebar" class="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col fixed inset-y-0 left-0 z-40 border-r border-slate-800">
             <!-- Brand Logo Header -->
             <div class="p-5 border-b border-slate-800 flex items-center gap-3">
                 <img src="/images/bali-badu-farmindo-logo.jpeg" alt="Logo" class="h-10 w-10 object-contain rounded-lg border border-slate-700 bg-white">
                 <div>
                     <h2 class="text-sm font-bold text-white leading-tight">Bali Badu</h2>
-                    <p class="text-[10px] text-amber-400 font-semibold tracking-wider uppercase">Farmindo System</p>
+                    <p class="text-[10px] text-amber-400 font-semibold tracking-wider uppercase">Farmindo Back Office</p>
                 </div>
             </div>
 
@@ -70,16 +70,40 @@
             <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
                 <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Navigasi Utama</div>
 
-                <!-- Dashboard Overview -->
+                <!-- Dashboard Overview (Super Admin) -->
                 <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 transition shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     <span>Dashboard Utama</span>
                 </button>
 
+                <!-- Input Customer Baru (Marketing & Admin) -->
+                <button onclick="switchTab('customer')" id="nav-customer" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                    <span>Input Customer Baru</span>
+                </button>
+
                 <!-- Input Sales Order (Marketing & Admin) -->
                 <button onclick="switchTab('sales')" id="nav-sales" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    <span>Penjualan Sales</span>
+                    <span>Input Penjualan Sales</span>
+                </button>
+
+                <!-- Rekap Penjualan Harian -->
+                <button onclick="switchTab('daily-sales')" id="nav-daily-sales" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Rekap Penjualan Harian</span>
+                </button>
+
+                <!-- Rekap Penjualan Bulanan -->
+                <button onclick="switchTab('monthly-recap')" id="nav-monthly-recap" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span>Rekap Penjualan 1 Bulan</span>
+                </button>
+
+                <!-- Daftar Setoran Harian -->
+                <button onclick="switchTab('daily-deposits')" id="nav-daily-deposits" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span>Daftar Setoran Harian</span>
                 </button>
 
                 <!-- Barang Masuk / Restock (Super Admin) -->
@@ -97,7 +121,7 @@
                 <!-- Piutang Customer / Gantung Nota -->
                 <button onclick="switchTab('debts')" id="nav-debts" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <span>Piutang & Gantung Nota</span>
+                    <span>Daftar Customer Hutang</span>
                 </button>
 
                 <!-- Validasi Setoran Admin (Super Admin) -->
@@ -123,17 +147,41 @@
             </div>
         </aside>
 
+        <!-- BOTTOM MOBILE NAVIGATION BAR (MOBILE SALES APPS) -->
+        <nav id="mobileNavbar" class="md:hidden fixed bottom-0 inset-x-0 bg-slate-900 border-t border-slate-800 z-50 px-2 py-1.5 flex justify-around items-center text-slate-400">
+            <button onclick="switchTab('sales')" id="mobile-nav-sales" class="flex flex-col items-center gap-1 p-2 text-amber-500 font-bold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                <span class="text-[10px]">Penjualan</span>
+            </button>
+            <button onclick="switchTab('customer')" id="mobile-nav-customer" class="flex flex-col items-center gap-1 p-2 hover:text-amber-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                <span class="text-[10px]">Customer</span>
+            </button>
+            <button onclick="switchTab('daily-sales')" id="mobile-nav-daily-sales" class="flex flex-col items-center gap-1 p-2 hover:text-amber-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="text-[10px]">Rekap</span>
+            </button>
+            <button onclick="switchTab('debts')" id="mobile-nav-debts" class="flex flex-col items-center gap-1 p-2 hover:text-amber-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="text-[10px]">Hutang</span>
+            </button>
+            <button onclick="handleLogout()" class="flex flex-col items-center gap-1 p-2 text-rose-400 hover:text-rose-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <span class="text-[10px]">Keluar</span>
+            </button>
+        </nav>
+
         <!-- MAIN CONTENT AREA -->
-        <div class="flex-1 ml-64 flex flex-col min-h-screen">
+        <div class="flex-1 md:ml-64 flex flex-col min-h-screen">
             
             <!-- Top App Bar -->
-            <header class="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-3.5 flex justify-between items-center shadow-sm">
+            <header class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-6 py-3.5 flex justify-between items-center shadow-sm">
                 <div class="flex items-center gap-2">
-                    <h1 id="pageTitle" class="text-base font-bold text-slate-900">Dashboard Utama</h1>
-                    <span class="text-xs text-slate-400 font-medium">| Sistem Informasi Operasional</span>
+                    <h1 id="pageTitle" class="text-sm md:text-base font-bold text-slate-900">Dashboard Utama</h1>
+                    <span class="text-xs text-slate-400 font-medium hidden sm:inline">| Sistem Informasi Operasional</span>
                 </div>
-                <div class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Status: Supabase Realtime Active
+                <div class="text-[11px] text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
                 </div>
             </header>
 
@@ -158,6 +206,38 @@
                             <div id="statDebts" class="text-2xl font-extrabold text-rose-600">-</div>
                         </div>
                     </div>
+                <!-- TAB: INPUT CUSTOMER BARU (Marketing & Admin) -->
+                <div id="tab-customer" class="hidden max-w-2xl bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+                        <h2 class="text-base font-bold text-slate-900">👤 Form Input Data Customer Baru</h2>
+                        <span class="text-xs bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-200 font-medium">Marketing Field Input</span>
+                    </div>
+
+                    <form id="customerForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Customer / Toko / Depo</label>
+                            <input type="text" id="custName" required placeholder="Contoh: WARUNG BU TIEN / DEPOT LARIS" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nomor HP / WhatsApp</label>
+                            <input type="text" id="custPhone" placeholder="Contoh: 081234567890" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Alamat Lengkap</label>
+                            <textarea id="custAddress" rows="2" placeholder="Alamat pengiriman telur..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Limit Kredit (Rp)</label>
+                            <input type="number" id="custCreditLimit" value="5000000" placeholder="5000000" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <button type="button" onclick="submitNewCustomer()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm">
+                            Simpan Data Customer Baru
+                        </button>
+                    </form>
                 </div>
 
                 <!-- TAB: SALES ORDER INPUT -->
@@ -476,34 +556,45 @@
         });
 
         function switchTab(tabName) {
-            const tabs = ['dashboard', 'sales', 'stock', 'daily-sales', 'daily-deposits', 'monthly-recap', 'ledger', 'debts', 'validation'];
+            const tabs = ['dashboard', 'customer', 'sales', 'stock', 'daily-sales', 'daily-deposits', 'monthly-recap', 'ledger', 'debts', 'validation'];
             tabs.forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
                 const nav = document.getElementById(`nav-${t}`);
+                const mNav = document.getElementById(`mobile-nav-${t}`);
                 if (el) el.classList.add('hidden');
                 if (nav) {
                     nav.classList.remove('bg-amber-500', 'text-slate-950');
                     nav.classList.add('text-slate-400', 'hover:text-slate-100', 'hover:bg-slate-800');
                 }
+                if (mNav) {
+                    mNav.classList.remove('text-amber-500', 'font-bold');
+                    mNav.classList.add('text-slate-400');
+                }
             });
 
             const activeEl = document.getElementById(`tab-${tabName}`);
             const activeNav = document.getElementById(`nav-${tabName}`);
+            const activeMNav = document.getElementById(`mobile-nav-${tabName}`);
             if (activeEl) activeEl.classList.remove('hidden');
             if (activeNav) {
                 activeNav.classList.remove('text-slate-400', 'hover:text-slate-100', 'hover:bg-slate-800');
                 activeNav.classList.add('bg-amber-500', 'text-slate-950');
             }
+            if (activeMNav) {
+                activeMNav.classList.remove('text-slate-400');
+                activeMNav.classList.add('text-amber-500', 'font-bold');
+            }
 
             const titles = {
                 dashboard: 'Dashboard Utama Overview',
+                customer: 'Form Input Data Customer Baru',
                 sales: 'Form Input Penjualan Sales',
                 stock: 'Form Input Barang Masuk Gudang',
-                'daily-sales': 'Rekap Penjualan Harian (Gambar 1)',
-                'daily-deposits': 'Rekap Setoran Harian (Gambar 2)',
-                'monthly-recap': 'Rekap Penjualan Bulanan (Gambar 3)',
-                ledger: 'Kartu Stok Audit Detail (Gambar 5)',
-                debts: 'Rekap Nota Pending / Piutang (Gambar 4)',
+                'daily-sales': 'Rekap Penjualan Harian',
+                'daily-deposits': 'Rekap Setoran Harian',
+                'monthly-recap': 'Rekap Penjualan Bulanan (1 Bulan)',
+                ledger: 'Kartu Stok Audit Log',
+                debts: 'Daftar Customer Hutang / Gantung Nota',
                 validation: 'Validasi Setoran Pembayaran Admin'
             };
             document.getElementById('pageTitle').innerText = titles[tabName] || 'Dashboard';
@@ -570,22 +661,72 @@
         }
 
         function setupUserRoleView() {
+            if (!currentUser) return;
             document.getElementById('userFullName').innerText = currentUser.full_name;
             const roleBadge = document.getElementById('userRoleBadge');
-            roleBadge.innerText = currentUser.role;
+            if (roleBadge) roleBadge.innerText = currentUser.role;
 
+            const mobileNavbar = document.getElementById('mobileNavbar');
+            const navDashboard = document.getElementById('nav-dashboard');
             const navStock = document.getElementById('nav-stock');
             const navValidation = document.getElementById('nav-validation');
+            const navCustomer = document.getElementById('nav-customer');
+            const navSales = document.getElementById('nav-sales');
 
             if (currentUser.role === 'MARKETING') {
+                // MARKETING ROLE (Sales Mobile Mode):
+                // Hide admin-only tabs
+                if (navDashboard) navDashboard.classList.add('hidden');
                 if (navStock) navStock.classList.add('hidden');
                 if (navValidation) navValidation.classList.add('hidden');
+                
+                // Show Mobile Bottom Nav Bar
+                if (mobileNavbar) mobileNavbar.classList.remove('hidden');
+
+                // Auto switch to Sales Form view
+                switchTab('sales');
             } else {
+                // SUPER_ADMIN ROLE (Back Office Admin Mode):
+                // Show all admin tabs
+                if (navDashboard) navDashboard.classList.remove('hidden');
                 if (navStock) navStock.classList.remove('hidden');
                 if (navValidation) navValidation.classList.remove('hidden');
+                if (navCustomer) navCustomer.classList.remove('hidden');
+                if (navSales) navSales.classList.remove('hidden');
+
+                // Hide Mobile Bottom Nav Bar on Admin mode
+                if (mobileNavbar) mobileNavbar.classList.add('hidden');
+
+                // Auto switch to Back Office Dashboard view
+                switchTab('dashboard');
+            }
+        }
+
+        async function submitNewCustomer() {
+            const name = document.getElementById('custName').value;
+            const phone = document.getElementById('custPhone').value;
+            const address = document.getElementById('custAddress').value;
+            const credit_limit = document.getElementById('custCreditLimit').value;
+
+            if (!name) {
+                alert('Nama Customer wajib diisi!');
+                return;
             }
 
-            switchTab('dashboard');
+            try {
+                const res = await fetch(`${API_BASE}/customers`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ name, phone, address, credit_limit: parseFloat(credit_limit) || 5000000 })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showAlert(`Customer Baru "${data.customer.name}" Berhasil Disimpan!`);
+                document.getElementById('customerForm').reset();
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
         }
 
         function getAuthHeaders() {
@@ -633,7 +774,7 @@
 
                 loadStockLedger();
                 loadDebts();
-                if (currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
+                if (currentUser && currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
             } catch (err) {
                 showAlert('Gagal memuat data awal: ' + err.message, true);
             }
