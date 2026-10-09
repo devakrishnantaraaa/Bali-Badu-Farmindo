@@ -14,7 +14,94 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* Custom Styled Select Dropdown */
+        /* Custom Styled Select Dropdown Container */
+        .custom-select-wrapper {
+            position: relative;
+            user-select: none;
+            width: 100%;
+        }
+
+        .custom-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.625rem 0.875rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1e293b;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .custom-select-wrapper.open .custom-select-trigger {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+            background-color: #ffffff;
+        }
+
+        .custom-select-trigger:hover {
+            border-color: #f59e0b;
+        }
+
+        .custom-select-options {
+            position: absolute;
+            display: block;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            border: 1px solid #fcd34d;
+            background: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            z-index: 99;
+            max-height: 220px;
+            overflow-y: auto;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(-4px);
+            transition: all 0.15s ease-in-out;
+        }
+
+        .custom-select-wrapper.open .custom-select-options {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .custom-option {
+            position: relative;
+            padding: 0.625rem 0.875rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .custom-option:hover {
+            background-color: #fef3c7;
+            color: #78350f;
+        }
+
+        .custom-option.selected {
+            background-color: #f59e0b;
+            color: #78350f;
+            font-weight: 700;
+        }
+
+        .custom-option.selected:hover {
+            background-color: #d97706;
+            color: #ffffff;
+        }
+
         select {
             appearance: none;
             -webkit-appearance: none;
@@ -38,14 +125,6 @@
             outline: none !important;
             border-color: #f59e0b !important;
             box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3) !important;
-        }
-
-        select option {
-            background-color: #ffffff;
-            color: #0f172a;
-            padding: 10px;
-            font-size: 13px;
-            font-weight: 600;
         }
 
         @media print {
@@ -1182,6 +1261,11 @@
                 loadStockLedger();
                 loadDebts();
                 if (currentUser && currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
+
+                // Build custom UI dropdown overlays for all selects
+                setTimeout(() => {
+                    initCustomSelects();
+                }, 50);
             } catch (err) {
                 showAlert('Gagal memuat data awal: ' + err.message, true);
             }
@@ -1727,6 +1811,115 @@
                 container.classList.add('hidden');
             }
         }
+
+        // --- CUSTOM SELECT DROPDOWN COMPONENT ENGINE ---
+        function makeSelectCustom(selectId) {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+
+            // Remove previous custom wrapper if exists
+            const parent = selectEl.parentElement;
+            let wrapper = parent.querySelector(`.custom-select-wrapper[data-for="${selectId}"]`);
+            if (wrapper) wrapper.remove();
+
+            // Hide raw select element
+            selectEl.style.display = 'none';
+
+            // Create wrapper
+            wrapper = document.createElement('div');
+            wrapper.className = 'custom-select-wrapper';
+            wrapper.setAttribute('data-for', selectId);
+
+            // Get selected option
+            const selectedOpt = selectEl.options[selectEl.selectedIndex] || selectEl.options[0];
+            const selectedText = selectedOpt ? selectedOpt.text : 'Pilih...';
+
+            // Create Trigger Box
+            const trigger = document.createElement('div');
+            trigger.className = 'custom-select-trigger';
+            trigger.innerHTML = `
+                <span class="truncate">${selectedText}</span>
+                <svg class="w-4 h-4 text-amber-500 transition-transform duration-200 ml-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            `;
+
+            // Create Options Container
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'custom-select-options';
+
+            Array.from(selectEl.options).forEach((opt, idx) => {
+                const isSelected = idx === selectEl.selectedIndex;
+                const optDiv = document.createElement('div');
+                optDiv.className = `custom-option ${isSelected ? 'selected' : ''}`;
+                optDiv.innerHTML = `
+                    <span class="truncate">${opt.text}</span>
+                    ${isSelected ? '<span class="text-amber-700 font-bold ml-2">✓</span>' : ''}
+                `;
+
+                optDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectEl.selectedIndex = idx;
+                    
+                    // Dispatch change event on target select
+                    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    // Re-render trigger label
+                    trigger.querySelector('span').innerText = opt.text;
+
+                    // Update option styles
+                    optionsContainer.querySelectorAll('.custom-option').forEach((el, i) => {
+                        if (i === idx) {
+                            el.classList.add('selected');
+                            if (!el.querySelector('span.text-amber-700')) {
+                                el.insertAdjacentHTML('beforeend', '<span class="text-amber-700 font-bold ml-2">✓</span>');
+                            }
+                        } else {
+                            el.classList.remove('selected');
+                            const check = el.querySelector('span.text-amber-700');
+                            if (check) check.remove();
+                        }
+                    });
+
+                    wrapper.classList.remove('open');
+                });
+
+                optionsContainer.appendChild(optDiv);
+            });
+
+            // Toggle Open State
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Close all other custom dropdowns first
+                document.querySelectorAll('.custom-select-wrapper.open').forEach(w => {
+                    if (w !== wrapper) w.classList.remove('open');
+                });
+                wrapper.classList.toggle('open');
+            });
+
+            wrapper.appendChild(trigger);
+            wrapper.appendChild(optionsContainer);
+            parent.appendChild(wrapper);
+        }
+
+        function initCustomSelects() {
+            const selectIds = [
+                'prodUnit',
+                'orderCustomer',
+                'orderProduct',
+                'orderPaymentType',
+                'incomingProduct',
+                'filterMonthlyRecapMonth',
+                'adjProduct',
+                'filterLedgerProduct'
+            ];
+            selectIds.forEach(id => makeSelectCustom(id));
+        }
+
+        // Close dropdowns on document click
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.custom-select-wrapper.open').forEach(w => w.classList.remove('open'));
+        });
 
         // --- EXPORT TO EXCEL UTILITY ---
         function exportTableToExcel(tableId, filename = 'Laporan_Distribusi_Telur') {
