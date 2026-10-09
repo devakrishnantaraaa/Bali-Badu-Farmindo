@@ -7,10 +7,42 @@
     <title>Bali Badu Farmindo - Sistem Distribusi Telur</title>
     <link rel="icon" type="image/png" href="/images/DJS.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+
+            #printModal,
+            #printModal * {
+                visibility: visible !important;
+            }
+
+            #printModal {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: white !important;
+                display: block !important;
+            }
+
+            #printInvoiceArea {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -466,6 +498,10 @@
                                 class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
                             <button onclick="loadDailySalesReport()"
                                 class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Filter</button>
+                            <button onclick="exportTableToExcel('dailySalesTable', 'Rekap_Penjualan_Harian')"
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                📥 Tarik Excel
+                            </button>
                         </div>
                     </div>
 
@@ -485,21 +521,33 @@
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <table id="dailySalesTable"
+                            class="w-full text-left text-xs text-slate-800 border-collapse border border-slate-300">
+                            <thead
+                                class="bg-slate-200 text-slate-800 sticky top-0 border-b border-slate-400 font-bold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
-                                    <th class="p-2.5">Waktu</th>
-                                    <th class="p-2.5">No Invoice</th>
-                                    <th class="p-2.5">Customer</th>
-                                    <th class="p-2.5">Tipe Pembayaran</th>
-                                    <th class="p-2.5 text-right">Total Transaksi</th>
-                                    <th class="p-2.5">Status Nota</th>
+                                    <th class="p-2 border border-slate-300">PERIODE</th>
+                                    <th class="p-2 border border-slate-300">TGL</th>
+                                    <th class="p-2 border border-slate-300">NAMA CUSTOMER</th>
+                                    <th class="p-2 border border-slate-300 text-right">PENJUALAN</th>
+                                    <th class="p-2 border border-slate-300 text-center">KETERANGAN</th>
+                                    <th class="p-2 border border-slate-300 text-right">HARGA</th>
+                                    <th class="p-2 border border-slate-300 text-right">TOTAL</th>
+                                    <th class="p-2 border border-slate-300 text-center">TOP</th>
+                                    <th class="p-2 border border-slate-300 text-right bg-amber-100/50">PEMBAYARAN</th>
+                                    <th class="p-2 border border-slate-300 text-right">SISA PEMBAYARAN</th>
+                                    <th class="p-2 border border-slate-300 text-center">CEK</th>
+                                    <th class="p-2 border border-slate-300 text-center">TRANSFER</th>
                                 </tr>
                             </thead>
-                            <tbody id="dailySalesBody" class="divide-y divide-slate-100">
+                            <tbody id="dailySalesBody" class="divide-y divide-slate-200">
                                 <!-- Rows -->
                             </tbody>
+                            <tfoot id="dailySalesFoot"
+                                class="bg-blue-100 font-extrabold text-slate-900 border-t-2 border-slate-400 text-[11px]">
+                                <!-- Totals -->
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -516,24 +564,41 @@
                                 class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
                             <button onclick="loadDailyDepositsReport()"
                                 class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Filter</button>
+                            <button onclick="exportTableToExcel('dailyDepositsTable', 'Rekap_Setoran_Harian')"
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                📥 Tarik Excel
+                            </button>
                         </div>
                     </div>
-                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <table id="dailyDepositsTable"
+                            class="w-full text-left text-xs text-slate-800 border-collapse border border-slate-300">
+                            <thead
+                                class="bg-amber-100 text-slate-800 sticky top-0 border-b border-slate-400 font-bold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
-                                    <th class="p-2.5">No Setoran</th>
-                                    <th class="p-2.5">Customer</th>
-                                    <th class="p-2.5">No Invoice</th>
-                                    <th class="p-2.5">Nominal Setoran</th>
-                                    <th class="p-2.5">Metode</th>
-                                    <th class="p-2.5">Referensi / Catatan</th>
-                                    <th class="p-2.5">Status Validasi Admin</th>
+                                    <th class="p-2 border border-slate-300">PERIODE</th>
+                                    <th class="p-2 border border-slate-300">TGL</th>
+                                    <th class="p-2 border border-slate-300">NAMA CUSTOMER</th>
+                                    <th class="p-2 border border-slate-300 text-right">PENJUALAN</th>
+                                    <th class="p-2 border border-slate-300 text-center">KETERANGAN</th>
+                                    <th class="p-2 border border-slate-300 text-right">HARGA</th>
+                                    <th class="p-2 border border-slate-300 text-right">TOTAL</th>
+                                    <th class="p-2 border border-slate-300 text-center">TOP</th>
+                                    <th
+                                        class="p-2 border border-slate-300 text-right bg-amber-200/80 text-amber-950 font-black">
+                                        PEMBAYARAN</th>
+                                    <th class="p-2 border border-slate-300 text-right">SISA PEMBAYARAN</th>
+                                    <th class="p-2 border border-slate-300 text-center">CEK</th>
+                                    <th class="p-2 border border-slate-300 text-center">TRANSFER</th>
                                 </tr>
                             </thead>
-                            <tbody id="dailyDepositsBody" class="divide-y divide-slate-100">
+                            <tbody id="dailyDepositsBody" class="divide-y divide-slate-200">
                                 <!-- Rows -->
                             </tbody>
+                            <tfoot id="dailyDepositsFoot"
+                                class="bg-blue-100 font-extrabold text-slate-900 border-t-2 border-slate-400 text-[11px]">
+                                <!-- Totals -->
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -541,45 +606,84 @@
                 <!-- TAB: REKAP PENJUALAN BULANAN PIVOT (Gambar 3) -->
                 <div id="tab-monthly-recap"
                     class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                        <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Bulanan (Pivot Per Tanggal)</h3>
-                        <button onclick="loadMonthlyRecapReport()"
-                            class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                    <div
+                        class="border-b border-slate-200 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">REKAP PENJUALAN</h3>
+                            <p class="text-xs font-bold text-amber-600 uppercase">DISTRIBUTOR TELUR</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="text-xs font-bold text-slate-600 border border-slate-300 bg-slate-100 px-3 py-1 rounded">PERIODE:</span>
+                            <select id="filterMonthlyRecapMonth" onchange="loadMonthlyRecapReport()"
+                                class="bg-blue-50 border border-blue-300 font-bold text-blue-900 rounded px-3 py-1 text-xs">
+                                <option value="ALL">SEMUA PERIODE</option>
+                                <option value="10" selected>OKTOBER</option>
+                                <option value="9">SEPTEMBER</option>
+                                <option value="8">AGUSTUS</option>
+                                <option value="7">JULI</option>
+                                <option value="6">JUNI</option>
+                            </select>
+                            <button onclick="loadMonthlyRecapReport()"
+                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded font-medium border border-slate-200">Refresh</button>
+                            <button onclick="exportTableToExcel('monthlyRecapTable', 'Rekap_Penjualan_Bulanan')"
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                📥 Tarik Excel
+                            </button>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead class="bg-blue-50 text-blue-900 sticky top-0 border-b border-blue-200">
+                    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <table id="monthlyRecapTable"
+                            class="w-full text-left text-xs text-slate-800 border-collapse border border-slate-300">
+                            <thead
+                                class="bg-blue-100/90 text-blue-950 sticky top-0 border-b border-slate-400 font-extrabold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
-                                    <th class="p-3">Tanggal</th>
-                                    <th class="p-3 text-right">Penjualan (Omset)</th>
-                                    <th class="p-3 text-right text-emerald-700">Lunas</th>
-                                    <th class="p-3 text-right text-rose-700">Pending</th>
-                                    <th class="p-3 text-right">Total Krat/Qty</th>
+                                    <th class="p-2.5 border border-slate-300">Row Labels</th>
+                                    <th class="p-2.5 border border-slate-300 text-right">PENJUALAN.</th>
+                                    <th class="p-2.5 border border-slate-300 text-right text-emerald-800">LUNAS</th>
+                                    <th class="p-2.5 border border-slate-300 text-right text-rose-800">PENDING</th>
+                                    <th class="p-2.5 border border-slate-300 text-right text-blue-900">/KRAT</th>
                                 </tr>
                             </thead>
-                            <tbody id="monthlyRecapBody" class="divide-y divide-slate-100">
+                            <tbody id="monthlyRecapBody" class="divide-y divide-slate-200 font-medium">
                                 <!-- Rows -->
                             </tbody>
-                            <tfoot id="monthlyRecapFoot" class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                            <tfoot id="monthlyRecapFoot"
+                                class="bg-blue-200/80 font-black text-slate-900 border-t-2 border-slate-400 text-xs">
                                 <!-- Total row -->
                             </tfoot>
                         </table>
                     </div>
                 </div>
 
-                <!-- TAB: KARTU STOK AUDIT LEDGER & ADUSTMENT (Gambar 5: Rusak, Stok Fisik, Penyesuaian, Keterangan) -->
+                <!-- TAB: KARTU STOK AUDIT LEDGER & ADJUSTMENT -->
                 <div id="tab-ledger" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
                     <div
-                        class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
-                        <h3 class="text-base font-bold text-slate-900">📋 Kartu Stok & Form Penyesuaian Stok (Audit
-                            Detail)</h3>
-                        <div class="flex gap-2">
+                        class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">KARTU STOK & AUDIT GUDANG
+                            </h3>
+                            <p class="text-xs font-bold text-emerald-600 uppercase">UPDATE OTOMATIS DARI NOTA PENJUALAN
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="filterLedgerProduct" onchange="loadStockLedger()"
+                                class="bg-blue-50 border border-blue-300 font-bold text-blue-900 rounded px-3 py-1.5 text-xs">
+                                <option value="ALL">SEMUA PRODUK</option>
+                                <option value="1">STOK TB (Telur Ras Super)</option>
+                                <option value="2">STOK TG (Telur Medium/Gemuk)</option>
+                                <option value="3">STOK OMEGA (Telur Kampong/Omega)</option>
+                            </select>
                             <button onclick="showAdjustmentModal()"
                                 class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
-                                + Input Penyesuaian / Stok Fisik / Rusak
+                                + Input Audit / Rusak / Fisik
                             </button>
                             <button onclick="loadStockLedger()"
                                 class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                            <button onclick="exportTableToExcel('stockLedgerTable', 'Kartu_Stok_Gudang')"
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                📥 Tarik Excel
+                            </button>
                         </div>
                     </div>
 
@@ -618,7 +722,7 @@
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">Keterangan /
                                 Notes</label>
                             <input type="text" id="adjNotes"
-                                placeholder="Misal: Retur telur pecah di pengiriman kandang"
+                                placeholder="Misal: Retur telur pecah / opname fisik gudang"
                                 class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
                         </div>
                         <div class="flex justify-end gap-2">
@@ -630,49 +734,67 @@
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <table id="stockLedgerTable"
+                            class="w-full text-left text-xs text-slate-800 border-collapse border border-slate-300">
+                            <thead
+                                class="bg-slate-200 text-slate-900 sticky top-0 border-b border-slate-400 font-extrabold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
-                                    <th class="p-2.5">Waktu</th>
-                                    <th class="p-2.5">Produk</th>
-                                    <th class="p-2.5">Tipe</th>
-                                    <th class="p-2.5">Qty Flow</th>
-                                    <th class="p-2.5 text-rose-700">Rusak</th>
-                                    <th class="p-2.5 text-blue-700">Stok Fisik</th>
-                                    <th class="p-2.5">Penyesuaian</th>
-                                    <th class="p-2.5 font-bold text-amber-700">Sisa Stok</th>
-                                    <th class="p-2.5">Keterangan</th>
+                                    <th class="p-2 border border-slate-300">TGL</th>
+                                    <th class="p-2 border border-slate-300 text-right text-emerald-800">IN / KRAT</th>
+                                    <th class="p-2 border border-slate-300 text-right">HARGA</th>
+                                    <th class="p-2 border border-slate-300 text-right text-amber-900">OUT / KRAT</th>
+                                    <th class="p-2 border border-slate-300 text-right text-rose-700">RUSAK</th>
+                                    <th class="p-2 border border-slate-300 text-right text-blue-700">STOK FISIK</th>
+                                    <th class="p-2 border border-slate-300 text-right text-purple-700">PENYESUAIAN</th>
+                                    <th class="p-2 border border-slate-300 text-right font-black bg-blue-100">SISA</th>
+                                    <th class="p-2 border border-slate-300">KETERANGAN</th>
                                 </tr>
                             </thead>
-                            <tbody id="stockLedgerBody" class="divide-y divide-slate-100">
+                            <tbody id="stockLedgerBody" class="divide-y divide-slate-200 font-medium">
                                 <!-- Rows -->
                             </tbody>
+                            <tfoot id="stockLedgerFoot"
+                                class="bg-blue-100 font-extrabold text-slate-900 border-t-2 border-slate-400 text-xs">
+                                <!-- Totals -->
+                            </tfoot>
                         </table>
                     </div>
                 </div>
 
                 <!-- TAB: DAFTAR PIUTANG & REKAP NOTA PENDING (Gambar 4: Grouped By Customer) -->
                 <div id="tab-debts" class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                        <h3 class="text-base font-bold text-slate-900">⚠️ Rekap Nota Pending / Piutang Per Customer</h3>
-                        <button onclick="loadDebts()"
-                            class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 tracking-tight">REKAP NOTA PENDING</h3>
+                            <p class="text-xs font-bold text-rose-600 uppercase">DAFTAR PIUTANG CUSTOMER</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="loadDebts()"
+                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Refresh</button>
+                            <button onclick="exportTableToExcel('debtListTable', 'Rekap_Nota_Pending')"
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                📥 Tarik Excel
+                            </button>
+                        </div>
                     </div>
-                    <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table class="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead class="bg-rose-50 text-rose-900 sticky top-0 border-b border-rose-200">
+                    <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
+                        <table id="debtListTable"
+                            class="w-full text-left text-xs text-slate-800 border-collapse border border-slate-300">
+                            <thead
+                                class="bg-slate-200 text-slate-900 sticky top-0 border-b border-slate-400 font-extrabold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
-                                    <th class="p-3">Nama Customer / Tgl Nota Pending</th>
-                                    <th class="p-3 text-right">No Invoice</th>
-                                    <th class="p-3 text-right">Sisa Pembayaran / Total Piutang</th>
-                                    <th class="p-3 text-center">Status Due Date</th>
-                                    <th class="p-3 text-center">Aksi Setor</th>
+                                    <th class="p-2.5 border border-slate-300">Row Labels</th>
+                                    <th class="p-2.5 border border-slate-300 text-right">Sum of SISA PEMBAYARAN</th>
                                 </tr>
                             </thead>
-                            <tbody id="debtListBody" class="divide-y divide-slate-100">
+                            <tbody id="debtListBody" class="divide-y divide-slate-200">
                                 <!-- Rows -->
                             </tbody>
+                            <tfoot id="debtListFoot"
+                                class="bg-blue-200/90 font-black text-slate-900 border-t-2 border-slate-400 text-xs">
+                                <!-- Grand Total -->
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -949,12 +1071,17 @@
         }
 
         async function submitSalesOrder() {
-            const customer_id = document.getElementById('orderCustomer').value;
-            const product_id = document.getElementById('orderProduct').value;
+            const customerSelect = document.getElementById('orderCustomer');
+            const productSelect = document.getElementById('orderProduct');
+            const customer_id = customerSelect.value;
+            const product_id = productSelect.value;
             const quantity = document.getElementById('orderQty').value;
             const unit_price = document.getElementById('orderPrice').value;
             const payment_type = document.getElementById('orderPaymentType').value;
             const due_date = document.getElementById('orderDueDate').value;
+
+            const custText = customerSelect.options[customerSelect.selectedIndex] ? customerSelect.options[customerSelect.selectedIndex].text : 'Customer';
+            const prodText = productSelect.options[productSelect.selectedIndex] ? productSelect.options[productSelect.selectedIndex].text : 'Telur Ayam';
 
             try {
                 const res = await fetch(`${API_BASE}/orders`, {
@@ -971,6 +1098,18 @@
                 if (!res.ok) throw new Error(data.message || data.error);
                 showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
                 loadInitialData();
+
+                // Open Print Modal for instant printing
+                showInvoicePrintModal({
+                    invoice_number: data.invoice.invoice_number,
+                    date: new Date().toLocaleDateString('id-ID'),
+                    customer_name: custText,
+                    status: payment_type === 'CASH' || payment_type === 'TRANSFER' ? 'LUNAS' : 'PENDING (GANTUNG NOTA)',
+                    quantity: quantity,
+                    price: unit_price,
+                    total: Number(quantity) * Number(unit_price || 0),
+                    product_name: prodText
+                });
             } catch (err) {
                 showAlert(err.message, true);
             }
@@ -999,89 +1138,223 @@
         // --- REPORTS LOGIC ---
         async function loadDailySalesReport() {
             const date = document.getElementById('filterDailySalesDate').value;
-            const res = await fetch(`${API_BASE}/reports/daily-sales?date=${date}`, { headers: getAuthHeaders() });
+            const res = await fetch(`${API_BASE}/reports/daily-sales?date=${date || ''}`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
 
             document.getElementById('dailySalesCount').innerText = `${data.length} Nota`;
-            const totalRev = data.reduce((sum, row) => sum + Number(row.total_amount), 0);
+            const totalRev = data.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
             document.getElementById('dailySalesRevenue').innerText = `Rp ${totalRev.toLocaleString('id-ID')}`;
-            document.getElementById('dailySalesDateLabel').innerText = date ? new Date(date).toLocaleDateString('id-ID') : 'Semua Tanggal';
+            document.getElementById('dailySalesDateLabel').innerText = date ? new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Semua Tanggal';
+
+            const monthsIndo = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+
+            let totalQty = 0;
+            let totalAmountSum = 0;
+            let totalPaidSum = 0;
+            let totalSisaSum = 0;
 
             const body = document.getElementById('dailySalesBody');
-            body.innerHTML = data.map(item => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-2.5 text-slate-500">${new Date(item.order_date).toLocaleTimeString('id-ID')}</td>
-                    <td class="p-2.5 font-mono text-blue-700 font-semibold">${item.invoice_number}</td>
-                    <td class="p-2.5 font-semibold text-slate-800">${item.customer_name}</td>
-                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${item.payment_type}</span></td>
-                    <td class="p-2.5 text-right font-bold text-slate-900">Rp ${Number(item.total_amount).toLocaleString('id-ID')}</td>
-                    <td class="p-2.5">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                            ${item.status}
-                        </span>
-                    </td>
+            body.innerHTML = data.map(item => {
+                const dt = new Date(item.created_at);
+                const periode = monthsIndo[dt.getMonth()] || 'OKTOBER';
+                const dayStr = String(dt.getDate()).padStart(2, '0');
+                const monthShortStr = dt.toLocaleString('en-US', { month: 'short' });
+                const tglStr = `${dayStr}-${monthShortStr}`;
+
+                const qty = Number(item.penjualan_qty || 0);
+                const harga = Number(item.harga_satuan || 0);
+                const total = Number(item.total_amount || 0);
+                const paid = Number(item.amount_paid || 0);
+                const sisa = Number(item.sisa_pembayaran || 0);
+
+                totalQty += qty;
+                totalAmountSum += total;
+                totalPaidSum += paid;
+                totalSisaSum += sisa;
+
+                // Abbreviate product name if available (e.g., Telur Besar -> TB, Telur Gemuk -> TG)
+                let code = 'TB';
+                if (item.product_name) {
+                    if (item.product_name.toLowerCase().includes('medium') || item.product_name.toLowerCase().includes('gemuk')) code = 'TG';
+                    else if (item.product_name.toLowerCase().includes('kampong')) code = 'TK';
+                    else code = 'TB';
+                }
+
+                const topStatus = item.invoice_status === 'LUNAS' ? 'LUNAS' : 'PENDING';
+                const topClass = topStatus === 'LUNAS' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-rose-100 text-rose-800 font-bold';
+
+                const cekMethod = item.last_payment_method || item.payment_type || '-';
+                const transferTgl = item.last_payment_date ? `${String(new Date(item.last_payment_date).getDate()).padStart(2, '0')}-${new Date(item.last_payment_date).toLocaleString('en-US', { month: 'short' })}` : '-';
+
+                return `
+                    <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
+                        <td class="p-2 border border-slate-300 text-slate-700">${tglStr}</td>
+                        <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.customer_name}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-800">${qty.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-center font-bold text-slate-700">${code}</td>
+                        <td class="p-2 border border-slate-300 text-right text-slate-700">${harga ? harga.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-900">${total.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] ${topClass}">${topStatus}</span></td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-emerald-800 bg-amber-50/50">${paid > 0 ? paid.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-rose-700">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-center font-semibold text-slate-700">${cekMethod}</td>
+                        <td class="p-2 border border-slate-300 text-center text-slate-600">${transferTgl}</td>
+                    </tr>
+                `;
+            }).join('') || '<tr><td colspan="12" class="p-4 text-center text-slate-400">Tidak ada transaksi pada tanggal ini</td></tr>';
+
+            // Render Footer Totals Row
+            const foot = document.getElementById('dailySalesFoot');
+            foot.innerHTML = `
+                <tr>
+                    <td colspan="3" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
+                    <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalQty.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalAmountSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400 text-right text-emerald-900 font-black bg-amber-200/60">${totalPaidSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400 text-right text-rose-900 font-black">${totalSisaSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400"></td>
                 </tr>
-            `).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ada transaksi pada tanggal ini</td></tr>';
+            `;
         }
 
         async function loadDailyDepositsReport() {
             const date = document.getElementById('filterDepositDate').value;
-            const res = await fetch(`${API_BASE}/reports/daily-deposits?date=${date}`, { headers: getAuthHeaders() });
+            const res = await fetch(`${API_BASE}/reports/daily-deposits?date=${date || ''}`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
 
+            const monthsIndo = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+
+            let totalQty = 0;
+            let totalAmountSum = 0;
+            let totalDepositSum = 0;
+            let totalSisaSum = 0;
+
             const body = document.getElementById('dailyDepositsBody');
-            body.innerHTML = data.map(item => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-2.5 font-mono text-slate-700">${item.payment_number}</td>
-                    <td class="p-2.5 font-semibold text-slate-800">${item.customer_name}</td>
-                    <td class="p-2.5 font-mono text-blue-600">${item.invoice_number}</td>
-                    <td class="p-2.5 font-bold text-emerald-700">Rp ${Number(item.amount).toLocaleString('id-ID')}</td>
-                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">${item.payment_method}</span></td>
-                    <td class="p-2.5 text-slate-500">${item.reference_number || '-'}</td>
-                    <td class="p-2.5">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.validation_status === 'VALIDATED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                            ${item.validation_status}
-                        </span>
-                    </td>
+            body.innerHTML = data.map(item => {
+                const dtNota = new Date(item.tgl_nota || item.tgl_transfer);
+                const periode = monthsIndo[dtNota.getMonth()] || 'OKTOBER';
+                const dayStr = String(dtNota.getDate()).padStart(2, '0');
+                const monthShortStr = dtNota.toLocaleString('en-US', { month: 'short' });
+                const tglNotaStr = `${dayStr}-${monthShortStr}`;
+
+                const qty = Number(item.penjualan_qty || 0);
+                const harga = Number(item.harga_satuan || 0);
+                const totalNota = Number(item.total_nota || 0);
+                const depositAmt = Number(item.setoran_amount || item.amount || 0);
+                const sisa = Number(item.sisa_pembayaran || 0);
+
+                totalQty += qty;
+                totalAmountSum += totalNota;
+                totalDepositSum += depositAmt;
+                totalSisaSum += sisa;
+
+                let code = 'TB';
+                if (item.product_name) {
+                    if (item.product_name.toLowerCase().includes('medium') || item.product_name.toLowerCase().includes('gemuk')) code = 'TG';
+                    else if (item.product_name.toLowerCase().includes('kampong')) code = 'TK';
+                    else code = 'TB';
+                }
+
+                const dtTransfer = new Date(item.tgl_transfer);
+                const transferTglStr = `${String(dtTransfer.getDate()).padStart(2, '0')}-${dtTransfer.toLocaleString('en-US', { month: 'short' })}`;
+                const cekMethod = item.payment_method ? item.payment_method.toUpperCase() : 'SETOR';
+
+                return `
+                    <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
+                        <td class="p-2 border border-slate-300 text-slate-700">${tglNotaStr}</td>
+                        <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.customer_name}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-800">${qty.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-center font-bold text-slate-700">${code}</td>
+                        <td class="p-2 border border-slate-300 text-right text-slate-700">${harga ? harga.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-900">${totalNota.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">LUNAS</span></td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-amber-950 bg-amber-100/70">${depositAmt.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-400">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-center font-semibold text-slate-700">${cekMethod}</td>
+                        <td class="p-2 border border-slate-300 text-center font-bold text-slate-800">${transferTglStr}</td>
+                    </tr>
+                `;
+            }).join('') || '<tr><td colspan="12" class="p-4 text-center text-slate-400">Tidak ada setoran pada tanggal ini</td></tr>';
+
+            const foot = document.getElementById('dailyDepositsFoot');
+            foot.innerHTML = `
+                <tr>
+                    <td colspan="3" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
+                    <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalQty.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalAmountSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400 text-right text-amber-950 font-black bg-amber-200/80">${totalDepositSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalSisaSum > 0 ? totalSisaSum.toLocaleString('id-ID') : '-'}</td>
+                    <td class="p-2 border border-slate-400"></td>
+                    <td class="p-2 border border-slate-400"></td>
                 </tr>
-            `).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-400">Tidak ada setoran pada tanggal ini</td></tr>';
+            `;
         }
 
         async function loadMonthlyRecapReport() {
-            const res = await fetch(`${API_BASE}/reports/monthly-recap`, { headers: getAuthHeaders() });
+            const mEl = document.getElementById('filterMonthlyRecapMonth');
+            const monthVal = mEl ? mEl.value : '10';
+            const res = await fetch(`${API_BASE}/reports/monthly-recap?month=${monthVal}`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
 
+            let sumPenjualan = 0;
+            let sumLunas = 0;
+            let sumPending = 0;
+            let sumKrat = 0;
+
             const body = document.getElementById('monthlyRecapBody');
-            body.innerHTML = data.map(item => `
-                <tr class="hover:bg-blue-50/50">
-                    <td class="p-3 font-semibold text-slate-800">${new Date(item.tgl_nota).toLocaleDateString('id-ID')}</td>
-                    <td class="p-3 text-right font-bold text-slate-900">Rp ${Number(item.total_penjualan).toLocaleString('id-ID')}</td>
-                    <td class="p-3 text-right font-semibold text-emerald-700">Rp ${Number(item.total_lunas).toLocaleString('id-ID')}</td>
-                    <td class="p-3 text-right font-semibold text-rose-700">Rp ${Number(item.total_pending).toLocaleString('id-ID')}</td>
-                    <td class="p-3 text-right font-extrabold text-blue-800">${item.total_krat}</td>
-                </tr>
-            `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data rekap penjualan</td></tr>';
+            body.innerHTML = data.map(item => {
+                const penjualan = Number(item.total_sales || 0);
+                const lunas = Number(item.total_lunas || 0);
+                const pending = Number(item.total_pending || 0);
+                const krat = Number(item.total_krat || 0);
 
-            // Calculate Footers
-            if (data.length > 0) {
-                const sumPenjualan = data.reduce((s, r) => s + Number(r.total_penjualan), 0);
-                const sumLunas = data.reduce((s, r) => s + Number(r.total_lunas), 0);
-                const sumPending = data.reduce((s, r) => s + Number(r.total_pending), 0);
-                const sumKrat = data.reduce((s, r) => s + Number(r.total_krat), 0);
+                sumPenjualan += penjualan;
+                sumLunas += lunas;
+                sumPending += pending;
+                sumKrat += krat;
 
-                document.getElementById('monthlyRecapFoot').innerHTML = `
-                    <tr>
-                        <td class="p-3">Grand Total</td>
-                        <td class="p-3 text-right text-slate-900">Rp ${sumPenjualan.toLocaleString('id-ID')}</td>
-                        <td class="p-3 text-right text-emerald-700">Rp ${sumLunas.toLocaleString('id-ID')}</td>
-                        <td class="p-3 text-right text-rose-700">Rp ${sumPending.toLocaleString('id-ID')}</td>
-                        <td class="p-3 text-right text-blue-900">${sumKrat} Krat</td>
+                let dateFormatted = item.date_label;
+                if (!dateFormatted && item.date_raw) {
+                    const dt = new Date(item.date_raw);
+                    const dd = String(dt.getDate()).padStart(2, '0');
+                    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                    const yyyy = dt.getFullYear();
+                    dateFormatted = `${dd}/${mm}/${yyyy}`;
+                }
+
+                return `
+                    <tr class="hover:bg-blue-50/60 border-b border-slate-200">
+                        <td class="p-2.5 border border-slate-300 font-semibold text-slate-800">${dateFormatted || '-'}</td>
+                        <td class="p-2.5 border border-slate-300 text-right font-bold text-slate-900">${penjualan.toLocaleString('id-ID')}</td>
+                        <td class="p-2.5 border border-slate-300 text-right font-bold text-emerald-800">${lunas.toLocaleString('id-ID')}</td>
+                        <td class="p-2.5 border border-slate-300 text-right font-bold text-rose-700">${pending.toLocaleString('id-ID')}</td>
+                        <td class="p-2.5 border border-slate-300 text-right font-extrabold text-blue-900">${krat.toLocaleString('id-ID')}</td>
                     </tr>
                 `;
-            }
+            }).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data rekap penjualan</td></tr>';
+
+            const foot = document.getElementById('monthlyRecapFoot');
+            foot.innerHTML = `
+                <tr>
+                    <td class="p-2.5 border border-slate-400 font-extrabold text-slate-900">Grand Total</td>
+                    <td class="p-2.5 border border-slate-400 text-right text-slate-950 font-black">${sumPenjualan.toLocaleString('id-ID')}</td>
+                    <td class="p-2.5 border border-slate-400 text-right text-emerald-900 font-black">${sumLunas.toLocaleString('id-ID')}</td>
+                    <td class="p-2.5 border border-slate-400 text-right text-rose-900 font-black">${sumPending.toLocaleString('id-ID')}</td>
+                    <td class="p-2.5 border border-slate-400 text-right text-blue-950 font-black">${sumKrat.toLocaleString('id-ID')}</td>
+                </tr>
+            `;
         }
 
         // --- STOCK AUDIT & ADJUSTMENT MODAL ---
@@ -1121,29 +1394,76 @@
         }
 
         async function loadStockLedger() {
-            const res = await fetch(`${API_BASE}/stock/ledger`, { headers: getAuthHeaders() });
+            const pEl = document.getElementById('filterLedgerProduct');
+            const pVal = pEl ? pEl.value : 'ALL';
+            const res = await fetch(`${API_BASE}/stock/ledger?product_id=${pVal}`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
+
+            let totalIn = 0;
+            let totalOut = 0;
+            let totalDamaged = 0;
+            let totalAdj = 0;
+            let latestSisa = 0;
+
+            if (data.length > 0) {
+                latestSisa = Number(data[0].balance_after || 0);
+            }
+
             const body = document.getElementById('stockLedgerBody');
-            body.innerHTML = data.map(item => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-2.5 text-slate-500">${new Date(item.created_at).toLocaleString('id-ID')}</td>
-                    <td class="p-2.5 font-semibold text-slate-800">${item.product_name}</td>
-                    <td class="p-2.5">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.movement_type === 'BARANG_MASUK' ? 'bg-emerald-100 text-emerald-800' :
-                    item.movement_type === 'PENJUALAN' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800'
-                }">
-                            ${item.movement_type}
-                        </span>
-                    </td>
-                    <td class="p-2.5 font-bold text-slate-800">${item.quantity} ${item.unit}</td>
-                    <td class="p-2.5 font-bold text-rose-600">${item.damaged_qty || 0}</td>
-                    <td class="p-2.5 font-bold text-blue-600">${item.physical_stock !== null ? item.physical_stock : '-'}</td>
-                    <td class="p-2.5 font-bold ${item.adjustment_qty >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${item.adjustment_qty !== 0 ? item.adjustment_qty : '-'}</td>
-                    <td class="p-2.5 text-amber-700 font-extrabold">${item.balance_after}</td>
-                    <td class="p-2.5 text-slate-500">${item.notes || '-'}</td>
-                </tr>
-            `).join('') || '<tr><td colspan="9" class="p-4 text-center text-slate-400">Belum ada riwayat pergerakan stok</td></tr>';
+            body.innerHTML = data.map(item => {
+                const dt = new Date(item.created_at);
+                const dayStr = String(dt.getDate()).padStart(2, '0');
+                const monthShortStr = dt.toLocaleString('en-US', { month: 'short' });
+                const tglStr = `${dayStr}-${monthShortStr}`;
+
+                const qty = Number(item.quantity || 0);
+                const inQty = item.movement_type === 'BARANG_MASUK' ? qty : 0;
+                const outQty = item.movement_type === 'PENJUALAN' ? qty : 0;
+                const damaged = Number(item.damaged_qty || 0);
+                const physical = item.physical_stock !== null && item.physical_stock !== undefined ? Number(item.physical_stock) : null;
+                const adj = Number(item.adjustment_qty || 0);
+                const sisa = Number(item.balance_after || 0);
+                const harga = Number(item.price_per_unit || 0);
+
+                totalIn += inQty;
+                totalOut += outQty;
+                totalDamaged += damaged;
+                totalAdj += adj;
+
+                return `
+                    <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 font-semibold text-slate-700">${tglStr}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-emerald-800">${inQty > 0 ? inQty.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right text-slate-700">${harga > 0 ? harga.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-amber-900">${outQty > 0 ? outQty.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-rose-700">${damaged > 0 ? damaged.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-blue-700">${physical !== null ? physical.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-purple-700">${adj !== 0 ? (adj > 0 ? `+${adj}` : adj) : '-'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-black bg-blue-50 text-slate-900">${sisa.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-slate-600 font-medium">
+                            <span class="font-bold text-slate-800">[${item.product_name}]</span> ${item.notes || item.movement_type}
+                        </td>
+                    </tr>
+                `;
+            }).join('') || '<tr><td colspan="9" class="p-4 text-center text-slate-400">Belum ada riwayat pergerakan stok</td></tr>';
+
+            const foot = document.getElementById('stockLedgerFoot');
+            if (foot) {
+                foot.innerHTML = `
+                    <tr>
+                        <td class="p-2 border border-slate-400 font-extrabold uppercase">TOTAL</td>
+                        <td class="p-2 border border-slate-400 text-right text-emerald-950 font-black">${totalIn > 0 ? totalIn.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-400"></td>
+                        <td class="p-2 border border-slate-400 text-right text-amber-950 font-black">${totalOut > 0 ? totalOut.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-400 text-right text-rose-950 font-black">${totalDamaged > 0 ? totalDamaged.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-400"></td>
+                        <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${totalAdj !== 0 ? totalAdj.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-blue-200/80">${latestSisa.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-400"></td>
+                    </tr>
+                `;
+            }
         }
 
         // --- DEBTS (GAMBAR 4 MATCHING: GROUPED BY CUSTOMER) ---
@@ -1153,66 +1473,71 @@
             const data = await res.json();
 
             let totalPiutangGrand = 0;
-            data.forEach(cust => { totalPiutangGrand += Number(cust.total_customer_debt); });
-            document.getElementById('statDebts').innerText = `Rp ${totalPiutangGrand.toLocaleString('id-ID')}`;
+            data.forEach(cust => {
+                const custTotal = Number(cust.total_remaining_debt || cust.total_customer_debt || 0);
+                totalPiutangGrand += custTotal;
+            });
+            const statDebtsEl = document.getElementById('statDebts');
+            if (statDebtsEl) statDebtsEl.innerText = `Rp ${totalPiutangGrand.toLocaleString('id-ID')}`;
 
             const body = document.getElementById('debtListBody');
-
             let html = '';
+
             data.forEach(cust => {
-                // Header Row per Customer
+                const custDebt = Number(cust.total_remaining_debt || cust.total_customer_debt || 0);
+                const invList = cust.invoices_list || cust.invoices || [];
+
+                // Customer Header Row
                 html += `
-                    <tr class="bg-slate-100 font-bold border-t-2 border-slate-300">
-                        <td colspan="2" class="p-2.5 text-slate-900 uppercase tracking-wide">
-                            📂 ${cust.customer_name}
+                    <tr class="bg-slate-100 font-extrabold border-t border-b border-slate-300">
+                        <td class="p-2 border border-slate-300 text-slate-900 tracking-tight">
+                            <span class="text-slate-500 font-mono mr-1">⊟</span> ${cust.customer_name}
                         </td>
-                        <td class="p-2.5 text-right text-rose-700 font-extrabold text-sm">
-                            Rp ${Number(cust.total_customer_debt).toLocaleString('id-ID')}
-                        </td>
-                        <td colspan="2" class="p-2.5 text-center text-slate-500 font-normal text-[11px]">
-                            ${cust.invoices.length} Nota Pending
+                        <td class="p-2 border border-slate-300 text-right text-slate-900 font-black">
+                            ${custDebt.toLocaleString('id-ID')}
                         </td>
                     </tr>
                 `;
 
                 // Invoices Sub-rows
-                cust.invoices.forEach(inv => {
+                invList.forEach(inv => {
+                    const invDebt = Number(inv.remaining_debt || (Number(inv.amount_due) - Number(inv.amount_paid)) || 0);
+                    let dateStr = '';
+                    const dt = new Date(inv.created_at || inv.order_date || inv.due_date);
+                    if (!isNaN(dt.getTime())) {
+                        const dd = String(dt.getDate()).padStart(2, '0');
+                        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                        const yyyy = dt.getFullYear();
+                        dateStr = `${dd}/${mm}/${yyyy}`;
+                    } else {
+                        dateStr = '-';
+                    }
+
                     html += `
-                        <tr class="hover:bg-slate-50 border-b border-slate-100">
-                            <td class="p-2.5 pl-8 text-slate-600">
-                                📅 Tgl Nota: ${new Date(inv.order_date).toLocaleDateString('id-ID')}
+                        <tr class="hover:bg-amber-50/40 border-b border-slate-200">
+                            <td class="p-2 pl-6 border border-slate-300 text-slate-700 font-medium">
+                                ${dateStr}
                             </td>
-                            <td class="p-2.5 text-right font-mono text-blue-700 font-semibold">
-                                ${inv.invoice_number}
-                            </td>
-                            <td class="p-2.5 text-right text-rose-600 font-semibold">
-                                Rp ${Number(inv.remaining_debt).toLocaleString('id-ID')}
-                            </td>
-                            <td class="p-2.5 text-center">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${inv.debt_status === 'OVERDUE' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}">
-                                    ${inv.debt_status}
-                                </span>
-                            </td>
-                            <td class="p-2.5 text-center">
-                                <button onclick="promptSubmitPayment(${inv.invoice_id}, ${inv.remaining_debt})" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-semibold px-2.5 py-1 rounded shadow-sm">
-                                    Input Setoran
-                                </button>
+                            <td class="p-2 border border-slate-300 text-right text-slate-800 font-bold">
+                                ${invDebt.toLocaleString('id-ID')}
                             </td>
                         </tr>
                     `;
                 });
             });
 
-            // Grand Total Row
-            html += `
-                <tr class="bg-rose-100 font-extrabold border-t-2 border-rose-400">
-                    <td colspan="2" class="p-3 text-rose-950 text-sm">GRAND TOTAL PIUTANG REKAP NOTA PENDING</td>
-                    <td class="p-3 text-right text-rose-900 text-base">Rp ${totalPiutangGrand.toLocaleString('id-ID')}</td>
-                    <td colspan="2"></td>
-                </tr>
-            `;
+            body.innerHTML = html || '<tr><td colspan="2" class="p-4 text-center text-slate-400">Tidak ada nota pending</td></tr>';
 
-            body.innerHTML = html || '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada nota pending</td></tr>';
+            // Grand Total Footer
+            const foot = document.getElementById('debtListFoot');
+            if (foot) {
+                foot.innerHTML = `
+                    <tr>
+                        <td class="p-2.5 border border-slate-400 font-extrabold text-slate-900">Grand Total</td>
+                        <td class="p-2.5 border border-slate-400 text-right text-slate-950 font-black">${totalPiutangGrand.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            }
         }
 
         async function promptSubmitPayment(invoice_id, remaining) {
@@ -1285,7 +1610,150 @@
                 container.classList.add('hidden');
             }
         }
+
+        // --- EXPORT TO EXCEL UTILITY ---
+        function exportTableToExcel(tableId, filename = 'Laporan_Distribusi_Telur') {
+            const table = document.getElementById(tableId);
+            if (!table) return alert('Tabel tidak ditemukan!');
+            try {
+                const wb = XLSX.utils.table_to_book(table, { sheet: "Laporan" });
+                const dateStr = new Date().toISOString().split('T')[0];
+                XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
+            } catch (err) {
+                alert('Gagal mengeksport Excel: ' + err.message);
+            }
+        }
+
+        // --- CETAK NOTA / INVOICE PRINTING UTILITY ---
+        function showInvoicePrintModal(invData) {
+            document.getElementById('invNoPrint').innerText = invData.invoice_number || 'INV-001';
+            document.getElementById('invDatePrint').innerText = invData.date || new Date().toLocaleDateString('id-ID');
+            document.getElementById('invCustPrint').innerText = invData.customer_name || 'Pelanggan';
+            document.getElementById('invStatusPrint').innerText = invData.status || 'CONFIRMED';
+
+            const itemsBody = document.getElementById('invItemsPrint');
+            const itemsList = invData.items || [];
+
+            if (itemsList.length > 0) {
+                itemsBody.innerHTML = itemsList.map(item => `
+                    <tr class="border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.name || item.product_name || 'Telur Ayam Ras'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-800">${item.quantity} krat</td>
+                        <td class="p-2 border border-slate-300 text-right">Rp ${Number(item.price || item.unit_price || 0).toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-right font-extrabold text-slate-900">Rp ${Number(item.subtotal || (item.quantity * (item.price || item.unit_price)) || 0).toLocaleString('id-ID')}</td>
+                    </tr>
+                `).join('');
+            } else {
+                itemsBody.innerHTML = `
+                    <tr class="border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 font-bold text-slate-900">${invData.product_name || 'Telur Ayam Ras'}</td>
+                        <td class="p-2 border border-slate-300 text-right font-bold text-slate-800">${invData.quantity || 1} krat</td>
+                        <td class="p-2 border border-slate-300 text-right">Rp ${Number(invData.price || invData.harga_satuan || 0).toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-300 text-right font-extrabold text-slate-900">Rp ${Number(invData.total || invData.total_amount || 0).toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('invTotalPrint').innerText = `Rp ${Number(invData.total || invData.total_amount || 0).toLocaleString('id-ID')}`;
+            document.getElementById('printModal').classList.remove('hidden');
+        }
+
+        function closePrintModal() {
+            document.getElementById('printModal').classList.add('hidden');
+        }
+
+        function triggerPrintInvoice() {
+            window.print();
+        }
     </script>
+
+    <!-- MODAL POPUP CETAK NOTA PENJUALAN -->
+    <div id="printModal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div id="printInvoiceArea"
+            class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl text-slate-900 font-sans space-y-4">
+            <!-- Header Logo & Store -->
+            <div class="flex justify-between items-start border-b-2 border-slate-900 pb-3">
+                <div class="flex items-center gap-3">
+                    <img src="/images/DJS.png" class="h-12 w-12 object-contain rounded-lg border">
+                    <div>
+                        <h2 class="text-sm font-black text-slate-900 leading-none uppercase">DEWATA JAYA SUPPLIER</h2>
+                        <p class="text-[11px] font-bold text-amber-600">BALI BADU FARMINDO</p>
+                        <p class="text-[9px] text-slate-500">Distribusi Telur Ayam Ras & Kampong | WA: 081234567890</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span
+                        class="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-900 text-amber-400">NOTA
+                        PENJUALAN</span>
+                    <p id="invNoPrint" class="text-xs font-mono font-extrabold text-slate-800 mt-1">INV-202610-001</p>
+                    <p id="invDatePrint" class="text-[10px] text-slate-500">05/10/2026</p>
+                </div>
+            </div>
+
+            <!-- Customer & Status Info -->
+            <div class="grid grid-cols-2 gap-2 text-xs border border-slate-200 p-2.5 rounded-lg bg-slate-50">
+                <div>
+                    <span class="text-[9px] text-slate-500 uppercase font-bold block">Pelanggan / Toko:</span>
+                    <span id="invCustPrint" class="font-extrabold text-slate-900 text-sm">WARUNG BU TIEN</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9px] text-slate-500 uppercase font-bold block">Status Transaksi:</span>
+                    <span id="invStatusPrint"
+                        class="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800">LUNAS</span>
+                </div>
+            </div>
+
+            <!-- Rincian Produk -->
+            <table class="w-full text-xs text-left border-collapse border border-slate-300">
+                <thead class="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                    <tr>
+                        <th class="p-2 border border-slate-300">Item Produk</th>
+                        <th class="p-2 border border-slate-300 text-right">Qty</th>
+                        <th class="p-2 border border-slate-300 text-right">Harga Satuan</th>
+                        <th class="p-2 border border-slate-300 text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="invItemsPrint" class="divide-y divide-slate-200">
+                    <!-- Rows -->
+                </tbody>
+            </table>
+
+            <!-- Total Payment -->
+            <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-200">
+                <div class="text-[10px] text-slate-500">
+                    <p>• Transfer BCA: <span class="font-bold text-slate-900">1468924624</span></p>
+                    <p>• Terima kasih atas kepercayaannya!</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold block">Total Bayar:</span>
+                    <span id="invTotalPrint" class="text-base font-black text-slate-950">Rp 500.000</span>
+                </div>
+            </div>
+
+            <!-- Tanda Tangan -->
+            <div
+                class="grid grid-cols-2 text-center text-[10px] pt-4 font-medium text-slate-600 border-t border-dashed border-slate-300">
+                <div>
+                    <p class="mb-8">Tanda Terima Customer,</p>
+                    <p class="font-bold border-t border-slate-300 mx-6 pt-1">( ........................... )</p>
+                </div>
+                <div>
+                    <p class="mb-8">Hormat Kami (Admin/Sales),</p>
+                    <p class="font-bold border-t border-slate-300 mx-6 pt-1">( Dewata Jaya Supplier )</p>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons (hidden during printing) -->
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 no-print">
+                <button onclick="closePrintModal()"
+                    class="px-4 py-1.5 text-xs font-semibold bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg">Tutup</button>
+                <button onclick="triggerPrintInvoice()"
+                    class="px-4 py-1.5 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg shadow-sm flex items-center gap-1">
+                    🖨️ Cetak Nota Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
