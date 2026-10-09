@@ -707,6 +707,7 @@
                                     <th class="p-2 border border-slate-300 text-right">SISA PEMBAYARAN</th>
                                     <th class="p-2 border border-slate-300 text-center">CEK</th>
                                     <th class="p-2 border border-slate-300 text-center">TRANSFER</th>
+                                    <th class="p-2 border border-slate-300 text-center bg-amber-200 text-amber-950">AKSI</th>
                                 </tr>
                             </thead>
                             <tbody id="dailySalesBody" class="divide-y divide-slate-200">
@@ -1178,13 +1179,25 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({ name, phone, address, credit_limit: parseFloat(credit_limit) || 5000000 })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan customer');
                 showAlert(`Customer Baru "${data.customer.name}" Berhasil Disimpan!`);
                 document.getElementById('customerForm').reset();
                 loadInitialData();
             } catch (err) {
                 showAlert(err.message, true);
+            }
+        }
+
+        async function safeJsonResponse(res) {
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                if (!res.ok) {
+                    throw new Error(`Server Error (${res.status}): ${text.substring(0, 100) || res.statusText}`);
+                }
+                throw new Error('Respon server bukan format JSON valid: ' + text.substring(0, 80));
             }
         }
 
@@ -1205,8 +1218,8 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({ name, unit, current_stock: parseFloat(current_stock), price_per_unit: parseFloat(price_per_unit) })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan produk');
                 showAlert(data.message || 'Produk baru berhasil ditambahkan!');
                 document.getElementById('productForm').reset();
                 loadInitialData();
@@ -1295,8 +1308,8 @@
                         items: [{ product_id, quantity, unit_price }]
                     })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.message || data.error);
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.message || data.error || 'Gagal menyimpan order');
                 showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
                 loadInitialData();
 
@@ -1327,8 +1340,8 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({ product_id, quantity, notes })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan barang masuk');
                 showAlert(`Barang Masuk Berhasil Diinput! Stok Terbaru: ${data.new_stock}`);
                 loadInitialData();
             } catch (err) {
@@ -1388,6 +1401,17 @@
                 const cekMethod = item.last_payment_method || item.payment_type || '-';
                 const transferTgl = item.last_payment_date ? `${String(new Date(item.last_payment_date).getDate()).padStart(2, '0')}-${new Date(item.last_payment_date).toLocaleString('en-US', { month: 'short' })}` : '-';
 
+                const printPayload = JSON.stringify({
+                    invoice_number: item.invoice_number || `INV-${item.id}`,
+                    date: tglStr,
+                    customer_name: item.customer_name,
+                    status: topStatus,
+                    quantity: qty,
+                    price: harga,
+                    total: total,
+                    product_name: item.product_name || 'Telur Ayam Ras'
+                }).replace(/"/g, '&quot;');
+
                 return `
                     <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
                         <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
@@ -1402,9 +1426,15 @@
                         <td class="p-2 border border-slate-300 text-right font-bold text-rose-700">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-center font-semibold text-slate-700">${cekMethod}</td>
                         <td class="p-2 border border-slate-300 text-center text-slate-600">${transferTgl}</td>
+                        <td class="p-2 border border-slate-300 text-center">
+                            <button onclick="showInvoicePrintModal(${printPayload})" 
+                                class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-1 mx-auto transition">
+                                🖨️ Cetak
+                            </button>
+                        </td>
                     </tr>
                 `;
-            }).join('') || '<tr><td colspan="12" class="p-4 text-center text-slate-400">Tidak ada transaksi pada tanggal ini</td></tr>';
+            }).join('') || '<tr><td colspan="13" class="p-4 text-center text-slate-400">Tidak ada transaksi pada tanggal ini</td></tr>';
 
             // Render Footer Totals Row
             const foot = document.getElementById('dailySalesFoot');
@@ -1418,6 +1448,7 @@
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400 text-right text-emerald-900 font-black bg-amber-200/60">${totalPaidSum.toLocaleString('id-ID')}</td>
                     <td class="p-2 border border-slate-400 text-right text-rose-900 font-black">${totalSisaSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
                 </tr>
@@ -1584,8 +1615,8 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({ product_id, damaged_qty, physical_stock, adjustment_qty, notes })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan penyesuaian stok');
                 showAlert(data.message);
                 hideAdjustmentModal();
                 loadInitialData();
