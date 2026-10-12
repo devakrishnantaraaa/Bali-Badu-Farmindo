@@ -552,156 +552,164 @@
                     </div>
                 </div>
 
-                <!-- TAB: INPUT CUSTOMER BARU (Marketing & Admin) -->
-                <div id="tab-customer"
-                    class="hidden max-w-2xl bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-                    <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
-                        <h2 class="text-base font-bold text-slate-900">👤 Form Input Data Customer Baru</h2>
-                        <span
-                            class="text-xs bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded border border-emerald-200 font-medium">Marketing
-                            Field Input</span>
-                    </div>
+                <!-- TAB: DATA CUSTOMER (Grid 2 Kolom: Form Input & Tabel Terdaftar) -->
+                <div id="tab-customer" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <!-- Card Kiri: Form Input Customer Baru (4 Kolom) -->
+                        <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-sm space-y-4">
+                            <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+                                <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>👤</span> Form Tambah Customer
+                                </h2>
+                                <span class="text-[10px] bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded border border-emerald-200 font-semibold">
+                                    Input Baru
+                                </span>
+                            </div>
 
-                    <form id="customerForm" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama
-                                Customer / Toko / Depo</label>
-                            <input type="text" id="custName" required placeholder="Contoh: WARUNG BU TIEN / DEPOT LARIS"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                            <form id="customerForm" class="space-y-3.5">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Customer / Toko / Depo</label>
+                                    <input type="text" id="custName" required placeholder="Contoh: WARUNG BU TIEN / DEPOT LARIS"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nomor HP / WhatsApp</label>
+                                    <input type="text" id="custPhone" placeholder="Contoh: 081234567890"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Termin Pembayaran</label>
+                                    <select id="custPaymentTerms"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 font-medium">
+                                        <option value="REGULER">Reguler</option>
+                                        <option value="TGL_15_30">Pembayaran di Tgl 15 dan Tgl 30</option>
+                                        <option value="REKAP_BULANAN">Pembayaran Rekapan 1 Bulan</option>
+                                        <option value="GANTUNG_1_NOTA">Gantung 1 Nota</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Alamat Lengkap</label>
+                                    <textarea id="custAddress" rows="2" placeholder="Alamat pengiriman telur..."
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-500"></textarea>
+                                </div>
+
+                                <button type="button" onclick="submitNewCustomer()"
+                                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition text-sm flex items-center justify-center gap-1.5">
+                                    <span>➕</span> Simpan Data Customer Baru
+                                </button>
+                            </form>
                         </div>
 
-                        <div>
-                            <label
-                                class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nomor
-                                HP / WhatsApp</label>
-                            <input type="text" id="custPhone" placeholder="Contoh: 081234567890"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
-                        </div>
-
-                        <div>
-                            <label
-                                class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Alamat
-                                Lengkap</label>
-                            <textarea id="custAddress" rows="2" placeholder="Alamat pengiriman telur..."
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500"></textarea>
-                        </div>
-
-                        <div>
-                            <label
-                                class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Termin Pembayaran</label>
-                            <select id="custPaymentTerms"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
-                                <option value="REGULER">Reguler</option>
-                                <option value="TGL_15_30">Pembayaran di Tgl 15 dan Tgl 30</option>
-                                <option value="REKAP_BULANAN">Pembayaran Rekapan 1 Bulan</option>
-                                <option value="GANTUNG_1_NOTA">Gantung 1 Nota</option>
-                            </select>
-                        </div>
-
-                        <button type="button" onclick="submitNewCustomer()"
-                            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm">
-                            Simpan Data Customer Baru
-                        </button>
-                    </form>
-
-                    <!-- TABEL DAFTAR CUSTOMER TERDAFTAR -->
-                    <div class="pt-6 border-t border-slate-200 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                                <span>📋</span> Daftar Customer Terdaftar (<span id="countCustomerTable">0</span>)
-                            </h3>
-                            <button onclick="loadInitialData()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded border border-slate-200 font-semibold">
-                                Refresh Data
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto max-h-[350px] overflow-y-auto border border-slate-200 rounded-lg">
-                            <table id="customerMasterTable" class="w-full text-left text-xs border-collapse">
-                                <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                                    <tr>
-                                        <th class="p-2 border border-slate-200">NAMA CUSTOMER</th>
-                                        <th class="p-2 border border-slate-200">NO. HP / WA</th>
-                                        <th class="p-2 border border-slate-200">TERMIN PEMBAYARAN</th>
-                                        <th class="p-2 border border-slate-200">ALAMAT</th>
-                                        <th class="p-2 border border-slate-200 text-center w-28">AKSI</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="customerTableBody" class="divide-y divide-slate-100 bg-white">
-                                    <!-- Rows -->
-                                </tbody>
-                            </table>
+                        <!-- Card Kanan: Tabel Customer Terdaftar (7-8 Kolom Lebar) -->
+                        <div class="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-sm space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📋</span> Daftar Customer Terdaftar (<span id="countCustomerTable">0</span>)
+                                </h3>
+                                <button onclick="loadInitialData()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg border border-slate-200 font-semibold transition">
+                                    🔄 Refresh Data
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-slate-200 rounded-lg">
+                                <table id="customerMasterTable" class="w-full text-left text-xs border-collapse">
+                                    <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5 border border-slate-200">NAMA CUSTOMER</th>
+                                            <th class="p-2.5 border border-slate-200">NO. HP / WA</th>
+                                            <th class="p-2.5 border border-slate-200">TERMIN</th>
+                                            <th class="p-2.5 border border-slate-200">ALAMAT</th>
+                                            <th class="p-2.5 border border-slate-200 text-center w-28">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="customerTableBody" class="divide-y divide-slate-100 bg-white">
+                                        <!-- Rows -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- TAB: INPUT PRODUK BARU (Master Produk) -->
-                <div id="tab-product"
-                    class="hidden max-w-2xl bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
-                    <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
-                        <h2 class="text-base font-bold text-slate-900">📦 Form Master Input Produk Baru</h2>
-                        <span
-                            class="text-xs bg-amber-50 text-amber-800 px-2.5 py-1 rounded border border-amber-200 font-medium">Sistem Catalog</span>
-                    </div>
-
-                    <form id="productForm" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Produk / Varian Telur</label>
-                            <input type="text" id="prodName" required placeholder="Contoh: Telur Ayam Ras Super / Telur Omega Blitar"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan Produk</label>
-                                <select id="prodUnit" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-semibold">
-                                    <option value="krat" selected>krat (Krat Telur)</option>
-                                    <option value="kg">kg (Kilogram)</option>
-                                    <option value="butir">butir</option>
-                                </select>
+                <!-- TAB: DATA PRODUK & KATALOG (Grid 2 Kolom: Form Input & Tabel Terdaftar) -->
+                <div id="tab-product" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <!-- Card Kiri: Form Input Produk Baru (5 Kolom) -->
+                        <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-sm space-y-4">
+                            <div class="border-b border-slate-100 pb-3 flex justify-between items-center">
+                                <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📦</span> Form Tambah Produk Baru
+                                </h2>
+                                <span class="text-[10px] bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded border border-amber-200 font-semibold">
+                                    Katalog Master
+                                </span>
                             </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Stok Awal (Qty)</label>
-                                <input type="number" id="prodStock" value="0" placeholder="0"
-                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+
+                            <form id="productForm" class="space-y-3.5">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Varian Produk Telur</label>
+                                    <input type="text" id="prodName" required placeholder="Contoh: Telur Ayam Ras Super"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan</label>
+                                        <select id="prodUnit" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-semibold">
+                                            <option value="krat" selected>krat</option>
+                                            <option value="kg">kg</option>
+                                            <option value="tray">tray</option>
+                                            <option value="butir">butir</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Stok Awal</label>
+                                        <input type="number" id="prodStock" value="0" placeholder="0"
+                                            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan Default (Rp)</label>
+                                    <input type="number" id="prodPrice" value="50000" placeholder="50000"
+                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-bold">
+                                </div>
+
+                                <button type="button" onclick="submitNewProduct()"
+                                    class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-lg shadow-sm transition text-sm flex items-center justify-center gap-1.5">
+                                    <span>➕</span> Simpan Produk Baru
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Card Kanan: Tabel Katalog & Stok Produk (7 Kolom) -->
+                        <div class="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 sm:p-6 shadow-sm space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                    <span>📦</span> Katalog Produk & Stok Terkini (<span id="countProductTable">0</span>)
+                                </h3>
+                                <button onclick="loadInitialData()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg border border-slate-200 font-semibold transition">
+                                    🔄 Refresh Data
+                                </button>
                             </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan Default (Rp)</label>
-                            <input type="number" id="prodPrice" value="50000" placeholder="50000"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
-                        </div>
-
-                        <button type="button" onclick="submitNewProduct()"
-                            class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm">
-                            Simpan Produk Baru ke Sistem
-                        </button>
-                    </form>
-
-                    <!-- TABEL DAFTAR PRODUK & STOK -->
-                    <div class="pt-6 border-t border-slate-200 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                                <span>📦</span> Katalog Produk & Stok Terkini (<span id="countProductTable">0</span>)
-                            </h3>
-                            <button onclick="loadInitialData()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded border border-slate-200 font-semibold">
-                                Refresh Data
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto max-h-[350px] overflow-y-auto border border-slate-200 rounded-lg">
-                            <table id="productMasterTable" class="w-full text-left text-xs border-collapse">
-                                <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
-                                    <tr>
-                                        <th class="p-2 border border-slate-200">ID</th>
-                                        <th class="p-2 border border-slate-200">NAMA PRODUK</th>
-                                        <th class="p-2 border border-slate-200 text-right">STOK SAAT INI</th>
-                                        <th class="p-2 border border-slate-200 text-right">HARGA DEFAULT</th>
-                                        <th class="p-2 border border-slate-200 text-center w-28">AKSI</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productTableBody" class="divide-y divide-slate-100 bg-white">
-                                    <!-- Rows -->
-                                </tbody>
-                            </table>
+                            <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-slate-200 rounded-lg">
+                                <table id="productMasterTable" class="w-full text-left text-xs border-collapse">
+                                    <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-300 font-bold uppercase text-[10px] whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5 border border-slate-200">ID</th>
+                                            <th class="p-2.5 border border-slate-200">NAMA PRODUK</th>
+                                            <th class="p-2.5 border border-slate-200 text-right">STOK</th>
+                                            <th class="p-2.5 border border-slate-200 text-right">HARGA DEFAULT</th>
+                                            <th class="p-2.5 border border-slate-200 text-center w-28">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productTableBody" class="divide-y divide-slate-100 bg-white">
+                                        <!-- Rows -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
