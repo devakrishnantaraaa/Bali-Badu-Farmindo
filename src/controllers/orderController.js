@@ -10,38 +10,62 @@ async function createOrder(req, res) {
             return res.status(400).json({ error: 'Customer ID, items array, and payment_type are required' });
         }
 
-        if (payment_type === 'CREDIT' && !due_date) {
-            return res.status(400).json({ error: 'Due date is strictly required for CREDIT (Gantung Nota) orders' });
-        }
-
         await client.query('BEGIN');
 
-        // -------------------------------------------------------------
-        // STRICT RULE #3: Check if customer has active "Gantung Nota"
-        // -------------------------------------------------------------
-        const unpaidCheck = await client.query(
-            `SELECT invoice_number, amount_due - amount_paid AS remaining 
-             FROM invoices 
-             WHERE customer_id = $1 AND status = 'GANTUNG' 
-             LIMIT 1`,
-            [customer_id]
-        );
-
-        if (unpaidCheck.rows.length > 0) {
-            await client.query('ROLLBACK');
-            return res.status(403).json({
-                error: 'BLOCK_ORDER_UNPAID_CREDIT',
-                message: `Pembelian ditolak! Customer masih memiliki nota gantung (${unpaidCheck.rows[0].invoice_number}) sebesar Rp ${unpaidCheck.rows[0].remaining}. Pelunasan / validasi setoran diperlukan!`
-            });
+        // 1. Validate customer existence and get payment terms
+        let customerRes;
+        try {
+            customerRes = await client.query('SELECT name, payment_terms FROM customers WHERE id = $1', [customer_id]);
+        } catch (e) {
+            // fallback if payment_terms column not present yet
+            customerRes = await client.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
         }
 
-        // 1. Validate customer existence
-        const customerRes = await client.query('SELECT name FROM customers WHERE id = $1', [customer_id]);
         if (customerRes.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ error: 'Customer not found' });
         }
         const customerName = customerRes.rows[0].name;
+        const customerPaymentTerms = customerRes.rows[0].payment_terms || 'REGULER';
+
+        // -------------------------------------------------------------
+        // Check active "Gantung Nota" according to Customer Payment Terms
+        // -------------------------------------------------------------
+        const unpaidCheck = await client.query(
+            `SELECT invoice_number, amount_due - amount_paid AS remaining 
+             FROM invoices 
+             WHERE customer_id = $1 AND status = 'GANTUNG' 
+             ORDER BY created_at ASC`,
+            [customer_id]
+        );
+
+        let pendingInvoiceWarning = null;
+        const pendingCount = unpaidCheck.rows.length;
+        const totalRemaining = unpaidCheck.rows.reduce((sum, r) => sum + parseFloat(r.remaining), 0);
+
+        if (customerPaymentTerms === 'GANTUNG_1_NOTA') {
+            // "Gantung 1 nota (buat popup pemberitahuan kl ada 2 Nota pending)"
+            if (pendingCount >= 2) {
+                pendingInvoiceWarning = {
+                    title: 'Peringatan Termin: Gantung 1 Nota!',
+                    message: `Customer "${customerName}" memiliki ${pendingCount} nota pending (melebihi batas 1 nota gantung)!`,
+                    terms: 'Gantung 1 Nota',
+                    pending_count: pendingCount,
+                    invoice_number: unpaidCheck.rows.map(r => r.invoice_number).join(', '),
+                    remaining: totalRemaining
+                };
+            }
+        } else if (pendingCount > 0) {
+            // Informational warning for other terms with pending invoice
+            pendingInvoiceWarning = {
+                title: 'Pemberitahuan Nota Gantung',
+                message: `Customer "${customerName}" memiliki ${pendingCount} nota pending sebelumnya.`,
+                terms: customerPaymentTerms,
+                pending_count: pendingCount,
+                invoice_number: unpaidCheck.rows[0].invoice_number,
+                remaining: totalRemaining
+            };
+        }
 
         // 2. Validate product stocks and calculate total
         let totalAmount = 0;
@@ -121,7 +145,7 @@ async function createOrder(req, res) {
         const initialPaid = payment_type === 'CREDIT' ? 0.00 : totalAmount;
 
         let googleCalEventId = null;
-        if (payment_type === 'CREDIT') {
+        if (payment_type === 'CREDIT' && due_date) {
             googleCalEventId = await googleCalendarService.createDueDateReminder({
                 invoiceNumber: invoiceNum,
                 customerName: customerName,
@@ -142,7 +166,8 @@ async function createOrder(req, res) {
         return res.status(201).json({
             message: 'Order created successfully',
             order: order,
-            invoice: invoiceRes.rows[0]
+            invoice: invoiceRes.rows[0],
+            pending_warning: pendingInvoiceWarning
         });
 
     } catch (error) {

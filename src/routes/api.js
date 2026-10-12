@@ -23,6 +23,7 @@ router.post('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerCo
 
 // Products & Stock (Access: SUPER_ADMIN can input stock & adjustments, MARKETING can view)
 router.get('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getProducts);
+router.post('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.createProduct);
 router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN'), stockController.recordIncomingGoods);
 router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN'), stockController.recordStockAdjustment);
 router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getStockLedger);
@@ -34,6 +35,7 @@ router.post('/orders', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderControll
 router.post('/payments', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.submitPayment);
 router.get('/payments/pending', authorizeRoles('SUPER_ADMIN'), paymentController.getPendingPayments);
 router.post('/payments/:payment_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validatePayment);
+router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validateInvoiceDirectly);
 
 // Reports & Financial Debts (Access: SUPER_ADMIN & MARKETING)
 router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getDailySales);

@@ -113,8 +113,65 @@ async function getPendingPayments(req, res) {
     }
 }
 
+// Direct Validate Invoice (e.g., dari Rekap Penjualan Harian)
+async function validateInvoiceDirectly(req, res) {
+    const client = await db.getClient();
+    try {
+        const { invoice_id } = req.params;
+        const { payment_method } = req.body; // CASH / TRANSFER
+
+        await client.query('BEGIN');
+
+        const invRes = await client.query('SELECT * FROM invoices WHERE id = $1 FOR UPDATE', [invoice_id]);
+        if (invRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Invoice tidak ditemukan' });
+        }
+        const invoice = invRes.rows[0];
+
+        const sisa = parseFloat(invoice.amount_due) - parseFloat(invoice.amount_paid);
+        if (sisa <= 0 && invoice.status === 'LUNAS') {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Invoice ini sudah lunas sebelumnya.' });
+        }
+
+        const payNum = `PAY-${Date.now()}`;
+        const method = payment_method || (invoice.payment_type === 'CREDIT' ? 'TRANSFER' : invoice.payment_type);
+
+        // Record validated payment
+        await client.query(
+            `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at)
+             VALUES ($1, $2, $3, $4, $5, TRUE, CURRENT_TIMESTAMP)`,
+            [payNum, invoice.id, invoice.customer_id, sisa, method]
+        );
+
+        // Update invoice to LUNAS
+        await client.query(
+            `UPDATE invoices 
+             SET amount_paid = amount_due, status = 'LUNAS', updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $1`,
+            [invoice.id]
+        );
+
+        await client.query('COMMIT');
+
+        return res.json({
+            message: `Invoice ${invoice.invoice_number} berhasil divalidasi LUNAS!`,
+            invoice_id: invoice.id,
+            status: 'LUNAS'
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: error.message });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     submitPayment,
     validatePayment,
-    getPendingPayments
+    getPendingPayments,
+    validateInvoiceDirectly
 };
+

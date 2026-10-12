@@ -4,7 +4,7 @@ const db = require('../config/db');
 async function recordIncomingGoods(req, res) {
     const client = await db.getClient();
     try {
-        const { product_id, quantity, notes } = req.body;
+        const { product_id, quantity, notes, incoming_date } = req.body;
         
         if (!product_id || !quantity || quantity <= 0) {
             return res.status(400).json({ error: 'Valid product_id and positive quantity required' });
@@ -29,12 +29,22 @@ async function recordIncomingGoods(req, res) {
         const balanceAfter = updateRes.rows[0].current_stock;
 
         // 2. Log stock movement
-        const movementRes = await client.query(
-            `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes)
-             VALUES ($1, 'BARANG_MASUK', $2, $3, $4)
-             RETURNING *`,
-            [product_id, quantity, balanceAfter, notes || 'Penerimaan Barang Masuk']
-        );
+        let movementRes;
+        if (incoming_date) {
+            movementRes = await client.query(
+                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+                 VALUES ($1, 'BARANG_MASUK', $2, $3, $4, $5)
+                 RETURNING *`,
+                [product_id, quantity, balanceAfter, notes || 'Penerimaan Barang Masuk', new Date(incoming_date)]
+            );
+        } else {
+            movementRes = await client.query(
+                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes)
+                 VALUES ($1, 'BARANG_MASUK', $2, $3, $4)
+                 RETURNING *`,
+                [product_id, quantity, balanceAfter, notes || 'Penerimaan Barang Masuk']
+            );
+        }
 
         await client.query('COMMIT');
         return res.status(201).json({
@@ -111,7 +121,7 @@ async function getStockLedger(req, res) {
     try {
         const { product_id } = req.query;
         let queryText = `
-            SELECT sm.id, sm.created_at, p.name AS product_name, p.unit, sm.movement_type, 
+            SELECT sm.id, sm.created_at, p.name AS product_name, p.unit, p.price_per_unit, sm.movement_type, 
                    sm.quantity, sm.damaged_qty, sm.physical_stock, sm.adjustment_qty,
                    sm.balance_after, sm.reference_id, sm.notes
             FROM stock_movements sm
@@ -119,12 +129,12 @@ async function getStockLedger(req, res) {
         `;
         const params = [];
 
-        if (product_id) {
+        if (product_id && product_id !== 'ALL') {
             queryText += ` WHERE sm.product_id = $1`;
             params.push(product_id);
         }
 
-        queryText += ` ORDER BY sm.created_at DESC LIMIT 100`;
+        queryText += ` ORDER BY sm.created_at DESC LIMIT 200`;
 
         const result = await db.query(queryText, params);
         return res.json(result.rows);
@@ -143,9 +153,36 @@ async function getProducts(req, res) {
     }
 }
 
+// Create New Product
+async function createProduct(req, res) {
+    try {
+        const { name, unit, current_stock, price_per_unit } = req.body;
+        if (!name) return res.status(400).json({ error: 'Nama produk wajib diisi' });
+
+        const queryText = `
+            INSERT INTO products (name, unit, current_stock, price_per_unit)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const result = await db.query(queryText, [
+            name,
+            unit || 'krat',
+            current_stock || 0,
+            price_per_unit || 0
+        ]);
+        return res.status(201).json({
+            message: 'Produk baru berhasil ditambahkan!',
+            product: result.rows[0]
+        });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     recordIncomingGoods,
     recordStockAdjustment,
     getStockLedger,
-    getProducts
+    getProducts,
+    createProduct
 };
