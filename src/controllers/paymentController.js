@@ -168,10 +168,86 @@ async function validateInvoiceDirectly(req, res) {
     }
 }
 
+// Update Invoice Payment Fields Inline (TOP, CEK/METODE, TGL TRANSFER) dari Rekap Penjualan Harian
+async function updateInvoiceFields(req, res) {
+    const client = await db.getClient();
+    try {
+        const { invoice_id } = req.params;
+        const { top_status, payment_method, transfer_date } = req.body;
+
+        await client.query('BEGIN');
+
+        const invRes = await client.query('SELECT * FROM invoices WHERE id = $1 FOR UPDATE', [invoice_id]);
+        if (invRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Invoice tidak ditemukan' });
+        }
+        const invoice = invRes.rows[0];
+
+        // 1. Update status TOP (LUNAS / GANTUNG / PENDING)
+        if (top_status) {
+            if (top_status === 'LUNAS') {
+                await client.query(
+                    `UPDATE invoices 
+                     SET status = 'LUNAS', amount_paid = amount_due, updated_at = CURRENT_TIMESTAMP 
+                     WHERE id = $1`,
+                    [invoice.id]
+                );
+            } else if (top_status === 'PENDING' || top_status === 'GANTUNG') {
+                await client.query(
+                    `UPDATE invoices 
+                     SET status = 'GANTUNG', amount_paid = 0, updated_at = CURRENT_TIMESTAMP 
+                     WHERE id = $1`,
+                    [invoice.id]
+                );
+            }
+        }
+
+        // 2. Update atau catat pembayaran/metode (CEK / TRANSFER / CASH) dan tanggal transfer
+        const existingPayment = await client.query(
+            `SELECT * FROM payments WHERE invoice_id = $1 ORDER BY created_at DESC LIMIT 1`,
+            [invoice.id]
+        );
+
+        const method = payment_method || invoice.payment_type || 'TRANSFER';
+        const pDate = transfer_date ? new Date(transfer_date) : new Date();
+
+        if (existingPayment.rows.length > 0) {
+            await client.query(
+                `UPDATE payments 
+                 SET payment_method = $1, created_at = $2, is_validated = TRUE
+                 WHERE id = $3`,
+                [method, pDate, existingPayment.rows[0].id]
+            );
+        } else if (top_status === 'LUNAS' || payment_method || transfer_date) {
+            const payNum = `PAY-${Date.now()}`;
+            await client.query(
+                `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
+                 VALUES ($1, $2, $3, $4, $5, TRUE, CURRENT_TIMESTAMP, $6)`,
+                [payNum, invoice.id, invoice.customer_id, invoice.amount_due, method, pDate]
+            );
+        }
+
+        await client.query('COMMIT');
+
+        return res.json({
+            message: `Data pembayaran invoice ${invoice.invoice_number} berhasil diperbarui!`,
+            invoice_id: invoice.id
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: error.message });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     submitPayment,
     validatePayment,
     getPendingPayments,
-    validateInvoiceDirectly
+    validateInvoiceDirectly,
+    updateInvoiceFields
 };
+
 

@@ -854,16 +854,26 @@
                 <div id="tab-daily-sales"
                     class="hidden bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
                     <div
-                        class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
-                        <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Harian (Per Tgl Nota)</h3>
-                        <div class="flex items-center gap-2">
-                            <label class="text-xs font-semibold text-slate-600">Pilih Tanggal:</label>
-                            <input type="date" id="filterDailySalesDate" onchange="loadDailySalesReport()"
-                                class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
-                            <button onclick="loadDailySalesReport()"
-                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Filter</button>
+                        class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-slate-100 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Harian</h3>
+                            <p class="text-[11px] text-slate-500">Filter berdasarkan rentang periode atau biarkan kosong untuk tampilkan semua.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
+                                <label class="text-[11px] font-semibold text-slate-600 pl-1.5">Dari:</label>
+                                <input type="date" id="filterDailySalesStart" onchange="loadDailySalesReport()"
+                                    class="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-700">
+                                <label class="text-[11px] font-semibold text-slate-600">Sampai:</label>
+                                <input type="date" id="filterDailySalesEnd" onchange="loadDailySalesReport()"
+                                    class="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-700">
+                            </div>
+                            <button onclick="clearDailySalesFilter()"
+                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium border border-slate-200 transition">
+                                Semua Data
+                            </button>
                             <button onclick="exportTableToExcel('dailySalesTable', 'Rekap_Penjualan_Harian')"
-                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition">
                                 📥 Tarik Excel
                             </button>
                         </div>
@@ -1887,16 +1897,44 @@
         }
 
         // --- REPORTS LOGIC ---
+        function clearDailySalesFilter() {
+            const startEl = document.getElementById('filterDailySalesStart');
+            const endEl = document.getElementById('filterDailySalesEnd');
+            if (startEl) startEl.value = '';
+            if (endEl) endEl.value = '';
+            loadDailySalesReport();
+        }
+
         async function loadDailySalesReport() {
-            const date = document.getElementById('filterDailySalesDate').value;
-            const res = await fetch(`${API_BASE}/reports/daily-sales?date=${date || ''}`, { headers: getAuthHeaders() });
+            const startDate = document.getElementById('filterDailySalesStart')?.value || '';
+            const endDate = document.getElementById('filterDailySalesEnd')?.value || '';
+
+            let query = '';
+            if (startDate && endDate) {
+                query = `start_date=${startDate}&end_date=${endDate}`;
+            } else if (startDate) {
+                query = `start_date=${startDate}`;
+            } else if (endDate) {
+                query = `end_date=${endDate}`;
+            }
+
+            const res = await fetch(`${API_BASE}/reports/daily-sales?${query}`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
 
             document.getElementById('dailySalesCount').innerText = `${data.length} Nota`;
             const totalRev = data.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
             document.getElementById('dailySalesRevenue').innerText = `Rp ${totalRev.toLocaleString('id-ID')}`;
-            document.getElementById('dailySalesDateLabel').innerText = date ? new Date(date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Semua Tanggal';
+
+            let dateLabel = 'Semua Penjualan';
+            if (startDate && endDate) {
+                dateLabel = `${startDate} s/d ${endDate}`;
+            } else if (startDate) {
+                dateLabel = `Mulai ${startDate}`;
+            } else if (endDate) {
+                dateLabel = `Sampai ${endDate}`;
+            }
+            document.getElementById('dailySalesDateLabel').innerText = dateLabel;
 
             const monthsIndo = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 
@@ -1924,7 +1962,6 @@
                 totalPaidSum += paid;
                 totalSisaSum += sisa;
 
-                // Abbreviate product name if available (e.g., Telur Besar -> TB, Telur Gemuk -> TG)
                 let code = 'TB';
                 if (item.product_name) {
                     if (item.product_name.toLowerCase().includes('medium') || item.product_name.toLowerCase().includes('gemuk')) code = 'TG';
@@ -1932,17 +1969,15 @@
                     else code = 'TB';
                 }
 
-                const topStatus = item.invoice_status === 'LUNAS' ? 'LUNAS' : 'PENDING';
-                const topClass = topStatus === 'LUNAS' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-rose-100 text-rose-800 font-bold';
-
-                const cekMethod = item.last_payment_method || item.payment_type || '-';
-                const transferTgl = item.last_payment_date ? `${String(new Date(item.last_payment_date).getDate()).padStart(2, '0')}-${new Date(item.last_payment_date).toLocaleString('en-US', { month: 'short' })}` : '-';
+                const currentTop = item.invoice_status === 'LUNAS' ? 'LUNAS' : 'PENDING';
+                const currentCek = item.last_payment_method || item.payment_type || 'TRANSFER';
+                const transferDateVal = item.last_payment_date ? new Date(item.last_payment_date).toISOString().split('T')[0] : '';
 
                 const printPayload = JSON.stringify({
                     invoice_number: item.invoice_number || `INV-${item.id}`,
                     date: tglStr,
                     customer_name: item.customer_name,
-                    status: topStatus,
+                    status: currentTop,
                     quantity: qty,
                     price: harga,
                     total: total,
@@ -1952,18 +1987,43 @@
                 return `
                     <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
                         <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
-                        <td class="p-2 border border-slate-300 text-slate-700">${tglStr}</td>
+                        <td class="p-2 border border-slate-300 text-slate-700 whitespace-nowrap">${tglStr}</td>
                         <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.customer_name}</td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-slate-800">${qty.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-center font-bold text-slate-700">${code}</td>
                         <td class="p-2 border border-slate-300 text-right text-slate-700">${harga ? harga.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-slate-900">${total.toLocaleString('id-ID')}</td>
-                        <td class="p-2 border border-slate-300 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] ${topClass}">${topStatus}</span></td>
+                        
+                        <!-- KOLOM TOP (BISA DIINPUT / DIPILIH LANGSUNG) -->
+                        <td class="p-1.5 border border-slate-300 text-center">
+                            <select onchange="updateInvoiceInlineFields(${item.invoice_id}, this.value, null, null)"
+                                class="text-[10px] font-bold px-1.5 py-1 rounded border focus:outline-none cursor-pointer ${currentTop === 'LUNAS' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}">
+                                <option value="PENDING" ${currentTop === 'PENDING' ? 'selected' : ''}>PENDING</option>
+                                <option value="LUNAS" ${currentTop === 'LUNAS' ? 'selected' : ''}>LUNAS</option>
+                            </select>
+                        </td>
+
                         <td class="p-2 border border-slate-300 text-right font-bold text-emerald-800 bg-amber-50/50">${paid > 0 ? paid.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-rose-700">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
-                        <td class="p-2 border border-slate-300 text-center font-semibold text-slate-700">${cekMethod}</td>
-                        <td class="p-2 border border-slate-300 text-center text-slate-600">${transferTgl}</td>
-                        <td class="p-2 border border-slate-300 text-center">
+
+                        <!-- KOLOM CEK / METODE (BISA DIINPUT / DIPILIH LANGSUNG) -->
+                        <td class="p-1.5 border border-slate-300 text-center">
+                            <select onchange="updateInvoiceInlineFields(${item.invoice_id}, null, this.value, null)"
+                                class="text-[10px] font-semibold px-1 py-1 bg-slate-50 border border-slate-300 rounded focus:outline-none text-slate-800">
+                                <option value="TRANSFER" ${currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>TRANSFER</option>
+                                <option value="CASH" ${currentCek.toUpperCase() === 'CASH' ? 'selected' : ''}>CASH</option>
+                                <option value="CEK" ${currentCek.toUpperCase() === 'CEK' ? 'selected' : ''}>CEK / BG</option>
+                                <option value="CREDIT" ${currentCek.toUpperCase() === 'CREDIT' ? 'selected' : ''}>TEMPO</option>
+                            </select>
+                        </td>
+
+                        <!-- KOLOM TRANSFER / TGL SETOR (BISA DIINPUT LANGSUNG) -->
+                        <td class="p-1.5 border border-slate-300 text-center">
+                            <input type="date" value="${transferDateVal}" onchange="updateInvoiceInlineFields(${item.invoice_id}, null, null, this.value)"
+                                class="text-[10px] bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none w-28">
+                        </td>
+
+                        <td class="p-2 border border-slate-300 text-center whitespace-nowrap">
                             <div class="flex items-center justify-center gap-1">
                                 <button onclick="showInvoicePrintModal(${printPayload})" 
                                     class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-1 transition" title="Cetak Nota">
@@ -1979,7 +2039,7 @@
                         </td>
                     </tr>
                 `;
-            }).join('') || '<tr><td colspan="13" class="p-4 text-center text-slate-400">Tidak ada transaksi pada tanggal ini</td></tr>';
+            }).join('') || '<tr><td colspan="13" class="p-4 text-center text-slate-400">Tidak ada transaksi penjualan pada filter ini</td></tr>';
 
             // Render Footer Totals Row
             const foot = document.getElementById('dailySalesFoot');
@@ -2002,6 +2062,31 @@
             // Hubungkan filter kolom model Excel
             initExcelTableFilters('dailySalesTable');
             applyExcelFilters('dailySalesTable');
+        }
+
+        async function updateInvoiceInlineFields(invoiceId, topStatus, paymentMethod, transferDate) {
+            try {
+                const payload = {};
+                if (topStatus) payload.top_status = topStatus;
+                if (paymentMethod) payload.payment_method = paymentMethod;
+                if (transferDate) payload.transfer_date = transferDate;
+
+                const res = await fetch(`${API_BASE}/invoices/${invoiceId}/fields`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal memperbarui status');
+
+                showAlert(data.message || 'Data berhasil diperbarui!');
+                loadDailySalesReport();
+                loadDailyDepositsReport();
+                loadMonthlyRecapReport();
+                loadDebts();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
         }
 
         async function loadDailyDepositsReport() {

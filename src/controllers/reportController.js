@@ -1,16 +1,26 @@
 const db = require('../config/db');
 
-// Daily Sales Report
+// Daily Sales Report (Per Tanggal atau Rentang Periode)
 async function getDailySales(req, res) {
     try {
-        const { date } = req.query; // YYYY-MM-DD
+        const { date, start_date, end_date } = req.query; // YYYY-MM-DD
         let whereClause = "WHERE o.status = 'CONFIRMED'";
         let queryParams = [];
 
-        if (date && date !== 'ALL') {
-            whereClause += " AND DATE(o.created_at AT TIME ZONE 'UTC') = $1";
+        if (start_date && end_date) {
+            whereClause += " AND DATE(o.created_at) >= $1 AND DATE(o.created_at) <= $2";
+            queryParams.push(start_date, end_date);
+        } else if (start_date) {
+            whereClause += " AND DATE(o.created_at) >= $1";
+            queryParams.push(start_date);
+        } else if (end_date) {
+            whereClause += " AND DATE(o.created_at) <= $1";
+            queryParams.push(end_date);
+        } else if (date && date !== 'ALL') {
+            whereClause += " AND DATE(o.created_at) = $1";
             queryParams.push(date);
         }
+        // Jika tidak ada filter tanggal / kosong, semua penjualan ditampilkan tanpa filter tanggal
 
         const queryText = `
             SELECT 

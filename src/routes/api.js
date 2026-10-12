@@ -40,6 +40,7 @@ router.post('/payments', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentCont
 router.get('/payments/pending', authorizeRoles('SUPER_ADMIN'), paymentController.getPendingPayments);
 router.post('/payments/:payment_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validatePayment);
 router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validateInvoiceDirectly);
+router.put('/invoices/:invoice_id/fields', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.updateInvoiceFields);
 
 // Reports & Financial Debts (Access: SUPER_ADMIN & MARKETING)
 router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getDailySales);
