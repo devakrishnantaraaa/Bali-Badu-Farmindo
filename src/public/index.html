@@ -2127,22 +2127,37 @@
             }
         }
 
-        async function confirmDeleteSalesOrder(orderId, invNumber, custName, total) {
-            const confirmMsg = `Yakin ingin menghapus transaksi nota ini?\n\n` +
-                               `• Invoice: ${invNumber || '-'}\n` +
-                               `• Pelanggan: ${custName || '-'}\n` +
-                               `• Total: Rp ${(total || 0).toLocaleString('id-ID')}\n\n` +
-                               `Stok barang akan otomatis dikembalikan ke gudang.`;
-            if (!confirm(confirmMsg)) return;
+        let pendingDeleteOrderId = null;
+
+        function confirmDeleteSalesOrder(orderId, invNumber, custName, total) {
+            pendingDeleteOrderId = orderId;
+            document.getElementById('delOrderInv').innerText = invNumber || '-';
+            document.getElementById('delOrderCust').innerText = custName || '-';
+            document.getElementById('delOrderTotal').innerText = `Rp ${(total || 0).toLocaleString('id-ID')}`;
+            document.getElementById('deleteOrderModal').classList.remove('hidden');
+        }
+
+        function closeDeleteOrderModal() {
+            document.getElementById('deleteOrderModal').classList.add('hidden');
+            pendingDeleteOrderId = null;
+        }
+
+        async function executeDeleteOrder() {
+            if (!pendingDeleteOrderId) return;
+            const btn = document.getElementById('btnExecuteDeleteOrder');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>Menghapus...</span>';
 
             try {
-                const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+                const res = await fetch(`${API_BASE}/orders/${pendingDeleteOrderId}`, {
                     method: 'DELETE',
                     headers: getAuthHeaders()
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Gagal menghapus transaksi penjualan');
 
+                closeDeleteOrderModal();
                 showAlert(data.message || 'Transaksi penjualan berhasil dihapus!');
                 loadDailySalesReport();
                 loadDailyDepositsReport();
@@ -2151,7 +2166,11 @@
                 loadDebts();
                 loadInitialData();
             } catch (err) {
+                closeDeleteOrderModal();
                 showAlert(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 
@@ -3587,6 +3606,53 @@
                 <button id="btnExecuteResetData" onclick="executeResetData()"
                     class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
                     <span>Ya, Kosongkan Transaksi Sekarang</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM KONFIRMASI HAPUS TRANSAKSI PENJUALAN -->
+    <div id="deleteOrderModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-rose-200 text-slate-900 space-y-4 animate-scaleUp">
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0 text-2xl font-bold">
+                    🗑️
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Hapus Transaksi Penjualan?</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Nota ini akan dihapus dari rekap.</p>
+                </div>
+            </div>
+
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-950 space-y-2">
+                <div class="bg-white/90 p-2.5 rounded-lg border border-rose-200 space-y-1 font-mono text-[11px]">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500 font-sans">No. Invoice:</span>
+                        <span id="delOrderInv" class="font-bold text-slate-900"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500 font-sans">Customer:</span>
+                        <span id="delOrderCust" class="font-bold text-slate-900 font-sans"></span>
+                    </div>
+                    <div class="flex justify-between pt-1 border-t border-rose-100">
+                        <span class="text-slate-500 font-sans font-bold">Total Nilai:</span>
+                        <span id="delOrderTotal" class="font-black text-rose-700"></span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px] text-emerald-800 font-semibold pt-1">
+                    <span>📦</span>
+                    <span>Stok telur otomatis dikembalikan ke gudang.</span>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeDeleteOrderModal()"
+                    class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors">
+                    Batal
+                </button>
+                <button id="btnExecuteDeleteOrder" onclick="executeDeleteOrder()"
+                    class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                    <span>Ya, Hapus Nota Ini</span>
                 </button>
             </div>
         </div>
