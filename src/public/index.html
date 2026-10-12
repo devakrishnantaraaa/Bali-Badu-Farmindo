@@ -73,6 +73,33 @@
             transform: translateY(0);
         }
 
+        .custom-select-search-box {
+            position: sticky;
+            top: 0;
+            background: #ffffff;
+            padding: 0.5rem;
+            border-bottom: 1px solid #fed7aa;
+            z-index: 10;
+        }
+
+        .custom-select-search-input {
+            width: 100%;
+            padding: 0.4rem 0.65rem;
+            font-size: 0.8125rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.375rem;
+            background-color: #f8fafc;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .custom-select-search-input:focus {
+            border-color: #f59e0b;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+        }
+
         .custom-option {
             position: relative;
             padding: 0.625rem 0.875rem;
@@ -2511,7 +2538,7 @@
             }
         }
 
-        // --- CUSTOM SELECT DROPDOWN COMPONENT ENGINE ---
+        // --- CUSTOM SELECT DROPDOWN COMPONENT ENGINE DENGAN LIVE SEARCH ---
         function makeSelectCustom(selectId) {
             const selectEl = document.getElementById(selectId);
             if (!selectEl) return;
@@ -2547,10 +2574,66 @@
             const optionsContainer = document.createElement('div');
             optionsContainer.className = 'custom-select-options';
 
+            // Aktifkan Search Box jika selectId adalah orderCustomer / customer atau jika opsi lebih dari 4
+            const isSearchable = selectId.toLowerCase().includes('customer') || selectEl.options.length > 4;
+            let searchInput = null;
+
+            if (isSearchable) {
+                const searchBox = document.createElement('div');
+                searchBox.className = 'custom-select-search-box';
+                searchBox.innerHTML = `
+                    <div class="relative flex items-center">
+                        <span class="absolute left-2.5 text-slate-400 text-xs">🔍</span>
+                        <input type="text" class="custom-select-search-input pl-7" placeholder="Ketik nama atau kata kunci...">
+                    </div>
+                `;
+                searchInput = searchBox.querySelector('input');
+
+                // Cegah event bubbling saat mengetik agar tidak menutup dropdown
+                searchBox.addEventListener('click', (e) => e.stopPropagation());
+
+                // Filter Real-Time saat user mengetik
+                searchInput.addEventListener('input', (e) => {
+                    const q = e.target.value.toLowerCase().trim();
+                    const optElements = optionsContainer.querySelectorAll('.custom-option');
+                    let matchCount = 0;
+
+                    optElements.forEach(el => {
+                        const optText = el.getAttribute('data-text') || '';
+                        // Opsi placeholder (Pilih Customer...)
+                        if (el.getAttribute('data-value') === '' && q !== '') {
+                            el.style.display = 'none';
+                            return;
+                        }
+                        const isMatch = optText.includes(q);
+                        el.style.display = isMatch ? 'flex' : 'none';
+                        if (isMatch) matchCount++;
+                    });
+
+                    // Pesan tidak ditemukan jika kosong
+                    let emptyMsg = optionsContainer.querySelector('.custom-select-no-match');
+                    if (matchCount === 0) {
+                        if (!emptyMsg) {
+                            emptyMsg = document.createElement('div');
+                            emptyMsg.className = 'custom-select-no-match p-3 text-xs text-center text-slate-400 italic';
+                            emptyMsg.innerText = 'Tidak ditemukan hasil yang cocok';
+                            optionsContainer.appendChild(emptyMsg);
+                        }
+                    } else if (emptyMsg) {
+                        emptyMsg.remove();
+                    }
+                });
+
+                optionsContainer.appendChild(searchBox);
+            }
+
+            // Render Daftar Pilihan (Options)
             Array.from(selectEl.options).forEach((opt, idx) => {
                 const isSelected = idx === selectEl.selectedIndex;
                 const optDiv = document.createElement('div');
                 optDiv.className = `custom-option ${isSelected ? 'selected' : ''}`;
+                optDiv.setAttribute('data-value', opt.value);
+                optDiv.setAttribute('data-text', opt.text.toLowerCase());
                 optDiv.innerHTML = `
                     <span class="truncate">${opt.text}</span>
                     ${isSelected ? '<span class="text-amber-700 font-bold ml-2">✓</span>' : ''}
@@ -2586,7 +2669,7 @@
                 optionsContainer.appendChild(optDiv);
             });
 
-            // Toggle Open State
+            // Toggle Open State & Auto Focus ke Search Input
             trigger.addEventListener('click', (e) => {
                 e.stopPropagation();
                 // Close all other custom dropdowns first
@@ -2594,6 +2677,15 @@
                     if (w !== wrapper) w.classList.remove('open');
                 });
                 wrapper.classList.toggle('open');
+
+                if (wrapper.classList.contains('open') && searchInput) {
+                    searchInput.value = '';
+                    // Reset filter tampilan opsi
+                    optionsContainer.querySelectorAll('.custom-option').forEach(el => el.style.display = 'flex');
+                    const emptyMsg = optionsContainer.querySelector('.custom-select-no-match');
+                    if (emptyMsg) emptyMsg.remove();
+                    setTimeout(() => searchInput.focus(), 80);
+                }
             });
 
             wrapper.appendChild(trigger);
