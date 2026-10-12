@@ -1416,26 +1416,46 @@
             }
         }
 
-        async function deleteProductById(productId, productName) {
-            if (!confirm(`Apakah Anda yakin ingin menghapus produk "${productName}" dari sistem?`)) {
-                return;
-            }
+        let pendingDeleteProdId = null;
+
+        function deleteProductById(productId, productName) {
+            pendingDeleteProdId = productId;
+            document.getElementById('deleteConfirmProdName').innerText = productName;
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+        }
+
+        function closeDeleteConfirmModal() {
+            pendingDeleteProdId = null;
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+        }
+
+        async function executeDeleteProduct() {
+            if (!pendingDeleteProdId) return;
+            const btn = document.getElementById('btnExecuteDeleteProd');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>Menghapus...</span>';
 
             try {
-                const res = await fetch(`${API_BASE}/products/${productId}`, {
+                const res = await fetch(`${API_BASE}/products/${pendingDeleteProdId}`, {
                     method: 'DELETE',
                     headers: getAuthHeaders()
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Gagal menghapus produk');
 
+                closeDeleteConfirmModal();
                 showAlert(data.message || 'Produk berhasil dihapus!');
                 loadInitialData();
             } catch (err) {
-                alert(err.message);
+                closeDeleteConfirmModal();
                 showAlert(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
             }
         }
+
 
 
         function getAuthHeaders() {
@@ -2983,6 +3003,40 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL CUSTOM KONFIRMASI HAPUS PRODUK -->
+    <div id="deleteConfirmModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-rose-200 text-slate-900 space-y-4 animate-scaleUp">
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0 text-2xl font-bold">
+                    🗑️
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Hapus Produk?</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Tindakan ini tidak dapat dibatalkan.</p>
+                </div>
+            </div>
+
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-950 space-y-1">
+                <p>Anda akan menghapus produk berikut dari sistem:</p>
+                <p id="deleteConfirmProdName" class="font-extrabold text-slate-900 text-sm bg-white/80 p-2 rounded border border-rose-200 mt-1"></p>
+                <p class="text-[11px] text-rose-800 italic pt-1">
+                    *Produk hanya dapat dihapus jika belum memiliki riwayat transaksi nota penjualan.
+                </p>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeDeleteConfirmModal()"
+                    class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors">
+                    Batal
+                </button>
+                <button id="btnExecuteDeleteProd" onclick="executeDeleteProduct()"
+                    class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                    <span>Ya, Hapus Sekarang</span>
+                </button>
+            </div>
         </div>
     </div>
 </body>
