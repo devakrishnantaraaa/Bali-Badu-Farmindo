@@ -295,6 +295,54 @@
         .excel-filter-popup-item:hover {
             background-color: #fef3c7;
         }
+
+        /* SIDEBAR COLLAPSED STYLES */
+        #mainSidebar {
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #mainSidebarContentArea {
+            transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.sidebar-collapsed #mainSidebar {
+            width: 4.5rem !important; /* 72px */
+        }
+
+        body.sidebar-collapsed #mainSidebarContentArea {
+            margin-left: 4.5rem !important;
+        }
+
+        body.sidebar-collapsed .sidebar-text,
+        body.sidebar-collapsed .sidebar-header-text,
+        body.sidebar-collapsed .sidebar-section-title,
+        body.sidebar-collapsed .sidebar-user-info {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed #mainSidebar .sidebar-link {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        body.sidebar-collapsed #mainSidebar .sidebar-link svg {
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+            margin: 0 !important;
+        }
+
+        body.sidebar-collapsed #mainSidebar .sidebar-brand-box {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        body.sidebar-collapsed #mainSidebar .sidebar-footer-box {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
     </style>
 </head>
 
@@ -353,129 +401,134 @@
         <aside id="mainSidebar"
             class="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col fixed inset-y-0 left-0 z-40 border-r border-slate-800">
             <!-- Brand Logo Header -->
-            <div class="p-5 border-b border-slate-800 flex items-center gap-3">
-                <img src="/images/DJS.png" alt="Logo"
-                    class="h-10 w-10 object-contain rounded-lg border border-slate-700 bg-white">
-                <div>
-                    <h2 class="text-sm font-bold text-white leading-tight">DEWATA JAYA</h2>
-                    <p class="text-[10px] text-amber-400 font-semibold tracking-wider uppercase">SUPPLIER Back Office
-                    </p>
+            <div class="sidebar-brand-box p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <img src="/images/DJS.png" alt="Logo"
+                        class="h-9 w-9 object-contain rounded-lg border border-slate-700 bg-white shrink-0">
+                    <div class="sidebar-header-text overflow-hidden">
+                        <h2 class="text-sm font-bold text-white leading-tight truncate">DEWATA JAYA</h2>
+                        <p class="text-[9px] text-amber-400 font-semibold tracking-wider uppercase truncate">Supplier System</p>
+                    </div>
                 </div>
+                <!-- Tombol Collapse Sidebar Internal -->
+                <button onclick="toggleSidebarCollapse()" class="sidebar-header-text p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition" title="Ciutkan Sidebar">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                    </svg>
+                </button>
             </div>
 
             <!-- Navigation Links -->
-            <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Navigasi Utama
-                </div>
+            <nav class="flex-1 p-3 space-y-1.5 overflow-y-auto">
+                <div class="sidebar-section-title text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Navigasi Utama</div>
 
                 <!-- Dashboard Overview (Super Admin) -->
-                <button onclick="switchTab('dashboard')" id="nav-dashboard"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 transition shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" title="Dashboard Utama"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 transition shadow-sm">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    <span>Dashboard Utama</span>
+                    <span class="sidebar-text truncate">Dashboard Utama</span>
                 </button>
 
                 <!-- Input Customer Baru (Marketing & Admin) -->
-                <button onclick="switchTab('customer')" id="nav-customer"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('customer')" id="nav-customer" title="Input Customer Baru"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
-                    <span>Input Customer Baru</span>
+                    <span class="sidebar-text truncate">Input Customer Baru</span>
                 </button>
 
                 <!-- Input Produk Baru (Super Admin & Marketing) -->
-                <button onclick="switchTab('product')" id="nav-product"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('product')" id="nav-product" title="Master Produk Baru"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
-                    <span>Master Produk Baru</span>
+                    <span class="sidebar-text truncate">Master Produk Baru</span>
                 </button>
 
                 <!-- Input Sales Order (Marketing & Admin) -->
-                <button onclick="switchTab('sales')" id="nav-sales"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('sales')" id="nav-sales" title="Input Penjualan Sales"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    <span>Input Penjualan Sales</span>
+                    <span class="sidebar-text truncate">Input Penjualan Sales</span>
                 </button>
 
                 <!-- Rekap Penjualan Harian -->
-                <button onclick="switchTab('daily-sales')" id="nav-daily-sales"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('daily-sales')" id="nav-daily-sales" title="Rekap Penjualan Harian"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>Rekap Penjualan Harian</span>
+                    <span class="sidebar-text truncate">Rekap Penjualan Harian</span>
                 </button>
 
                 <!-- Rekap Penjualan Bulanan -->
-                <button onclick="switchTab('monthly-recap')" id="nav-monthly-recap"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('monthly-recap')" id="nav-monthly-recap" title="Rekap Penjualan 1 Bulan"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span>Rekap Penjualan 1 Bulan</span>
+                    <span class="sidebar-text truncate">Rekap Penjualan 1 Bulan</span>
                 </button>
 
                 <!-- Daftar Setoran Harian -->
-                <button onclick="switchTab('daily-deposits')" id="nav-daily-deposits"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('daily-deposits')" id="nav-daily-deposits" title="Daftar Setoran Harian"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    <span>Daftar Setoran Harian</span>
+                    <span class="sidebar-text truncate">Daftar Setoran Harian</span>
                 </button>
 
                 <!-- Barang Masuk / Restock (Super Admin) -->
-                <button onclick="switchTab('stock')" id="nav-stock"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('stock')" id="nav-stock" title="Restock Gudang"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    <span>Restock Gudang</span>
+                    <span class="sidebar-text truncate">Restock Gudang</span>
                 </button>
 
                 <!-- Kartu Stok Log Audit -->
-                <button onclick="switchTab('ledger')" id="nav-ledger"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('ledger')" id="nav-ledger" title="Kartu Stok Audit Log"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>Kartu Stok Audit Log</span>
+                    <span class="sidebar-text truncate">Kartu Stok Audit Log</span>
                 </button>
 
                 <!-- Piutang Customer / Gantung Nota -->
-                <button onclick="switchTab('debts')" id="nav-debts"
-                    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button onclick="switchTab('debts')" id="nav-debts" title="Daftar Customer Hutang"
+                    class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>Daftar Customer Hutang</span>
+                    <span class="sidebar-text truncate">Daftar Customer Hutang</span>
                 </button>
 
             </nav>
 
             <!-- User Session Sidebar Footer -->
-            <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+            <div class="sidebar-footer-box p-3 border-t border-slate-800 bg-slate-950/60">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <div id="userFullName" class="text-xs font-bold text-white truncate max-w-[120px]">Nama User
-                        </div>
+                    <div class="sidebar-user-info overflow-hidden">
+                        <div id="userFullName" class="text-xs font-bold text-white truncate max-w-[120px]">Nama User</div>
                         <span id="userRoleBadge"
                             class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 mt-0.5">
                             ROLE
@@ -539,15 +592,24 @@
         </nav>
 
         <!-- MAIN CONTENT AREA -->
-        <div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+        <div id="mainSidebarContentArea" class="flex-1 md:ml-64 flex flex-col min-h-screen">
 
             <!-- Top App Bar -->
             <header
                 class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 md:px-6 py-3.5 flex justify-between items-center shadow-sm">
-                <div class="flex items-center gap-2">
-                    <h1 id="pageTitle" class="text-sm md:text-base font-bold text-slate-900">Dashboard Utama</h1>
-                    <span class="text-xs text-slate-400 font-medium hidden sm:inline">| Sistem Informasi
-                        Operasional</span>
+                <div class="flex items-center gap-3">
+                    <!-- Tombol Hamburger / Collapse di Topbar -->
+                    <button onclick="toggleSidebarCollapse()" 
+                        class="hidden md:flex p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition items-center justify-center border border-slate-200 shadow-2xs"
+                        title="Ciutkan / Buka Sidebar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 id="pageTitle" class="text-sm md:text-base font-bold text-slate-900 leading-tight">Dashboard Utama</h1>
+                        <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">Sistem Distribusi & Operasional</span>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <div
@@ -1272,6 +1334,20 @@
             if (tabName === 'ledger') loadStockLedger();
             if (tabName === 'debts') loadDebts();
         }
+
+        // --- COLLAPSIBLE SIDEBAR ENGINE ---
+        function toggleSidebarCollapse() {
+            document.body.classList.toggle('sidebar-collapsed');
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        }
+
+        function initSidebarState() {
+            if (localStorage.getItem('sidebar_collapsed') === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+        }
+        initSidebarState();
 
         function checkAuthSession() {
             const loginScreen = document.getElementById('loginScreen');
