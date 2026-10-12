@@ -523,11 +523,6 @@
                         Operasional</span>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button id="btnResetSystemData" onclick="openResetDataModal()" 
-                        class="hidden text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg border border-rose-200 font-bold flex items-center gap-1 transition"
-                        title="Kosongkan Transaksi Demo">
-                        🧹 Kosongkan Data Transaksi
-                    </button>
                     <div
                         class="text-[11px] text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
@@ -1328,15 +1323,6 @@
 
                 // Hide Mobile Bottom Nav Bar on Admin mode
                 if (mobileNavbar) mobileNavbar.classList.add('hidden');
-
-                const btnReset = document.getElementById('btnResetSystemData');
-                if (btnReset) {
-                    if (localStorage.getItem('hideResetBtn') === 'true') {
-                        btnReset.classList.add('hidden');
-                    } else {
-                        btnReset.classList.remove('hidden');
-                    }
-                }
 
                 // Auto switch to Back Office Dashboard view
                 switchTab('dashboard');
