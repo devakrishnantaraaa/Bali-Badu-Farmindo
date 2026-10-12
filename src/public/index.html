@@ -781,13 +781,11 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tipe
-                                Pembayaran</label>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tipe Pembayaran (TOP)</label>
                             <select id="orderPaymentType" onchange="toggleDueDate()"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
-                                <option value="CASH">CASH (Tunai Direct)</option>
-                                <option value="TRANSFER">TRANSFER (Bank Direct)</option>
-                                <option value="CREDIT">CREDIT (Gantung Nota / Tempo)</option>
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-amber-500">
+                                <option value="LUNAS">LUNAS</option>
+                                <option value="PENDING">PENDING</option>
                             </select>
                         </div>
 
@@ -2509,7 +2507,7 @@
         function toggleDueDate() {
             const type = document.getElementById('orderPaymentType').value;
             const container = document.getElementById('dueDateContainer');
-            if (type === 'CREDIT') {
+            if (type === 'PENDING' || type === 'CREDIT') {
                 container.classList.remove('hidden');
             } else {
                 container.classList.add('hidden');

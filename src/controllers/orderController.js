@@ -141,11 +141,13 @@ async function createOrder(req, res) {
 
         // 5. Create Invoice
         const invoiceNum = `INV-${Date.now()}`;
-        const invoiceStatus = payment_type === 'CREDIT' ? 'GANTUNG' : 'LUNAS';
-        const initialPaid = payment_type === 'CREDIT' ? 0.00 : totalAmount;
+        const isPending = (payment_type === 'PENDING' || payment_type === 'CREDIT');
+        const invoiceStatus = isPending ? 'GANTUNG' : 'LUNAS';
+        const initialPaid = isPending ? 0.00 : totalAmount;
+        const normalizedPaymentType = isPending ? 'CREDIT' : (payment_type === 'TRANSFER' ? 'TRANSFER' : 'CASH');
 
         let googleCalEventId = null;
-        if (payment_type === 'CREDIT' && due_date) {
+        if (isPending && due_date) {
             googleCalEventId = await googleCalendarService.createDueDateReminder({
                 invoiceNumber: invoiceNum,
                 customerName: customerName,
@@ -158,8 +160,18 @@ async function createOrder(req, res) {
             `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
-            [invoiceNum, order.id, customer_id, payment_type, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId]
+            [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId]
         );
+
+        // Jika transaksi langsung LUNAS, otomatis catat payment validated agar masuk ke laporan setoran
+        if (!isPending) {
+            const payNum = `PAY-${Date.now()}`;
+            await client.query(
+                `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at)
+                 VALUES ($1, $2, $3, $4, 'TRANSFER', TRUE, CURRENT_TIMESTAMP)`,
+                [payNum, invoiceRes.rows[0].id, customer_id, totalAmount]
+            );
+        }
 
         await client.query('COMMIT');
 
