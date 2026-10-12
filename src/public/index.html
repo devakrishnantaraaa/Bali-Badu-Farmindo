@@ -1812,12 +1812,6 @@
                     if (incomingDateEl && !incomingDateEl.value) {
                         incomingDateEl.value = new Date().toISOString().split('T')[0];
                     }
-
-                    // Default tanggal penjualan / nota ke hari ini jika belum diisi
-                    const orderDateEl = document.getElementById('orderDate');
-                    if (orderDateEl && !orderDateEl.value) {
-                        orderDateEl.value = new Date().toISOString().split('T')[0];
-                    }
                 }
 
                 loadStockLedger();
@@ -1864,6 +1858,9 @@
             const due_date = document.getElementById('orderDueDate').value;
             const order_date = document.getElementById('orderDate').value;
 
+            if (!order_date) {
+                return showAlert('Silakan isi Tanggal Penjualan / Nota terlebih dahulu!', true);
+            }
             if (!customer_id) {
                 return showAlert('Silakan pilih Pelanggan / Customer!', true);
             }
@@ -1894,8 +1891,6 @@
                 showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
                 const orderForm = document.getElementById('orderForm');
                 if (orderForm) orderForm.reset();
-                const orderDateEl = document.getElementById('orderDate');
-                if (orderDateEl) orderDateEl.value = new Date().toISOString().split('T')[0];
                 calculateOrderTotalLive();
                 loadInitialData();
 
