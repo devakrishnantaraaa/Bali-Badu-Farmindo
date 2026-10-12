@@ -1330,7 +1330,13 @@
                 if (mobileNavbar) mobileNavbar.classList.add('hidden');
 
                 const btnReset = document.getElementById('btnResetSystemData');
-                if (btnReset) btnReset.classList.remove('hidden');
+                if (btnReset) {
+                    if (localStorage.getItem('hideResetBtn') === 'true') {
+                        btnReset.classList.add('hidden');
+                    } else {
+                        btnReset.classList.remove('hidden');
+                    }
+                }
 
                 // Auto switch to Back Office Dashboard view
                 switchTab('dashboard');
@@ -1603,6 +1609,11 @@
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Gagal mereset data transaksi');
+
+                // Sembunyikan tombol reset di navbar setelah selesai dipakai (demo reset selesai)
+                localStorage.setItem('hideResetBtn', 'true');
+                const btnReset = document.getElementById('btnResetSystemData');
+                if (btnReset) btnReset.classList.add('hidden');
 
                 closeResetDataModal();
                 showAlert(data.message || 'Riwayat transaksi berhasil dibersihkan!');
