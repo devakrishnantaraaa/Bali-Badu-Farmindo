@@ -2574,17 +2574,21 @@
             const optionsContainer = document.createElement('div');
             optionsContainer.className = 'custom-select-options';
 
-            // Aktifkan Search Box jika selectId adalah orderCustomer / customer atau jika opsi lebih dari 4
-            const isSearchable = selectId.toLowerCase().includes('customer') || selectEl.options.length > 4;
+            // Aktifkan Search Box jika selectId adalah Customer atau Produk, atau opsi lebih dari 3
+            const lowerId = selectId.toLowerCase();
+            const isCustomer = lowerId.includes('customer');
+            const isProduct = lowerId.includes('product') || lowerId.includes('prod');
+            const isSearchable = isCustomer || isProduct || selectEl.options.length > 3;
             let searchInput = null;
 
             if (isSearchable) {
                 const searchBox = document.createElement('div');
                 searchBox.className = 'custom-select-search-box';
+                const placeholderText = isCustomer ? 'Cari nama customer...' : (isProduct ? 'Cari jenis produk telur...' : 'Ketik kata kunci...');
                 searchBox.innerHTML = `
                     <div class="relative flex items-center">
                         <span class="absolute left-2.5 text-slate-400 text-xs">🔍</span>
-                        <input type="text" class="custom-select-search-input pl-7" placeholder="Ketik nama atau kata kunci...">
+                        <input type="text" class="custom-select-search-input pl-7" placeholder="${placeholderText}">
                     </div>
                 `;
                 searchInput = searchBox.querySelector('input');
