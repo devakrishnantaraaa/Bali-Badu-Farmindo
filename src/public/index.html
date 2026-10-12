@@ -2045,10 +2045,9 @@
                         <td class="p-1.5 border border-slate-300 text-center">
                             <select onchange="updateInvoiceInlineFields(${item.invoice_id}, null, this.value, null)"
                                 class="text-[10px] font-semibold px-1 py-1 bg-slate-50 border border-slate-300 rounded focus:outline-none text-slate-800">
-                                <option value="TRANSFER" ${currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>TRANSFER</option>
-                                <option value="CASH" ${currentCek.toUpperCase() === 'CASH' ? 'selected' : ''}>CASH</option>
-                                <option value="CEK" ${currentCek.toUpperCase() === 'CEK' ? 'selected' : ''}>CEK / BG</option>
-                                <option value="CREDIT" ${currentCek.toUpperCase() === 'CREDIT' ? 'selected' : ''}>TEMPO</option>
+                                <option value="Transfer" ${currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>Transfer</option>
+                                <option value="Setor" ${currentCek.toUpperCase() === 'SETOR' ? 'selected' : ''}>Setor</option>
+                                <option value="OK" ${currentCek.toUpperCase() === 'OK' ? 'selected' : ''}>OK</option>
                             </select>
                         </td>
 
