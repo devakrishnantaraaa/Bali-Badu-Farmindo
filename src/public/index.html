@@ -738,17 +738,29 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label
-                                    class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Jumlah
-                                    (kg/tray)</label>
-                                <input type="number" id="orderQty" placeholder="0"
-                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                                    class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Jumlah Qty
+                                    (kg/krat/tray)</label>
+                                <input type="number" id="orderQty" placeholder="0" min="0.01" step="any" oninput="calculateOrderTotalLive()"
+                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-bold">
                             </div>
                             <div>
                                 <label
-                                    class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga
-                                    Satuan (Rp)</label>
-                                <input type="number" id="orderPrice" placeholder="Default harga"
-                                    class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                                    class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan (Rp)
+                                    <span class="text-[10px] text-amber-700 font-bold lowercase">(input manual)</span></label>
+                                <input type="number" id="orderPrice" placeholder="Ketik harga jual..." min="0" step="100" oninput="calculateOrderTotalLive()"
+                                    class="w-full bg-amber-50/70 border border-amber-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-amber-500 font-bold">
+                            </div>
+                        </div>
+
+                        <!-- LIVE PREVIEW RUMUS TOTAL PENJUALAN (Qty x Harga Manual) -->
+                        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center shadow-sm">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">Total Penjualan Nota</span>
+                                <span id="orderFormulaPreview" class="text-xs text-slate-600 font-mono">0 x Rp 0</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] text-slate-500 uppercase font-semibold block">Total Bayar:</span>
+                                <span id="orderLiveTotal" class="text-lg font-black text-slate-900 font-mono">Rp 0</span>
                             </div>
                         </div>
 
@@ -772,8 +784,8 @@
                         </div>
 
                         <button type="button" onclick="submitSalesOrder()"
-                            class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm">
-                            Proses Transaksi & Update Stok
+                            class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 px-4 rounded-lg shadow-sm transition text-sm flex items-center justify-center gap-1.5">
+                            <span>🧾</span> Proses Transaksi & Update Stok
                         </button>
                     </form>
                 </div>
@@ -1568,7 +1580,7 @@
                         }
                     });
 
-                    // Auto-fill harga acuan saat produk penjualan dipilih
+                    // Auto-fill harga acuan saat produk penjualan dipilih (bila field harga kosong)
                     const orderProdSelect = document.getElementById('orderProduct');
                     if (orderProdSelect && !orderProdSelect.dataset.hasPriceListener) {
                         orderProdSelect.dataset.hasPriceListener = 'true';
@@ -1578,6 +1590,7 @@
                             if (opt && opt.dataset.price && priceInput && !priceInput.value) {
                                 priceInput.value = opt.dataset.price;
                             }
+                            calculateOrderTotalLive();
                         });
                     }
 
@@ -1617,18 +1630,45 @@
             }
         }
 
+        // LIVE CALCULATION RUMUS TOTAL PENJUALAN (Qty x Harga Manual)
+        function calculateOrderTotalLive() {
+            const qty = parseFloat(document.getElementById('orderQty')?.value) || 0;
+            const price = parseFloat(document.getElementById('orderPrice')?.value) || 0;
+            const total = qty * price;
+
+            const formulaEl = document.getElementById('orderFormulaPreview');
+            const totalEl = document.getElementById('orderLiveTotal');
+
+            if (formulaEl) {
+                formulaEl.innerText = `${qty.toLocaleString('id-ID')} x Rp ${price.toLocaleString('id-ID')}`;
+            }
+            if (totalEl) {
+                totalEl.innerText = `Rp ${Math.round(total).toLocaleString('id-ID')}`;
+            }
+        }
+
         async function submitSalesOrder() {
             const customerSelect = document.getElementById('orderCustomer');
             const productSelect = document.getElementById('orderProduct');
             const customer_id = customerSelect.value;
             const product_id = productSelect.value;
-            const quantity = document.getElementById('orderQty').value;
-            const unit_price = document.getElementById('orderPrice').value;
+            const quantity = parseFloat(document.getElementById('orderQty').value);
+            const unit_price = parseFloat(document.getElementById('orderPrice').value);
             const payment_type = document.getElementById('orderPaymentType').value;
             const due_date = document.getElementById('orderDueDate').value;
 
-            const custText = customerSelect.options[customerSelect.selectedIndex] ? customerSelect.options[customerSelect.selectedIndex].text : 'Customer';
-            const prodText = productSelect.options[productSelect.selectedIndex] ? productSelect.options[productSelect.selectedIndex].text : 'Telur Ayam';
+            if (!customer_id) {
+                return showAlert('Silakan pilih Pelanggan / Customer!', true);
+            }
+            if (!product_id) {
+                return showAlert('Silakan pilih Produk Telur!', true);
+            }
+            if (!quantity || quantity <= 0) {
+                return showAlert('Silakan isi Jumlah Qty penjualan yang valid!', true);
+            }
+            if (isNaN(unit_price) || unit_price < 0) {
+                return showAlert('Silakan isi Harga Satuan penjualan (bisa diketik manual)!', true);
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/orders`, {
@@ -1646,6 +1686,7 @@
                 showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
                 const orderForm = document.getElementById('orderForm');
                 if (orderForm) orderForm.reset();
+                calculateOrderTotalLive();
                 loadInitialData();
 
                 // Tampilkan popup peringatan nota gantung jika ada catatan piutang sebelumnya
