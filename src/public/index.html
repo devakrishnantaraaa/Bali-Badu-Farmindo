@@ -754,6 +754,14 @@
 
                     <form id="orderForm" class="space-y-4">
                         <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                                Tanggal Penjualan / Nota
+                            </label>
+                            <input type="date" id="orderDate"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <div>
                             <label
                                 class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pelanggan
                                 / Customer</label>
@@ -1804,6 +1812,12 @@
                     if (incomingDateEl && !incomingDateEl.value) {
                         incomingDateEl.value = new Date().toISOString().split('T')[0];
                     }
+
+                    // Default tanggal penjualan / nota ke hari ini jika belum diisi
+                    const orderDateEl = document.getElementById('orderDate');
+                    if (orderDateEl && !orderDateEl.value) {
+                        orderDateEl.value = new Date().toISOString().split('T')[0];
+                    }
                 }
 
                 loadStockLedger();
@@ -1848,6 +1862,7 @@
             const unit_price = parseFloat(document.getElementById('orderPrice').value);
             const payment_type = document.getElementById('orderPaymentType').value;
             const due_date = document.getElementById('orderDueDate').value;
+            const order_date = document.getElementById('orderDate').value;
 
             if (!customer_id) {
                 return showAlert('Silakan pilih Pelanggan / Customer!', true);
@@ -1870,6 +1885,7 @@
                         customer_id,
                         payment_type,
                         due_date: due_date || null,
+                        order_date: order_date || undefined,
                         items: [{ product_id, quantity, unit_price }]
                     })
                 });
@@ -1878,6 +1894,8 @@
                 showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
                 const orderForm = document.getElementById('orderForm');
                 if (orderForm) orderForm.reset();
+                const orderDateEl = document.getElementById('orderDate');
+                if (orderDateEl) orderDateEl.value = new Date().toISOString().split('T')[0];
                 calculateOrderTotalLive();
                 loadInitialData();
 

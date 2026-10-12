@@ -108,11 +108,19 @@ async function createOrder(req, res) {
 
         // 3. Create Sales Order
         const orderNum = `ORD-${Date.now()}`;
+        const orderDateTimestamp = (req.body.order_date) ? `${req.body.order_date} 12:00:00` : null;
+
         const orderRes = await client.query(
-            `INSERT INTO orders (order_number, customer_id, total_amount, status)
-             VALUES ($1, $2, $3, 'CONFIRMED')
-             RETURNING *`,
-            [orderNum, customer_id, totalAmount]
+            orderDateTimestamp 
+                ? `INSERT INTO orders (order_number, customer_id, total_amount, status, created_at)
+                   VALUES ($1, $2, $3, 'CONFIRMED', $4)
+                   RETURNING *`
+                : `INSERT INTO orders (order_number, customer_id, total_amount, status)
+                   VALUES ($1, $2, $3, 'CONFIRMED')
+                   RETURNING *`,
+            orderDateTimestamp 
+                ? [orderNum, customer_id, totalAmount, orderDateTimestamp]
+                : [orderNum, customer_id, totalAmount]
         );
         const order = orderRes.rows[0];
 
@@ -133,9 +141,14 @@ async function createOrder(req, res) {
 
             // Log movement
             await client.query(
-                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes)
-                 VALUES ($1, 'PENJUALAN', $2, $3, $4, $5)`,
-                [pItem.product_id, pItem.quantity, newStock, orderNum, `Penjualan Nota ${orderNum}`]
+                orderDateTimestamp
+                    ? `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes, created_at)
+                       VALUES ($1, 'PENJUALAN', $2, $3, $4, $5, $6)`
+                    : `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes)
+                       VALUES ($1, 'PENJUALAN', $2, $3, $4, $5)`,
+                orderDateTimestamp
+                    ? [pItem.product_id, pItem.quantity, newStock, orderNum, `Penjualan Nota ${orderNum}`, orderDateTimestamp]
+                    : [pItem.product_id, pItem.quantity, newStock, orderNum, `Penjualan Nota ${orderNum}`]
             );
         }
 
@@ -157,19 +170,30 @@ async function createOrder(req, res) {
         }
 
         const invoiceRes = await client.query(
-            `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-             RETURNING *`,
-            [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId]
+            orderDateTimestamp
+                ? `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id, created_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                   RETURNING *`
+                : `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                   RETURNING *`,
+            orderDateTimestamp
+                ? [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId, orderDateTimestamp]
+                : [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId]
         );
 
         // Jika transaksi langsung LUNAS, otomatis catat payment validated agar masuk ke laporan setoran
         if (!isPending) {
             const payNum = `PAY-${Date.now()}`;
             await client.query(
-                `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at)
-                 VALUES ($1, $2, $3, $4, 'TRANSFER', TRUE, CURRENT_TIMESTAMP)`,
-                [payNum, invoiceRes.rows[0].id, customer_id, totalAmount]
+                orderDateTimestamp
+                    ? `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
+                       VALUES ($1, $2, $3, $4, 'TRANSFER', TRUE, $5, $6)`
+                    : `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at)
+                       VALUES ($1, $2, $3, $4, 'TRANSFER', TRUE, CURRENT_TIMESTAMP)`,
+                orderDateTimestamp
+                    ? [payNum, invoiceRes.rows[0].id, customer_id, totalAmount, orderDateTimestamp, orderDateTimestamp]
+                    : [payNum, invoiceRes.rows[0].id, customer_id, totalAmount]
             );
         }
 
