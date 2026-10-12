@@ -47,4 +47,38 @@ router.get('/reports/daily-deposits', authorizeRoles('SUPER_ADMIN', 'MARKETING')
 router.get('/reports/monthly-recap', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getMonthlyRecap);
 router.get('/reports/outstanding-debts', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getOutstandingDebts);
 
+// System Utility: Reset Riwayat Transaksi (Access: SUPER_ADMIN only)
+router.post('/system/reset-transactions', authorizeRoles('SUPER_ADMIN'), async (req, res) => {
+    const db = require('../config/db');
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Kosongkan pembayaran, invoice, item pesanan, dan pesanan
+        await client.query('DELETE FROM payments');
+        await client.query('DELETE FROM invoices');
+        await client.query('DELETE FROM order_items');
+        await client.query('DELETE FROM orders');
+
+        // 2. Kosongkan log mutasi kartu stok
+        await client.query('DELETE FROM stock_movements');
+
+        // 3. Reset stok produk ke 0 agar bersih (opsional) atau biarkan stok awal
+        if (req.body && req.body.reset_stock_to_zero) {
+            await client.query('UPDATE products SET current_stock = 0');
+        }
+
+        await client.query('COMMIT');
+        return res.json({ 
+            message: 'Seluruh riwayat transaksi nota penjualan, pembayaran, invoice, dan mutasi stok berhasil dibersihkan!' 
+        });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;
+

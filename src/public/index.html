@@ -522,9 +522,16 @@
                     <span class="text-xs text-slate-400 font-medium hidden sm:inline">| Sistem Informasi
                         Operasional</span>
                 </div>
-                <div
-                    class="text-[11px] text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                <div class="flex items-center gap-3">
+                    <button id="btnResetSystemData" onclick="openResetDataModal()" 
+                        class="hidden text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg border border-rose-200 font-bold flex items-center gap-1 transition"
+                        title="Kosongkan Transaksi Demo">
+                        🧹 Kosongkan Data Transaksi
+                    </button>
+                    <div
+                        class="text-[11px] text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                    </div>
                 </div>
             </header>
 
@@ -1314,6 +1321,9 @@
                 // Hide Mobile Bottom Nav Bar on Admin mode
                 if (mobileNavbar) mobileNavbar.classList.add('hidden');
 
+                const btnReset = document.getElementById('btnResetSystemData');
+                if (btnReset) btnReset.classList.remove('hidden');
+
                 // Auto switch to Back Office Dashboard view
                 switchTab('dashboard');
             }
@@ -1559,6 +1569,49 @@
                 btn.innerHTML = originalContent;
             }
         }
+
+        // ================= KOSONGKAN / RESET TRANSAKSI SISTEM =================
+        function openResetDataModal() {
+            document.getElementById('resetDataModal').classList.remove('hidden');
+        }
+
+        function closeResetDataModal() {
+            document.getElementById('resetDataModal').classList.add('hidden');
+        }
+
+        async function executeResetData() {
+            const btn = document.getElementById('btnExecuteResetData');
+            const originalContent = btn.innerHTML;
+            const resetStockToZero = document.getElementById('checkResetStockZero').checked;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span>Membersihkan Data...</span>';
+
+            try {
+                const res = await fetch(`${API_BASE}/system/reset-transactions`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ reset_stock_to_zero: resetStockToZero })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal mereset data transaksi');
+
+                closeResetDataModal();
+                showAlert(data.message || 'Riwayat transaksi berhasil dibersihkan!');
+                loadInitialData();
+                loadDailySalesReport();
+                loadMonthlyRecapReport();
+                loadStockLedger();
+                loadDebts();
+            } catch (err) {
+                closeResetDataModal();
+                showAlert(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+
 
 
 
@@ -3269,6 +3322,51 @@
                 <button id="btnExecuteDeleteCust" onclick="executeDeleteCustomer()"
                     class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
                     <span>Ya, Hapus Sekarang</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KONFIRMASI KOSONGKAN DATA TRANSAKSI -->
+    <div id="resetDataModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-300 text-slate-900 space-y-4 animate-scaleUp">
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0 text-2xl font-bold">
+                    🧹
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Kosongkan Riwayat Transaksi?</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Bersihkan semua data transaksi & rekap nota.</p>
+                </div>
+            </div>
+
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-950 space-y-2">
+                <p class="font-bold">Yang akan dibersihkan dari sistem:</p>
+                <ul class="list-disc list-inside space-y-1 text-[11px] text-rose-900">
+                    <li>Semua nota penjualan & invoice piutang</li>
+                    <li>Semua catatan pembayaran & setoran</li>
+                    <li>Riwayat laporan harian & rekap bulanan</li>
+                    <li>Kartu stok log audit perpindahan barang</li>
+                </ul>
+                <div class="pt-2 border-t border-rose-200">
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-800 font-semibold text-xs">
+                        <input type="checkbox" id="checkResetStockZero" class="rounded text-rose-600">
+                        <span>Nol-kan juga sisa stok produk (stok = 0)</span>
+                    </label>
+                </div>
+                <p class="text-[10px] text-slate-500 italic">
+                    *Akun pengguna (Admin/Marketing), master produk, dan daftar customer tetap utuh.
+                </p>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeResetDataModal()"
+                    class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors">
+                    Batal
+                </button>
+                <button id="btnExecuteResetData" onclick="executeResetData()"
+                    class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                    <span>Ya, Kosongkan Transaksi Sekarang</span>
                 </button>
             </div>
         </div>
