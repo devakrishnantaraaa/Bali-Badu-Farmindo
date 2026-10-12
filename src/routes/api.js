@@ -20,6 +20,8 @@ router.use(authenticateToken);
 // Customers (Access: SUPER_ADMIN & MARKETING)
 router.get('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.getCustomers);
 router.post('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.createCustomer);
+router.put('/customers/:id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.updateCustomer);
+router.delete('/customers/:id', authorizeRoles('SUPER_ADMIN'), customerController.deleteCustomer);
 
 // Products & Stock (Access: SUPER_ADMIN can input stock, edit & delete products, adjustments, MARKETING can view)
 router.get('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getProducts);
