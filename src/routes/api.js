@@ -21,9 +21,11 @@ router.use(authenticateToken);
 router.get('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.getCustomers);
 router.post('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.createCustomer);
 
-// Products & Stock (Access: SUPER_ADMIN can input stock & adjustments, MARKETING can view)
+// Products & Stock (Access: SUPER_ADMIN can input stock, edit & delete products, adjustments, MARKETING can view)
 router.get('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getProducts);
 router.post('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.createProduct);
+router.put('/products/:id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.updateProduct);
+router.delete('/products/:id', authorizeRoles('SUPER_ADMIN'), stockController.deleteProduct);
 router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN'), stockController.recordIncomingGoods);
 router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN'), stockController.recordStockAdjustment);
 router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getStockLedger);

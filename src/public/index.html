@@ -694,6 +694,7 @@
                                         <th class="p-2 border border-slate-200">NAMA PRODUK</th>
                                         <th class="p-2 border border-slate-200 text-right">STOK SAAT INI</th>
                                         <th class="p-2 border border-slate-200 text-right">HARGA DEFAULT</th>
+                                        <th class="p-2 border border-slate-200 text-center w-28">AKSI</th>
                                     </tr>
                                 </thead>
                                 <tbody id="productTableBody" class="divide-y divide-slate-100 bg-white">
@@ -1374,6 +1375,69 @@
             }
         }
 
+        // ================= EDIT & HAPUS PRODUK =================
+        function openEditProductModal(productId) {
+            const prod = (window.globalProductsList || []).find(p => p.id === productId);
+            if (!prod) return;
+
+            document.getElementById('editProdId').value = prod.id;
+            document.getElementById('editProdName').value = prod.name;
+            document.getElementById('editProdUnit').value = prod.unit || 'kg';
+            document.getElementById('editProdPrice').value = prod.price_per_unit || 0;
+
+            document.getElementById('editProductModal').classList.remove('hidden');
+        }
+
+        function closeEditProductModal() {
+            document.getElementById('editProductModal').classList.add('hidden');
+        }
+
+        async function submitEditProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('editProdId').value;
+            const name = document.getElementById('editProdName').value.trim();
+            const unit = document.getElementById('editProdUnit').value;
+            const price_per_unit = parseFloat(document.getElementById('editProdPrice').value) || 0;
+
+            try {
+                const res = await fetch(`${API_BASE}/products/${id}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ name, unit, price_per_unit })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal mengubah produk');
+
+                closeEditProductModal();
+                showAlert(data.message || 'Produk berhasil diperbarui!');
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
+        async function deleteProductById(productId, productName) {
+            if (!confirm(`Apakah Anda yakin ingin menghapus produk "${productName}" dari sistem?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/products/${productId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal menghapus produk');
+
+                showAlert(data.message || 'Produk berhasil dihapus!');
+                loadInitialData();
+            } catch (err) {
+                alert(err.message);
+                showAlert(err.message, true);
+            }
+        }
+
+
         function getAuthHeaders() {
             return {
                 'Content-Type': 'application/json',
@@ -1445,6 +1509,8 @@
                     const countProdEl = document.getElementById('countProductTable');
                     if (countProdEl) countProdEl.innerText = products.length;
 
+                    window.globalProductsList = products;
+
                     // Render Tabel Daftar Produk & Stok Terdaftar
                     const prodBody = document.getElementById('productTableBody');
                     if (prodBody) {
@@ -1458,17 +1524,42 @@
                                 <td class="p-2 border border-slate-200 text-right font-semibold text-slate-800">
                                     Rp ${Number(p.price_per_unit || 0).toLocaleString('id-ID')}
                                 </td>
+                                <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <button onclick="openEditProductModal(${p.id})" title="Edit Harga Pasar & Nama" 
+                                            class="px-2 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded shadow-sm flex items-center gap-1">
+                                            ✏️ Edit
+                                        </button>
+                                        <button onclick="deleteProductById(${p.id}, '${p.name.replace(/'/g, "\\'")}')" title="Hapus Produk" 
+                                            class="px-2 py-1 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded shadow-sm flex items-center gap-1">
+                                            🗑️ Hapus
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
-                        `).join('') || '<tr><td colspan="4" class="p-3 text-center text-slate-400">Belum ada produk terdaftar</td></tr>';
+                        `).join('') || '<tr><td colspan="5" class="p-3 text-center text-slate-400">Belum ada produk terdaftar</td></tr>';
                     }
 
                     const pSelects = [document.getElementById('orderProduct'), document.getElementById('incomingProduct'), document.getElementById('adjProduct')];
                     pSelects.forEach(select => {
                         if (select) {
                             select.innerHTML = '<option value="">Pilih Produk...</option>' +
-                                products.map(p => `<option value="${p.id}">${p.name} - Stok: ${p.current_stock} ${p.unit}</option>`).join('');
+                                products.map(p => `<option value="${p.id}" data-price="${p.price_per_unit || 0}">${p.name} - Stok: ${p.current_stock} ${p.unit}</option>`).join('');
                         }
                     });
+
+                    // Auto-fill harga acuan saat produk penjualan dipilih
+                    const orderProdSelect = document.getElementById('orderProduct');
+                    if (orderProdSelect && !orderProdSelect.dataset.hasPriceListener) {
+                        orderProdSelect.dataset.hasPriceListener = 'true';
+                        orderProdSelect.addEventListener('change', function() {
+                            const opt = this.options[this.selectedIndex];
+                            const priceInput = document.getElementById('orderPrice');
+                            if (opt && opt.dataset.price && priceInput && !priceInput.value) {
+                                priceInput.value = opt.dataset.price;
+                            }
+                        });
+                    }
 
                     // Populate Filter Kartu Stok Gudang
                     const filterLedger = document.getElementById('filterLedgerProduct');
@@ -2840,6 +2931,58 @@
                     Tutup Pengingat
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PRODUK & HARGA PASAR -->
+    <div id="editProductModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 text-slate-900 space-y-4 animate-scaleUp">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">✏️</span>
+                    <h3 class="text-base font-bold text-slate-900">Edit Produk & Harga Pasar</h3>
+                </div>
+                <button onclick="closeEditProductModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button>
+            </div>
+
+            <form id="editProductForm" onsubmit="submitEditProduct(event)" class="space-y-3.5">
+                <input type="hidden" id="editProdId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Produk Telur</label>
+                    <input type="text" id="editProdName" required
+                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Satuan Unit</label>
+                        <select id="editProdUnit" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
+                            <option value="kg">kg</option>
+                            <option value="tray">tray</option>
+                            <option value="butir">butir</option>
+                            <option value="krat">krat</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Harga Pasar Default (Rp)</label>
+                        <input type="number" id="editProdPrice" required min="0" step="100"
+                            class="w-full bg-amber-50 border border-amber-300 font-bold text-slate-900 rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">
+                    💡 <b>Tips Fluktuasi Harga:</b> Mengubah harga default di sini akan memperbarui harga acuan harian tanpa mengubah harga nota penjualan masa lalu.
+                </p>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closeEditProductModal()"
+                        class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">
+                        Batal
+                    </button>
+                    <button type="submit"
+                        class="px-5 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg shadow-sm">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </body>

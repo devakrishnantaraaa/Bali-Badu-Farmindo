@@ -179,10 +179,76 @@ async function createProduct(req, res) {
     }
 }
 
+// Update Product (e.g. Nama, Unit, Harga Default Pasar)
+async function updateProduct(req, res) {
+    try {
+        const { id } = req.params;
+        const { name, unit, price_per_unit } = req.body;
+
+        if (!name) return res.status(400).json({ error: 'Nama produk wajib diisi' });
+
+        const result = await db.query(
+            `UPDATE products 
+             SET name = $1, unit = $2, price_per_unit = $3
+             WHERE id = $4
+             RETURNING *`,
+            [name, unit || 'kg', price_per_unit || 0, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Produk tidak ditemukan' });
+        }
+
+        return res.json({
+            message: 'Data produk & harga berhasil diperbarui!',
+            product: result.rows[0]
+        });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+// Delete Product
+async function deleteProduct(req, res) {
+    try {
+        const { id } = req.params;
+
+        // Cek apakah produk memiliki riwayat transaksi penjualan
+        const orderCheck = await db.query('SELECT COUNT(*) FROM order_items WHERE product_id = $1', [id]);
+        if (parseInt(orderCheck.rows[0].count) > 0) {
+            return res.status(400).json({
+                error: 'Produk ini tidak dapat dihapus karena sudah memiliki riwayat transaksi/nota penjualan. Anda dapat mengubah namanya atau menyetel stok menjadi 0.'
+            });
+        }
+
+        // Cek apakah produk memiliki riwayat stok movement
+        const movementCheck = await db.query('SELECT COUNT(*) FROM stock_movements WHERE product_id = $1', [id]);
+        if (parseInt(movementCheck.rows[0].count) > 0) {
+            // Hapus mutasi stok terkait jika hanya barang masuk / penyesuaian uji coba
+            await db.query('DELETE FROM stock_movements WHERE product_id = $1', [id]);
+        }
+
+        const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Produk tidak ditemukan' });
+        }
+
+        return res.json({
+            message: `Produk "${result.rows[0].name}" berhasil dihapus dari sistem!`,
+            deletedProduct: result.rows[0]
+        });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     recordIncomingGoods,
     recordStockAdjustment,
     getStockLedger,
     getProducts,
-    createProduct
+    createProduct,
+    updateProduct,
+    deleteProduct
 };
+
