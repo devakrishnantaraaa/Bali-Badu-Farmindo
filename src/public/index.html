@@ -2070,6 +2070,10 @@
                                     ✅ Validasi
                                 </button>
                                 ` : ''}
+                                <button onclick="confirmDeleteSalesOrder(${item.order_id}, '${item.invoice_number}', '${item.customer_name}', ${total})" 
+                                    class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Hapus Transaksi Nota">
+                                    🗑️ Hapus
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -2119,6 +2123,34 @@
                 loadDailyDepositsReport();
                 loadMonthlyRecapReport();
                 loadDebts();
+            } catch (err) {
+                showAlert(err.message, true);
+            }
+        }
+
+        async function confirmDeleteSalesOrder(orderId, invNumber, custName, total) {
+            const confirmMsg = `Yakin ingin menghapus transaksi nota ini?\n\n` +
+                               `• Invoice: ${invNumber || '-'}\n` +
+                               `• Pelanggan: ${custName || '-'}\n` +
+                               `• Total: Rp ${(total || 0).toLocaleString('id-ID')}\n\n` +
+                               `Stok barang akan otomatis dikembalikan ke gudang.`;
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/orders/${orderId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal menghapus transaksi penjualan');
+
+                showAlert(data.message || 'Transaksi penjualan berhasil dihapus!');
+                loadDailySalesReport();
+                loadDailyDepositsReport();
+                loadMonthlyRecapReport();
+                loadStockLedger();
+                loadDebts();
+                loadInitialData();
             } catch (err) {
                 showAlert(err.message, true);
             }

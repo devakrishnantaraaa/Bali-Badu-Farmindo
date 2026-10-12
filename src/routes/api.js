@@ -34,6 +34,7 @@ router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockCon
 
 // Sales Orders & Credit Check (Access: SUPER_ADMIN & MARKETING)
 router.post('/orders', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.createOrder);
+router.delete('/orders/:order_id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.deleteOrderById);
 
 // Payments & Deposit Validation
 router.post('/payments', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.submitPayment);

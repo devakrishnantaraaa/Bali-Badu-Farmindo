@@ -215,6 +215,55 @@ async function createOrder(req, res) {
     }
 }
 
+async function deleteOrderById(req, res) {
+    const { order_id } = req.params;
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
+
+        // Cari item pesanan untuk mengembalikan stok produk (restore stock)
+        const itemsRes = await client.query(
+            `SELECT product_id, quantity FROM order_items WHERE order_id = $1`,
+            [order_id]
+        );
+
+        for (const item of itemsRes.rows) {
+            await client.query(
+                `UPDATE products SET current_stock = current_stock + $1 WHERE id = $2`,
+                [parseFloat(item.quantity), item.product_id]
+            );
+        }
+
+        // Hapus log pergerakan stok terkait order
+        const orderRes = await client.query(`SELECT order_number FROM orders WHERE id = $1`, [order_id]);
+        if (orderRes.rows.length > 0) {
+            const orderNum = orderRes.rows[0].order_number;
+            await client.query(`DELETE FROM stock_movements WHERE reference_id = $1`, [orderNum]);
+        }
+
+        // Hapus pembayaran & invoice terkait
+        const invRes = await client.query(`SELECT id FROM invoices WHERE order_id = $1`, [order_id]);
+        for (const inv of invRes.rows) {
+            await client.query(`DELETE FROM payments WHERE invoice_id = $1`, [inv.id]);
+        }
+        await client.query(`DELETE FROM invoices WHERE order_id = $1`, [order_id]);
+
+        // Hapus item pesanan dan order
+        await client.query(`DELETE FROM order_items WHERE order_id = $1`, [order_id]);
+        await client.query(`DELETE FROM orders WHERE id = $1`, [order_id]);
+
+        await client.query('COMMIT');
+        return res.json({ message: 'Transaksi penjualan berhasil dihapus dan stok barang telah dikembalikan!' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error deleting order:', err);
+        return res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
-    createOrder
+    createOrder,
+    deleteOrderById
 };
