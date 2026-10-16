@@ -760,16 +760,23 @@
                                         </select>
                                     </div>
                                     <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan Default (Rp)</label>
+                                        <input type="number" id="prodPrice" placeholder="0"
+                                            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-bold">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
                                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Stok Awal</label>
                                         <input type="number" id="prodStock" value="0" placeholder="0"
                                             class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500">
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Harga Satuan Default (Rp)</label>
-                                    <input type="number" id="prodPrice" placeholder="0"
-                                        class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-bold">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tanggal Stok Awal</label>
+                                        <input type="date" id="prodStockDate"
+                                            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-700 focus:outline-none focus:border-amber-500 font-medium">
+                                    </div>
                                 </div>
 
                                 <button type="button" onclick="submitNewProduct()"
@@ -1580,6 +1587,7 @@
             const name = document.getElementById('prodName').value;
             const unit = document.getElementById('prodUnit').value;
             const current_stock = document.getElementById('prodStock').value || 0;
+            const stock_date = document.getElementById('prodStockDate')?.value || '';
             const price_per_unit = document.getElementById('prodPrice').value || 0;
 
             if (!name) {
@@ -1591,7 +1599,13 @@
                 const res = await fetch(`${API_BASE}/products`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ name, unit, current_stock: parseFloat(current_stock), price_per_unit: parseFloat(price_per_unit) })
+                    body: JSON.stringify({
+                        name,
+                        unit,
+                        current_stock: parseFloat(current_stock),
+                        stock_date: stock_date || undefined,
+                        price_per_unit: parseFloat(price_per_unit)
+                    })
                 });
                 const data = await safeJsonResponse(res);
                 if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan produk');

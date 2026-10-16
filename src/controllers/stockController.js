@@ -155,27 +155,50 @@ async function getProducts(req, res) {
 
 // Create New Product
 async function createProduct(req, res) {
+    const client = await db.getClient();
     try {
-        const { name, unit, current_stock, price_per_unit } = req.body;
+        const { name, unit, current_stock, stock_date, price_per_unit } = req.body;
         if (!name) return res.status(400).json({ error: 'Nama produk wajib diisi' });
+
+        await client.query('BEGIN');
+
+        const initialStock = parseFloat(current_stock || 0);
 
         const queryText = `
             INSERT INTO products (name, unit, current_stock, price_per_unit)
             VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
-        const result = await db.query(queryText, [
+        const result = await client.query(queryText, [
             name,
             unit || 'krat',
-            current_stock || 0,
+            initialStock,
             price_per_unit || 0
         ]);
+
+        const newProduct = result.rows[0];
+
+        // Jika ada stok awal > 0, catat mutasi stok awal di stock_movements
+        if (initialStock > 0) {
+            const dateVal = stock_date ? new Date(stock_date) : new Date();
+            await client.query(
+                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+                 VALUES ($1, 'BARANG_MASUK', $2, $3, $4, $5)`,
+                [newProduct.id, initialStock, initialStock, 'Stok Awal', dateVal]
+            );
+        }
+
+        await client.query('COMMIT');
+
         return res.status(201).json({
             message: 'Produk baru berhasil ditambahkan!',
-            product: result.rows[0]
+            product: newProduct
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         return res.status(500).json({ error: error.message });
+    } finally {
+        client.release();
     }
 }
 
