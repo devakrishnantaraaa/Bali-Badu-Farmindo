@@ -195,51 +195,52 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 4px;
+            gap: 6px;
+            width: 100%;
         }
 
         .excel-filter-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 17px;
-            height: 17px;
-            border-radius: 3px;
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.15);
+            width: 19px;
+            height: 19px;
+            border-radius: 4px;
+            background: #ffffff;
+            border: 1px solid #94a3b8;
             cursor: pointer;
-            color: #475569;
+            color: #334155;
             font-size: 9px;
             line-height: 1;
             transition: all 0.15s ease;
             flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+            padding: 0;
         }
 
         .excel-filter-btn:hover {
-            background: #f59e0b;
-            color: #000000;
-            border-color: #d97706;
+            background: #fef3c7;
+            color: #b45309;
+            border-color: #f59e0b;
+            transform: scale(1.08);
         }
 
         .excel-filter-btn.active {
             background: #d97706;
             color: #ffffff;
             border-color: #b45309;
-            box-shadow: 0 0 0 1px #b45309;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35);
+            font-weight: bold;
         }
 
         .excel-filter-popup {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            z-index: 50;
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            min-width: 200px;
-            max-width: 280px;
-            padding: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
+            min-width: 230px;
+            max-width: 290px;
+            padding: 10px;
             display: none;
             text-transform: none;
             font-weight: normal;
@@ -253,16 +254,19 @@
 
         .excel-filter-popup-search {
             width: 100%;
-            padding: 4px 8px;
+            padding: 5px 8px;
             font-size: 11px;
             border: 1px solid #cbd5e1;
-            border-radius: 4px;
+            border-radius: 5px;
             margin-bottom: 6px;
             outline: none;
+            background-color: #f8fafc;
         }
 
         .excel-filter-popup-search:focus {
             border-color: #f59e0b;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
         }
 
         .excel-filter-popup-actions {
@@ -276,19 +280,19 @@
         }
 
         .excel-filter-popup-list {
-            max-height: 150px;
+            max-height: 160px;
             overflow-y: auto;
             border: 1px solid #f1f5f9;
             border-radius: 4px;
-            padding: 2px 4px;
+            padding: 3px 4px;
         }
 
         .excel-filter-popup-item {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 3px 4px;
-            border-radius: 3px;
+            padding: 4px 6px;
+            border-radius: 4px;
             cursor: pointer;
         }
 
@@ -947,7 +951,7 @@
                         class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-slate-100 pb-3">
                         <div>
                             <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Harian</h3>
-                            <p class="text-[11px] text-slate-500">Filter berdasarkan rentang periode atau biarkan kosong untuk tampilkan semua.</p>
+                            <p class="text-[11px] text-slate-500">Filter rentang periode atau gunakan filter kolom Excel (klik tanda <span class="inline-block px-1 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-700 border border-slate-300">▼</span> di setiap judul kolom).</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
@@ -961,6 +965,10 @@
                             <button onclick="clearDailySalesFilter()"
                                 class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium border border-slate-200 transition">
                                 Semua Data
+                            </button>
+                            <button id="btnResetExcelFilter-dailySalesTable" onclick="resetAllExcelFilters('dailySalesTable')"
+                                class="hidden text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1.5 rounded-lg font-bold border border-amber-300 transition items-center gap-1">
+                                <span>🧹</span> Reset Filter Excel
                             </button>
                             <button onclick="exportTableToExcel('dailySalesTable', 'Rekap_Penjualan_Harian')"
                                 class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition">
@@ -991,18 +999,78 @@
                             <thead
                                 class="bg-slate-200 text-slate-800 sticky top-0 border-b border-slate-400 font-bold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
-                                    <th class="p-2 border border-slate-300">PERIODE</th>
-                                    <th class="p-2 border border-slate-300">TGL</th>
-                                    <th class="p-2 border border-slate-300">NAMA CUSTOMER</th>
-                                    <th class="p-2 border border-slate-300 text-right">PENJUALAN</th>
-                                    <th class="p-2 border border-slate-300 text-center">KETERANGAN</th>
-                                    <th class="p-2 border border-slate-300 text-right">HARGA</th>
-                                    <th class="p-2 border border-slate-300 text-right">TOTAL</th>
-                                    <th class="p-2 border border-slate-300 text-center">TOP</th>
-                                    <th class="p-2 border border-slate-300 text-right bg-amber-100/50">PEMBAYARAN</th>
-                                    <th class="p-2 border border-slate-300 text-right">SISA PEMBAYARAN</th>
-                                    <th class="p-2 border border-slate-300 text-center">CEK</th>
-                                    <th class="p-2 border border-slate-300 text-center">TRANSFER</th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter">
+                                        <div class="th-excel-header-content">
+                                            <span>PERIODE</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="0" title="Filter & Urutkan PERIODE">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter">
+                                        <div class="th-excel-header-content">
+                                            <span>TGL</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="1" title="Filter & Urutkan TGL">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter">
+                                        <div class="th-excel-header-content">
+                                            <span>NAMA CUSTOMER</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="2" title="Filter & Urutkan NAMA CUSTOMER">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-right">
+                                        <div class="th-excel-header-content justify-end">
+                                            <span>PENJUALAN</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="3" title="Filter & Urutkan PENJUALAN">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-center">
+                                        <div class="th-excel-header-content justify-center">
+                                            <span>KETERANGAN</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="4" title="Filter & Urutkan KETERANGAN">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-right">
+                                        <div class="th-excel-header-content justify-end">
+                                            <span>HARGA</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="5" title="Filter & Urutkan HARGA">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-right">
+                                        <div class="th-excel-header-content justify-end">
+                                            <span>TOTAL</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="6" title="Filter & Urutkan TOTAL">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-center">
+                                        <div class="th-excel-header-content justify-center">
+                                            <span>TOP</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="7" title="Filter & Urutkan TOP">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-right bg-amber-100/50">
+                                        <div class="th-excel-header-content justify-end">
+                                            <span>PEMBAYARAN</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="8" title="Filter & Urutkan PEMBAYARAN">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-right">
+                                        <div class="th-excel-header-content justify-end">
+                                            <span>SISA PEMBAYARAN</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="9" title="Filter & Urutkan SISA PEMBAYARAN">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-center">
+                                        <div class="th-excel-header-content justify-center">
+                                            <span>CEK</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="10" title="Filter & Urutkan CEK">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-center">
+                                        <div class="th-excel-header-content justify-center">
+                                            <span>TRANSFER</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="11" title="Filter & Urutkan TRANSFER">▼</button>
+                                        </div>
+                                    </th>
                                     <th class="p-2 border border-slate-300 text-center bg-amber-200 text-amber-950">AKSI</th>
                                 </tr>
                             </thead>
@@ -1281,6 +1349,12 @@
             const filterDep = document.getElementById('filterDepositDate');
             if (filterDaily) filterDaily.value = today;
             if (filterDep) filterDep.value = today;
+
+            // Pastikan tombol filter model Excel terpasang sejak awal di semua tabel rekap
+            initExcelTableFilters('dailySalesTable');
+            initExcelTableFilters('dailyDepositsTable');
+            initExcelTableFilters('monthlyRecapTable');
+            initExcelTableFilters('stockLedgerTable');
         });
 
         function switchTab(tabName) {
@@ -1327,11 +1401,23 @@
             };
             document.getElementById('pageTitle').innerText = titles[tabName] || 'Dashboard';
 
-            // Trigger specific loads
-            if (tabName === 'daily-sales') loadDailySalesReport();
-            if (tabName === 'daily-deposits') loadDailyDepositsReport();
-            if (tabName === 'monthly-recap') loadMonthlyRecapReport();
-            if (tabName === 'ledger') loadStockLedger();
+            // Trigger specific loads & inisialisasi filter kolom Excel
+            if (tabName === 'daily-sales') {
+                initExcelTableFilters('dailySalesTable');
+                loadDailySalesReport();
+            }
+            if (tabName === 'daily-deposits') {
+                initExcelTableFilters('dailyDepositsTable');
+                loadDailyDepositsReport();
+            }
+            if (tabName === 'monthly-recap') {
+                initExcelTableFilters('monthlyRecapTable');
+                loadMonthlyRecapReport();
+            }
+            if (tabName === 'ledger') {
+                initExcelTableFilters('stockLedgerTable');
+                loadStockLedger();
+            }
             if (tabName === 'debts') loadDebts();
         }
 
@@ -3013,6 +3099,15 @@
         // --- EXCEL-LIKE COLUMN HEADER FILTER ENGINE ---
         const tableFilterStates = {}; // { tableId: { colIndex: Set of allowed values } }
 
+        function getCellFilterValue(cell) {
+            if (!cell) return '';
+            const sel = cell.querySelector('select');
+            if (sel) return sel.value.trim();
+            const inp = cell.querySelector('input');
+            if (inp) return inp.value.trim();
+            return cell.innerText.trim();
+        }
+
         function initExcelTableFilters(tableId) {
             const table = document.getElementById(tableId);
             if (!table) return;
@@ -3024,102 +3119,149 @@
 
             const thList = thead.querySelectorAll('th');
             thList.forEach((th, colIdx) => {
-                // Jangan pasang di kolom AKSI atau tombol
                 const thText = th.innerText.trim().toUpperCase();
                 if (thText.includes('AKSI') || thText === '') return;
 
-                // Cek apakah th sudah memiliki tombol filter
-                if (th.querySelector('.excel-filter-btn')) return;
+                let btn = th.querySelector('.excel-filter-btn');
+                if (!btn) {
+                    th.classList.add('th-excel-filter');
+                    const originalText = th.innerHTML.trim();
+                    th.innerHTML = `
+                        <div class="th-excel-header-content">
+                            <span class="truncate">${originalText}</span>
+                            <button type="button" class="excel-filter-btn" data-table="${tableId}" data-col="${colIdx}" title="Filter & Urutkan ${thText}">
+                                ▼
+                            </button>
+                        </div>
+                    `;
+                    btn = th.querySelector('.excel-filter-btn');
+                }
 
-                th.classList.add('th-excel-filter');
-                const originalText = th.innerHTML;
-
-                th.innerHTML = `
-                    <div class="th-excel-header-content">
-                        <span>${originalText}</span>
-                        <button type="button" class="excel-filter-btn" data-table="${tableId}" data-col="${colIdx}" title="Filter ${thText}">
-                            ▼
-                        </button>
-                    </div>
-                `;
-
-                const btn = th.querySelector('.excel-filter-btn');
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openExcelFilterPopup(tableId, colIdx, btn);
-                });
+                if (btn && !btn.dataset.initialized) {
+                    btn.dataset.initialized = 'true';
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openExcelFilterPopup(tableId, colIdx, btn);
+                    });
+                }
             });
+
+            updateResetAllExcelFilterButton(tableId);
         }
 
         function openExcelFilterPopup(tableId, colIdx, btnEl) {
-            // Tutup semua popup filter lain
             closeAllExcelFilterPopups();
 
             const table = document.getElementById(tableId);
             if (!table) return;
 
-            // Kumpulkan semua nilai unik dari kolom ini
             const tbody = table.querySelector('tbody');
             if (!tbody) return;
 
             const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('td[colspan]'));
-            const uniqueValues = new Set();
+            const valueCounts = {};
 
             rows.forEach(r => {
                 const cells = r.querySelectorAll('td');
                 if (cells[colIdx]) {
-                    const txt = cells[colIdx].innerText.trim();
-                    uniqueValues.add(txt || '(Kosong)');
+                    const val = getCellFilterValue(cells[colIdx]) || '(Kosong)';
+                    valueCounts[val] = (valueCounts[val] || 0) + 1;
                 }
             });
 
-            const sortedValues = Array.from(uniqueValues).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            const uniqueValues = Object.keys(valueCounts);
+            const sortedValues = uniqueValues.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-            // Ambil filter state saat ini
             const currentFilter = tableFilterStates[tableId][colIdx];
 
-            // Buat element popup
             const popup = document.createElement('div');
             popup.className = 'excel-filter-popup show';
             popup.setAttribute('data-table', tableId);
             popup.setAttribute('data-col', colIdx);
 
+            const th = btnEl.closest('th');
+            const colName = th ? th.querySelector('span')?.innerText.trim() || `Kolom ${colIdx + 1}` : `Kolom ${colIdx + 1}`;
+
             popup.innerHTML = `
-                <input type="text" class="excel-filter-popup-search" placeholder="Cari data..." autofocus>
-                <div class="excel-filter-popup-actions">
+                <div class="font-bold text-slate-800 text-[11px] pb-1.5 mb-1.5 border-b border-slate-200 flex justify-between items-center">
+                    <span>Filter: ${colName}</span>
+                    <span class="text-[10px] text-slate-500 font-normal">${rows.length} Baris</span>
+                </div>
+
+                <!-- Tombol Sort A-Z dan Z-A seperti Excel -->
+                <div class="grid grid-cols-2 gap-1 mb-2 pb-2 border-b border-slate-100">
+                    <button type="button" class="sort-asc-btn px-2 py-1 text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded font-semibold text-slate-700 flex items-center justify-center gap-1">
+                        <span>🔼</span> Urutkan A-Z
+                    </button>
+                    <button type="button" class="sort-desc-btn px-2 py-1 text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded font-semibold text-slate-700 flex items-center justify-center gap-1">
+                        <span>🔽</span> Urutkan Z-A
+                    </button>
+                </div>
+
+                <input type="text" class="excel-filter-popup-search" placeholder="🔍 Cari nilai..." autofocus>
+
+                <div class="excel-filter-popup-actions my-1.5 flex justify-between text-[10px]">
                     <button type="button" class="text-blue-600 hover:underline font-bold check-all-btn">Pilih Semua</button>
                     <button type="button" class="text-slate-500 hover:underline clear-all-btn">Hapus Semua</button>
-                    <button type="button" class="text-emerald-700 hover:underline font-bold reset-filter-btn">Reset</button>
+                    <button type="button" class="text-emerald-700 hover:underline font-bold reset-filter-btn">Reset Filter</button>
                 </div>
-                <div class="excel-filter-popup-list">
-                    ${sortedValues.map(val => {
+
+                <div class="excel-filter-popup-list space-y-0.5 my-1 bg-slate-50/50">
+                    ${sortedValues.length === 0 ? '<div class="text-[10px] text-slate-400 p-2 text-center">Belum ada data pada kolom ini</div>' : 
+                    sortedValues.map(val => {
                         const isChecked = !currentFilter || currentFilter.has(val);
                         return `
-                            <label class="excel-filter-popup-item">
-                                <input type="checkbox" value="${val.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} class="excel-filter-cb">
-                                <span class="truncate">${val}</span>
+                            <label class="excel-filter-popup-item flex items-center justify-between gap-1 text-[11px]">
+                                <div class="flex items-center gap-1.5 truncate">
+                                    <input type="checkbox" value="${val.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''} class="excel-filter-cb rounded text-amber-500">
+                                    <span class="truncate text-slate-800">${val}</span>
+                                </div>
+                                <span class="text-[9px] text-slate-400 font-mono">(${valueCounts[val]})</span>
                             </label>
                         `;
                     }).join('')}
                 </div>
+
                 <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
                     <span class="text-[9px] text-slate-500">${sortedValues.length} opsi</span>
                     <div class="flex gap-1.5">
-                        <button type="button" class="px-2 py-0.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-800 text-[10px] cancel-btn">Batal</button>
-                        <button type="button" class="px-2.5 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[10px] apply-btn">Terapkan</button>
+                        <button type="button" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold cancel-btn">Batal</button>
+                        <button type="button" class="px-3 py-1 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[10px] shadow-sm apply-btn">Terapkan</button>
                     </div>
                 </div>
             `;
 
-            // Append ke th parent
-            btnEl.closest('th').appendChild(popup);
+            // Fixed positioning agar tidak terpotong overflow container tabel
+            const rect = btnEl.getBoundingClientRect();
+            popup.style.position = 'fixed';
+            popup.style.top = `${rect.bottom + 4}px`;
+            const popupWidth = 240;
+            if (rect.left + popupWidth > window.innerWidth - 10) {
+                popup.style.left = `${Math.max(10, window.innerWidth - popupWidth - 10)}px`;
+            } else {
+                popup.style.left = `${rect.left}px`;
+            }
+            popup.style.zIndex = '99999';
+
+            document.body.appendChild(popup);
+
+            // Handler Sort A-Z
+            popup.querySelector('.sort-asc-btn')?.addEventListener('click', () => {
+                sortTableByColumn(tableId, colIdx, 'asc');
+            });
+
+            // Handler Sort Z-A
+            popup.querySelector('.sort-desc-btn')?.addEventListener('click', () => {
+                sortTableByColumn(tableId, colIdx, 'desc');
+            });
 
             // Handler Search
             const searchInput = popup.querySelector('.excel-filter-popup-search');
             searchInput.addEventListener('input', (e) => {
                 const q = e.target.value.toLowerCase();
                 popup.querySelectorAll('.excel-filter-popup-item').forEach(item => {
-                    const itemText = item.querySelector('span').innerText.toLowerCase();
+                    const span = item.querySelector('span');
+                    const itemText = span ? span.innerText.toLowerCase() : '';
                     item.style.display = itemText.includes(q) ? 'flex' : 'none';
                 });
             });
@@ -3137,7 +3279,6 @@
             // Handler Reset
             popup.querySelector('.reset-filter-btn').addEventListener('click', () => {
                 delete tableFilterStates[tableId][colIdx];
-                btnEl.classList.remove('active');
                 popup.remove();
                 applyExcelFilters(tableId);
             });
@@ -3156,10 +3297,8 @@
 
                 if (checked.size === sortedValues.length) {
                     delete tableFilterStates[tableId][colIdx];
-                    btnEl.classList.remove('active');
                 } else {
                     tableFilterStates[tableId][colIdx] = checked;
-                    btnEl.classList.add('active');
                 }
 
                 popup.remove();
@@ -3170,12 +3309,65 @@
             popup.addEventListener('click', (e) => e.stopPropagation());
         }
 
+        function sortTableByColumn(tableId, colIdx, direction = 'asc') {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('td[colspan]'));
+            if (rows.length === 0) return;
+
+            rows.sort((rowA, rowB) => {
+                const cellA = getCellFilterValue(rowA.querySelectorAll('td')[colIdx]);
+                const cellB = getCellFilterValue(rowB.querySelectorAll('td')[colIdx]);
+
+                const numA = parseFloat(cellA.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.-]+/g, ''));
+                const numB = parseFloat(cellB.replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.-]+/g, ''));
+                if (!isNaN(numA) && !isNaN(numB) && cellA.match(/[0-9]/) && cellB.match(/[0-9]/)) {
+                    return direction === 'asc' ? numA - numB : numB - numA;
+                }
+                return direction === 'asc'
+                    ? cellA.localeCompare(cellB, undefined, { numeric: true })
+                    : cellB.localeCompare(cellA, undefined, { numeric: true });
+            });
+
+            rows.forEach(r => tbody.appendChild(r));
+            closeAllExcelFilterPopups();
+            showAlert(`Data berhasil diurutkan ${direction === 'asc' ? 'A ke Z' : 'Z ke A'}`);
+        }
+
+        function resetAllExcelFilters(tableId) {
+            tableFilterStates[tableId] = {};
+            applyExcelFilters(tableId);
+            showAlert('Semua filter kolom telah di-reset');
+        }
+
+        function updateResetAllExcelFilterButton(tableId) {
+            const btn = document.getElementById(`btnResetExcelFilter-${tableId}`);
+            if (!btn) return;
+            const filters = tableFilterStates[tableId] || {};
+            const count = Object.keys(filters).length;
+            if (count > 0) {
+                btn.classList.remove('hidden');
+                btn.classList.add('inline-flex');
+                btn.innerHTML = `<span>🧹</span> Reset Filter Kolom (${count})`;
+            } else {
+                btn.classList.add('hidden');
+                btn.classList.remove('inline-flex');
+            }
+        }
+
         function closeAllExcelFilterPopups() {
             document.querySelectorAll('.excel-filter-popup').forEach(p => p.remove());
         }
 
         document.addEventListener('click', () => {
             closeAllExcelFilterPopups();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAllExcelFilterPopups();
         });
 
         function applyExcelFilters(tableId) {
@@ -3198,8 +3390,7 @@
                 for (const colIdx of filterColKeys) {
                     const allowedSet = filters[colIdx];
                     if (allowedSet) {
-                        const cellText = cells[colIdx] ? cells[colIdx].innerText.trim() : '';
-                        const val = cellText || '(Kosong)';
+                        const val = getCellFilterValue(cells[colIdx]) || '(Kosong)';
                         if (!allowedSet.has(val)) {
                             matches = false;
                             break;
@@ -3210,6 +3401,27 @@
                 r.style.display = matches ? '' : 'none';
                 if (matches) visibleCount++;
             });
+
+            // Update UI status pada tombol filter header
+            const thead = table.querySelector('thead');
+            if (thead) {
+                thead.querySelectorAll('.excel-filter-btn').forEach(btn => {
+                    const cIdx = Number(btn.getAttribute('data-col'));
+                    const isFiltered = filters[cIdx] && filters[cIdx].size > 0;
+                    if (isFiltered) {
+                        btn.classList.add('active');
+                        btn.innerHTML = '🔻';
+                        btn.title = 'Filter aktif - klik untuk ubah';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.innerHTML = '▼';
+                        btn.title = 'Filter kolom ini';
+                    }
+                });
+            }
+
+            // Update tombol reset semua filter
+            updateResetAllExcelFilterButton(tableId);
 
             // Update footer totals jika ada
             recalculateExcelTableTotals(tableId);
