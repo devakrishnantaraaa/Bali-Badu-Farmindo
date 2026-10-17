@@ -15,7 +15,10 @@ const pool = process.env.DATABASE_URL
     });
 
 // Pastikan kolom-kolom penting ada di database
+let migrationsExecuted = false;
 async function runAutoMigrations() {
+  if (migrationsExecuted) return;
+  migrationsExecuted = true;
   try {
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS transfer_date DATE');
   } catch (err) {

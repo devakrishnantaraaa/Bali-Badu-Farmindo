@@ -397,10 +397,10 @@
             </form>
 
             <div class="border-t border-slate-200 pt-4 text-center">
-                <p class="text-[11px] text-slate-500">Gunakan akun awal (Demo / Testing):</p>
-                <div class="mt-2 flex justify-center gap-2 text-[10px] text-slate-600 font-mono">
-                    <span class="bg-slate-100 px-2 py-1 rounded border">SUPER_ADMIN</span>
-                    <span class="bg-slate-100 px-2 py-1 rounded border">MARKETING</span>
+                <p class="text-[11px] text-slate-500 font-medium">Akun login default:</p>
+                <div class="mt-2 flex flex-col sm:flex-row justify-center gap-1.5 text-[11px] text-slate-700 font-mono">
+                    <span class="bg-amber-50 px-2.5 py-1 rounded border border-amber-200 font-bold">User: <span class="text-amber-800">admin</span></span>
+                    <span class="bg-amber-50 px-2.5 py-1 rounded border border-amber-200 font-bold">Pass: <span class="text-amber-800">123456</span></span>
                 </div>
             </div>
         </div>
@@ -1640,9 +1640,25 @@
 
         async function handleLogin(event) {
             event.preventDefault();
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
+            const usernameInput = document.getElementById('loginUsername');
+            const passwordInput = document.getElementById('loginPassword');
             const alertBox = document.getElementById('loginAlert');
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+
+            const username = usernameInput ? usernameInput.value.trim() : '';
+            const password = passwordInput ? passwordInput.value.trim() : '';
+
+            if (!username || !password) {
+                alertBox.innerText = 'Mohon masukkan username dan password';
+                alertBox.classList.remove('hidden');
+                return;
+            }
+
+            const originalBtnText = submitBtn ? submitBtn.innerText : 'Masuk';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Memverifikasi...';
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/auth/login`, {
@@ -1651,8 +1667,8 @@
                     body: JSON.stringify({ username, password })
                 });
 
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Login gagal, periksa username dan password');
 
                 authToken = data.token;
                 currentUser = data.user;
@@ -1662,8 +1678,13 @@
                 alertBox.classList.add('hidden');
                 checkAuthSession();
             } catch (err) {
-                alertBox.innerText = err.message;
+                alertBox.innerText = err.message || 'Gagal login';
                 alertBox.classList.remove('hidden');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = originalBtnText;
+                }
             }
         }
 
