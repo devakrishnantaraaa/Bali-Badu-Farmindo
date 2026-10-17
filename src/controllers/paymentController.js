@@ -203,24 +203,56 @@ async function updateInvoiceFields(req, res) {
             }
         }
 
-        // 2. Update atau catat pembayaran/metode (CEK / TRANSFER / CASH) dan tanggal transfer
+        // 1b. Update transfer_date HANYA jika transfer_date memang dikirim oleh user
+        if (transfer_date !== undefined) {
+            const formattedTransferDate = transfer_date ? transfer_date : null;
+            await client.query(
+                `UPDATE invoices 
+                 SET transfer_date = $1, updated_at = CURRENT_TIMESTAMP 
+                 WHERE id = $2`,
+                [formattedTransferDate, invoice.id]
+            );
+        }
+
+        // 2. Update atau catat pembayaran/metode (CEK: Transfer / Setor / OK)
         const existingPayment = await client.query(
             `SELECT * FROM payments WHERE invoice_id = $1 ORDER BY created_at DESC LIMIT 1`,
             [invoice.id]
         );
 
         const method = payment_method || invoice.payment_type || 'TRANSFER';
-        const pDate = transfer_date ? new Date(transfer_date) : new Date();
 
         if (existingPayment.rows.length > 0) {
-            await client.query(
-                `UPDATE payments 
-                 SET payment_method = $1, created_at = $2, is_validated = TRUE
-                 WHERE id = $3`,
-                [method, pDate, existingPayment.rows[0].id]
-            );
+            // JANGAN ubah tanggal jika user hanya mengganti kolom CEK atau status
+            if (transfer_date !== undefined) {
+                if (transfer_date) {
+                    await client.query(
+                        `UPDATE payments 
+                         SET payment_method = $1, created_at = $2, is_validated = TRUE
+                         WHERE id = $3`,
+                        [method, new Date(transfer_date), existingPayment.rows[0].id]
+                    );
+                } else {
+                    // Jika transfer_date dikosongkan, kembalikan tanggal ke created_at invoice semula
+                    await client.query(
+                        `UPDATE payments 
+                         SET payment_method = $1, created_at = $2, is_validated = TRUE
+                         WHERE id = $3`,
+                        [method, invoice.created_at, existingPayment.rows[0].id]
+                    );
+                }
+            } else {
+                // Hanya update kolom CEK (payment_method), tanggal sama sekali TIDAK BOLEH BERUBAH
+                await client.query(
+                    `UPDATE payments 
+                     SET payment_method = $1, is_validated = TRUE
+                     WHERE id = $2`,
+                    [method, existingPayment.rows[0].id]
+                );
+            }
         } else if (top_status === 'LUNAS' || payment_method || transfer_date) {
             const payNum = `PAY-${Date.now()}`;
+            const pDate = transfer_date ? new Date(transfer_date) : invoice.created_at;
             await client.query(
                 `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
                  VALUES ($1, $2, $3, $4, $5, TRUE, CURRENT_TIMESTAMP, $6)`,

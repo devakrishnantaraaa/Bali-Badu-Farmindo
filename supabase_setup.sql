@@ -100,6 +100,7 @@ CREATE TABLE invoices (
     amount_paid NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (amount_paid >= 0),
     status invoice_status NOT NULL DEFAULT 'GANTUNG',
     due_date DATE,
+    transfer_date DATE,
     google_calendar_event_id VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -138,3 +139,8 @@ INSERT INTO customers (name, phone, address) VALUES
 ('Toko Sembako Berkah Utama', '081234567890', 'Jl. Raya Denpasar No. 45'),
 ('Warung Makan Sedap Lezat', '089876543210', 'Jl. Sunset Road No. 12'),
 ('Martabak Manis Pak Kumis', '085711223344', 'Jl. Teuku Umar No. 88');
+
+INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes) VALUES
+(1, 'BARANG_MASUK', 500.00, 500.00, 'Stok Awal Sistem'),
+(2, 'BARANG_MASUK', 350.00, 350.00, 'Stok Awal Sistem'),
+(3, 'BARANG_MASUK', 100.00, 100.00, 'Stok Awal Sistem');

@@ -14,6 +14,28 @@ const pool = process.env.DATABASE_URL
       database: process.env.DB_NAME || 'inventory_telor'
     });
 
+// Pastikan kolom-kolom penting ada di database
+async function runAutoMigrations() {
+  try {
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS transfer_date DATE');
+  } catch (err) {
+    console.warn('Notice (transfer_date column check):', err.message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS damaged_qty NUMERIC(12, 2) DEFAULT 0.00;
+      ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS physical_stock NUMERIC(12, 2);
+      ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS adjustment_qty NUMERIC(12, 2) DEFAULT 0.00;
+      ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reference_id VARCHAR(100);
+      ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS notes TEXT;
+    `);
+  } catch (err) {
+    console.warn('Notice (stock_movements columns check):', err.message);
+  }
+}
+runAutoMigrations();
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
   getClient: () => pool.connect()

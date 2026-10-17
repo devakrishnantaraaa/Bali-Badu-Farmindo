@@ -120,25 +120,84 @@ async function recordStockAdjustment(req, res) {
 async function getStockLedger(req, res) {
     try {
         const { product_id } = req.query;
+
+        // Auto-sync: Pastikan setiap produk yang ada di sistem tercatat di mutasi kartu stok (Stok Awal)
+        try {
+            const missingMovements = await db.query(`
+                SELECT p.id, p.name, p.current_stock, p.created_at 
+                FROM products p
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM stock_movements sm WHERE sm.product_id = p.id
+                )
+            `);
+
+            for (const prod of missingMovements.rows) {
+                const stockVal = parseFloat(prod.current_stock) || 0;
+                await db.query(`
+                    INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+                    VALUES ($1, 'BARANG_MASUK', $2, $3, $4, $5)
+                `, [
+                    prod.id, 
+                    stockVal, 
+                    stockVal, 
+                    'Stok Awal Sistem', 
+                    prod.created_at || new Date()
+                ]);
+            }
+
+            // Juga auto-sync pesanan penjualan (orders) yang belum tercatat di stock_movements
+            const missingOrders = await db.query(`
+                SELECT oi.product_id, oi.quantity, o.order_number, o.created_at
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.id
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM stock_movements sm 
+                    WHERE sm.product_id = oi.product_id AND sm.reference_id = o.order_number
+                )
+            `);
+
+            for (const mOrd of missingOrders.rows) {
+                const pRes = await db.query('SELECT current_stock FROM products WHERE id = $1', [mOrd.product_id]);
+                const currStock = pRes.rows.length > 0 ? parseFloat(pRes.rows[0].current_stock) : 0;
+                await db.query(`
+                    INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes, created_at)
+                    VALUES ($1, 'PENJUALAN', $2, $3, $4, $5, $6)
+                `, [
+                    mOrd.product_id,
+                    parseFloat(mOrd.quantity) || 0,
+                    currStock,
+                    mOrd.order_number,
+                    `Penjualan Nota ${mOrd.order_number}`,
+                    mOrd.created_at || new Date()
+                ]);
+            }
+        } catch (syncErr) {
+            console.warn('Notice (stock movements auto-sync):', syncErr.message);
+        }
+
         let queryText = `
             SELECT sm.id, sm.created_at, p.name AS product_name, p.unit, p.price_per_unit, sm.movement_type, 
-                   sm.quantity, sm.damaged_qty, sm.physical_stock, sm.adjustment_qty,
+                   sm.quantity, 
+                   COALESCE(sm.damaged_qty, 0) AS damaged_qty, 
+                   sm.physical_stock, 
+                   COALESCE(sm.adjustment_qty, 0) AS adjustment_qty,
                    sm.balance_after, sm.reference_id, sm.notes
             FROM stock_movements sm
             JOIN products p ON sm.product_id = p.id
         `;
         const params = [];
 
-        if (product_id && product_id !== 'ALL') {
+        if (product_id && product_id !== 'ALL' && product_id !== 'undefined' && product_id !== 'null') {
             queryText += ` WHERE sm.product_id = $1`;
             params.push(product_id);
         }
 
-        queryText += ` ORDER BY sm.created_at DESC LIMIT 200`;
+        queryText += ` ORDER BY sm.created_at DESC, sm.id DESC LIMIT 500`;
 
         const result = await db.query(queryText, params);
         return res.json(result.rows);
     } catch (error) {
+        console.error('Error getStockLedger:', error);
         return res.status(500).json({ error: error.message });
     }
 }

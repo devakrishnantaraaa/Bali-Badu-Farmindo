@@ -1,24 +1,29 @@
 const db = require('../config/db');
 
-// Daily Sales Report (Per Tanggal atau Rentang Periode)
+// Daily Sales Report (Per Tanggal, Rentang Periode, atau Filter Customer)
 async function getDailySales(req, res) {
     try {
-        const { date, start_date, end_date } = req.query; // YYYY-MM-DD
+        const { date, start_date, end_date, customer_id } = req.query; // YYYY-MM-DD
         let whereClause = "WHERE o.status = 'CONFIRMED'";
         let queryParams = [];
 
+        if (customer_id && customer_id !== 'ALL') {
+            queryParams.push(customer_id);
+            whereClause += ` AND o.customer_id = $${queryParams.length}`;
+        }
+
         if (start_date && end_date) {
-            whereClause += " AND DATE(o.created_at) >= $1 AND DATE(o.created_at) <= $2";
             queryParams.push(start_date, end_date);
+            whereClause += ` AND DATE(o.created_at) >= $${queryParams.length - 1} AND DATE(o.created_at) <= $${queryParams.length}`;
         } else if (start_date) {
-            whereClause += " AND DATE(o.created_at) >= $1";
             queryParams.push(start_date);
+            whereClause += ` AND DATE(o.created_at) >= $${queryParams.length}`;
         } else if (end_date) {
-            whereClause += " AND DATE(o.created_at) <= $1";
             queryParams.push(end_date);
+            whereClause += ` AND DATE(o.created_at) <= $${queryParams.length}`;
         } else if (date && date !== 'ALL') {
-            whereClause += " AND DATE(o.created_at) = $1";
             queryParams.push(date);
+            whereClause += ` AND DATE(o.created_at) = $${queryParams.length}`;
         }
         // Jika tidak ada filter tanggal / kosong, semua penjualan ditampilkan tanpa filter tanggal
 
@@ -28,7 +33,10 @@ async function getDailySales(req, res) {
                 o.order_number, 
                 i.id AS invoice_id,
                 i.invoice_number,
-                c.name AS customer_name, 
+                c.id AS customer_id,
+                c.name AS customer_name,
+                c.phone AS customer_phone,
+                c.address AS customer_address, 
                 o.total_amount, 
                 i.payment_type, 
                 i.status AS invoice_status, 
@@ -40,6 +48,7 @@ async function getDailySales(req, res) {
                 COALESCE(oi.unit_price, 0) AS harga_satuan,
                 COALESCE(p.name, 'Telur') AS product_name,
                 COALESCE(p.unit, 'kg') AS product_unit,
+                i.transfer_date,
                 (
                     SELECT p2.payment_method 
                     FROM payments p2 
@@ -69,15 +78,15 @@ async function getDailySales(req, res) {
     }
 }
 
-// Rekap Setoran Harian (Gambar 2: Customer, Nominal, Metode, Cek/Setor, Tanggal Transfer)
+// Rekap Setoran Harian (Hanya memunculkan transaksi yang status CEK nya OK)
 async function getDailyDeposits(req, res) {
     try {
         const { date } = req.query;
-        let whereClause = "WHERE 1=1";
+        let whereClause = "WHERE UPPER(TRIM(COALESCE(p.payment_method, ''))) = 'OK'";
         let queryParams = [];
 
         if (date && date !== 'ALL') {
-            whereClause += " AND DATE(p.created_at AT TIME ZONE 'UTC') = $1";
+            whereClause += " AND DATE(COALESCE(i.transfer_date, p.created_at) AT TIME ZONE 'UTC') = $1";
             queryParams.push(date);
         }
 
@@ -92,7 +101,9 @@ async function getDailyDeposits(req, res) {
                 p.reference_number,
                 p.is_validated,
                 p.validated_at,
-                p.created_at AS tgl_transfer,
+                i.transfer_date,
+                p.created_at AS payment_created_at,
+                COALESCE(i.transfer_date, p.created_at) AS tgl_transfer,
                 o.created_at AS tgl_nota,
                 o.total_amount AS total_nota,
                 i.status AS invoice_status,
@@ -109,7 +120,7 @@ async function getDailyDeposits(req, res) {
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products prod ON oi.product_id = prod.id
             ${whereClause}
-            ORDER BY p.created_at DESC
+            ORDER BY COALESCE(i.transfer_date, p.created_at) DESC
         `;
         const result = await db.query(queryText, queryParams);
         return res.json(result.rows);
