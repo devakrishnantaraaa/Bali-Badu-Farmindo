@@ -67,7 +67,7 @@ async function getDailySales(req, res) {
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products p ON oi.product_id = p.id
             ${whereClause}
-            ORDER BY o.created_at DESC
+            ORDER BY o.created_at ASC, o.id ASC
         `;
         
         const result = await db.query(queryText, queryParams);
@@ -120,7 +120,7 @@ async function getDailyDeposits(req, res) {
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products prod ON oi.product_id = prod.id
             ${whereClause}
-            ORDER BY COALESCE(i.transfer_date, p.created_at) DESC
+            ORDER BY COALESCE(i.transfer_date, p.created_at) ASC, p.id ASC
         `;
         const result = await db.query(queryText, queryParams);
         return res.json(result.rows);
