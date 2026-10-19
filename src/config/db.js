@@ -34,21 +34,86 @@ async function runAutoMigrations() {
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS notes TEXT;
     `);
     try {
-      // Penyesuaian stok produk TB menjadi 300
+      // Penyesuaian jadwal stok masuk September sesuai data user:
+      // 01-Sep: TB 300
+      // 01-Sep: TG 150
+      // 05-Sep: OMEGA 5
+      // 06-Sep: TB 475
+      // 07-Sep: TG 150
+      const prodsRes = await pool.query('SELECT id, name FROM products');
+      let tbId = null, tgId = null, omegaId = null;
+
+      for (const p of prodsRes.rows) {
+        const n = (p.name || '').toUpperCase().trim();
+        if (n === 'TB' || n.includes('TB') || n.includes('SUPER')) {
+          if (!tbId) tbId = p.id;
+        }
+        if (n === 'TG' || n.includes('TG') || n.includes('MEDIUM') || n.includes('GEMUK')) {
+          if (!tgId) tgId = p.id;
+        }
+        if (n === 'OMEGA' || n === 'OMG' || n.includes('OMEGA') || n.includes('OMG') || n.includes('KAMPONG')) {
+          if (!omegaId) omegaId = p.id;
+        }
+      }
+
+      if (!tbId) {
+        const res = await pool.query("INSERT INTO products (name, unit, current_stock, price_per_unit) VALUES ('TB', 'krat', 775, 46000) RETURNING id");
+        tbId = res.rows[0].id;
+      }
+      if (!tgId) {
+        const res = await pool.query("INSERT INTO products (name, unit, current_stock, price_per_unit) VALUES ('TG', 'krat', 288, 42000) RETURNING id");
+        tgId = res.rows[0].id;
+      }
+      if (!omegaId) {
+        const res = await pool.query("INSERT INTO products (name, unit, current_stock, price_per_unit) VALUES ('OMEGA', 'krat', 5, 62000) RETURNING id");
+        omegaId = res.rows[0].id;
+      }
+
+      // Pastikan nama produk di tabel products konsisten
+      await pool.query("UPDATE products SET name = 'TB' WHERE id = $1 AND name != 'TB'", [tbId]);
+      await pool.query("UPDATE products SET name = 'TG' WHERE id = $1 AND name != 'TG'", [tgId]);
+      await pool.query("UPDATE products SET name = 'OMEGA' WHERE id = $1 AND name != 'OMEGA'", [omegaId]);
+
+      // Hapus mutasi BARANG_MASUK stok awal lama untuk 3 produk ini
       await pool.query(`
-        UPDATE products 
-        SET current_stock = 300 
-        WHERE (name = 'TB' OR name ILIKE '%TB%') AND current_stock = 370;
-      `);
+        DELETE FROM stock_movements 
+        WHERE movement_type = 'BARANG_MASUK'
+          AND product_id IN ($1, $2, $3)
+      `, [tbId, tgId, omegaId]);
+
+      // Masukkan 5 transaksi stok masuk sesuai tabel:
+      // 1. 01-Sep: TB 300
       await pool.query(`
-        UPDATE stock_movements 
-        SET quantity = 300, balance_after = 300 
-        WHERE product_id IN (SELECT id FROM products WHERE name = 'TB' OR name ILIKE '%TB%')
-          AND movement_type = 'BARANG_MASUK'
-          AND quantity = 370;
-      `);
+        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+        VALUES ($1, 'BARANG_MASUK', 300, 300, '', '2026-09-01 07:00:00+08')
+      `, [tbId]);
+
+      // 2. 01-Sep: TG 150
+      await pool.query(`
+        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+        VALUES ($1, 'BARANG_MASUK', 150, 150, '', '2026-09-01 07:00:00+08')
+      `, [tgId]);
+
+      // 3. 05-Sep: OMEGA 5
+      await pool.query(`
+        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+        VALUES ($1, 'BARANG_MASUK', 5, 5, '', '2026-09-05 07:00:00+08')
+      `, [omegaId]);
+
+      // 4. 06-Sep: TB 475
+      await pool.query(`
+        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+        VALUES ($1, 'BARANG_MASUK', 475, 775, '', '2026-09-06 07:00:00+08')
+      `, [tbId]);
+
+      // 5. 07-Sep: TG 150
+      await pool.query(`
+        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+        VALUES ($1, 'BARANG_MASUK', 150, 291, '', '2026-09-07 07:00:00+08')
+      `, [tgId]);
+
     } catch (err) {
-      console.warn('Notice (TB stock migration):', err.message);
+      console.warn('Notice (September stock schedule migration):', err.message);
     }
   } catch (err) {
     console.warn('Notice (stock_movements columns check):', err.message);

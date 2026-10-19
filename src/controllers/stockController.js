@@ -228,6 +228,8 @@ async function getStockLedger(req, res) {
                         await db.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
                     }
                 }
+                // Pastikan current_stock di tabel products sinkron dengan mutasi akhir
+                await db.query('UPDATE products SET current_stock = $1 WHERE id = $2', [running, p.id]);
             }
 
             // 4. Bersihkan teks otomatis bawaan agar kolom Keterangan bersih untuk diketik manual
