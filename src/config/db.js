@@ -57,7 +57,7 @@ async function runAutoMigrations() {
       }
 
       if (!tbId) {
-        const res = await pool.query("INSERT INTO products (name, unit, current_stock, price_per_unit) VALUES ('TB', 'krat', 775, 46000) RETURNING id");
+        const res = await pool.query("INSERT INTO products (name, unit, current_stock, price_per_unit) VALUES ('TB', 'krat', 300, 46000) RETURNING id");
         tbId = res.rows[0].id;
       }
       if (!tgId) {
@@ -74,14 +74,17 @@ async function runAutoMigrations() {
       await pool.query("UPDATE products SET name = 'TG' WHERE id = $1 AND name != 'TG'", [tgId]);
       await pool.query("UPDATE products SET name = 'OMEGA' WHERE id = $1 AND name != 'OMEGA'", [omegaId]);
 
-      // Hapus mutasi BARANG_MASUK stok awal lama untuk 3 produk ini
+      // Hapus mutasi BARANG_MASUK stok awal lama untuk 3 produk ini (termasuk yang 475)
       await pool.query(`
         DELETE FROM stock_movements 
         WHERE movement_type = 'BARANG_MASUK'
           AND product_id IN ($1, $2, $3)
       `, [tbId, tgId, omegaId]);
 
-      // Masukkan 5 transaksi stok masuk sesuai tabel:
+      // Hapus juga secara spesifik jika ada sisa data 475
+      await pool.query('DELETE FROM stock_movements WHERE quantity = 475');
+
+      // Masukkan transaksi stok masuk sesuai kebutuhan user (TB cukup 300):
       // 1. 01-Sep: TB 300
       await pool.query(`
         INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
@@ -100,17 +103,14 @@ async function runAutoMigrations() {
         VALUES ($1, 'BARANG_MASUK', 5, 5, '', '2026-09-05 07:00:00+08')
       `, [omegaId]);
 
-      // 4. 06-Sep: TB 475
-      await pool.query(`
-        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-        VALUES ($1, 'BARANG_MASUK', 475, 775, '', '2026-09-06 07:00:00+08')
-      `, [tbId]);
-
-      // 5. 07-Sep: TG 150
+      // 4. 07-Sep: TG 150
       await pool.query(`
         INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
         VALUES ($1, 'BARANG_MASUK', 150, 291, '', '2026-09-07 07:00:00+08')
       `, [tgId]);
+
+      // Update stok TB di tabel products menjadi 300
+      await pool.query('UPDATE products SET current_stock = 300 WHERE id = $1', [tbId]);
 
     } catch (err) {
       console.warn('Notice (September stock schedule migration):', err.message);
