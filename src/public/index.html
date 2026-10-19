@@ -2838,11 +2838,11 @@
                     totalDamaged += damaged;
                     totalAdj += adj;
 
-                    const typeBadge = item.movement_type === 'BARANG_MASUK'
-                        ? '<span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 mr-1">MASUK</span>'
-                        : (item.movement_type === 'PENJUALAN'
-                            ? '<span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-900 mr-1">KELUAR</span>'
-                            : '<span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 mr-1">AUDIT</span>');
+                    const rawNotes = (item.notes || '').trim();
+                    const isSystemNote = rawNotes === 'Stok Awal Sistem' || rawNotes === 'Stok Awal' || rawNotes.startsWith('Penjualan Nota') || rawNotes === item.movement_type;
+                    const defaultNote = isSystemNote ? '' : rawNotes;
+                    const savedNote = localStorage.getItem(`stock_note_${item.id}`);
+                    const displayNote = savedNote !== null ? savedNote : defaultNote;
 
                     return `
                         <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
@@ -2854,9 +2854,18 @@
                             <td class="p-2 border border-slate-300 text-right font-bold text-blue-700">${physical !== null ? physical.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-bold text-purple-700">${adj !== 0 ? (adj > 0 ? `+${adj}` : adj) : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-black bg-blue-50 text-slate-900">${sisa.toLocaleString('id-ID')}</td>
-                            <td class="p-2 border border-slate-300 text-slate-600 font-medium">
-                                ${typeBadge}
-                                <span class="font-bold text-slate-800">[${item.product_name}]</span> ${item.notes || item.movement_type}
+                            <td class="p-1 border border-slate-300">
+                                <div class="relative flex items-center w-full">
+                                    <input type="text"
+                                        class="w-full bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 text-xs text-slate-800 placeholder:text-slate-300 focus:outline-none transition shadow-none focus:shadow-xs"
+                                        placeholder="Ketik keterangan..."
+                                        value="${escapeHtml(displayNote)}"
+                                        data-movement-id="${item.id}"
+                                        onchange="saveLedgerNote('${item.id}', this.value, this)"
+                                        onkeydown="if(event.key==='Enter') this.blur()"
+                                    />
+                                    <span id="saveStatus-${item.id}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -2885,6 +2894,48 @@
                 console.error(err);
                 if (body) body.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-rose-500 font-semibold">Gagal memuat kartu stok: ' + err.message + '</td></tr>';
             }
+        }
+
+        // Simpan catatan / keterangan manual kartu stok
+        async function saveLedgerNote(movementId, newNote, inputEl) {
+            const noteVal = (newNote !== undefined && newNote !== null) ? String(newNote) : '';
+            localStorage.setItem(`stock_note_${movementId}`, noteVal);
+            const statusEl = document.getElementById(`saveStatus-${movementId}`);
+
+            try {
+                const res = await fetch(`${API_BASE}/stock/ledger/${movementId}/notes`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ notes: noteVal })
+                });
+
+                if (res.ok) {
+                    if (statusEl) {
+                        statusEl.classList.remove('hidden');
+                        setTimeout(() => statusEl.classList.add('hidden'), 1800);
+                    }
+                    if (inputEl) {
+                        inputEl.classList.add('bg-emerald-50/60', 'border-emerald-300');
+                        setTimeout(() => {
+                            inputEl.classList.remove('bg-emerald-50/60', 'border-emerald-300');
+                        }, 1200);
+                    }
+                } else {
+                    console.warn('Gagal sinkron keterangan ke server, tersimpan di browser lokal.');
+                }
+            } catch (err) {
+                console.error('Error saveLedgerNote:', err);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
         // --- DEBTS (GAMBAR 4 MATCHING: GROUPED BY CUSTOMER) ---
@@ -3234,7 +3285,19 @@
             const table = document.getElementById(tableId);
             if (!table) return alert('Tabel tidak ditemukan!');
             try {
-                const wb = XLSX.utils.table_to_book(table, { sheet: "Laporan" });
+                // Clone tabel agar nilai yang diketik manual di input/select terbawa ke file Excel
+                const clone = table.cloneNode(true);
+                const origInputs = table.querySelectorAll('input, select, textarea');
+                const cloneInputs = clone.querySelectorAll('input, select, textarea');
+                origInputs.forEach((orig, idx) => {
+                    const c = cloneInputs[idx];
+                    if (c && c.parentNode) {
+                        const val = orig.value || '';
+                        const textNode = document.createTextNode(val);
+                        c.parentNode.replaceChild(textNode, c);
+                    }
+                });
+                const wb = XLSX.utils.table_to_book(clone, { sheet: "Laporan" });
                 const dateStr = new Date().toISOString().split('T')[0];
                 XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
             } catch (err) {

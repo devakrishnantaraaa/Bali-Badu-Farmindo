@@ -121,31 +121,55 @@ async function getStockLedger(req, res) {
     try {
         const { product_id } = req.query;
 
-        // Auto-sync: Pastikan setiap produk yang ada di sistem tercatat di mutasi kartu stok (Stok Awal)
+        // Auto-sync: Pastikan setiap produk yang ada di sistem tercatat stok awal (BARANG_MASUK)
         try {
-            const missingMovements = await db.query(`
+            // 1. Cari produk yang BELUM memiliki mutasi BARANG_MASUK (Stok Awal)
+            const productsWithoutInitialStock = await db.query(`
                 SELECT p.id, p.name, p.current_stock, p.created_at 
                 FROM products p
                 WHERE NOT EXISTS (
-                    SELECT 1 FROM stock_movements sm WHERE sm.product_id = p.id
+                    SELECT 1 FROM stock_movements sm 
+                    WHERE sm.product_id = p.id AND sm.movement_type = 'BARANG_MASUK'
                 )
             `);
 
-            for (const prod of missingMovements.rows) {
-                const stockVal = parseFloat(prod.current_stock) || 0;
+            for (const prod of productsWithoutInitialStock.rows) {
+                // Hitung total kuantitas penjualan/keluar yang sudah tercatat
+                const salesAgg = await db.query(`
+                    SELECT 
+                        COALESCE(SUM(quantity), 0) AS total_out,
+                        MIN(created_at) AS earliest_movement_date
+                    FROM stock_movements 
+                    WHERE product_id = $1 AND movement_type = 'PENJUALAN'
+                `, [prod.id]);
+
+                const totalOut = parseFloat(salesAgg.rows[0]?.total_out) || 0;
+                const currStock = parseFloat(prod.current_stock) || 0;
+                const initialStock = currStock + totalOut;
+
+                // Tentukan tanggal stok awal: sebelum transaksi penjualan pertama, atau tanggal produk dibuat
+                const earliestDate = salesAgg.rows[0]?.earliest_movement_date;
+                let initialDate;
+                if (earliestDate) {
+                    const d = new Date(earliestDate);
+                    initialDate = new Date(d.getTime() - 5 * 60 * 1000); // 5 menit sebelum penjualan pertama
+                } else {
+                    initialDate = prod.created_at || new Date();
+                }
+
                 await db.query(`
                     INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
                     VALUES ($1, 'BARANG_MASUK', $2, $3, $4, $5)
                 `, [
                     prod.id, 
-                    stockVal, 
-                    stockVal, 
-                    'Stok Awal Sistem', 
-                    prod.created_at || new Date()
+                    initialStock, 
+                    initialStock, 
+                    '', 
+                    initialDate
                 ]);
             }
 
-            // Juga auto-sync pesanan penjualan (orders) yang belum tercatat di stock_movements
+            // 2. Auto-sync pesanan penjualan (orders) yang belum tercatat di stock_movements
             const missingOrders = await db.query(`
                 SELECT oi.product_id, oi.quantity, o.order_number, o.created_at
                 FROM order_items oi
@@ -157,20 +181,63 @@ async function getStockLedger(req, res) {
             `);
 
             for (const mOrd of missingOrders.rows) {
-                const pRes = await db.query('SELECT current_stock FROM products WHERE id = $1', [mOrd.product_id]);
-                const currStock = pRes.rows.length > 0 ? parseFloat(pRes.rows[0].current_stock) : 0;
                 await db.query(`
                     INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes, created_at)
-                    VALUES ($1, 'PENJUALAN', $2, $3, $4, $5, $6)
+                    VALUES ($1, 'PENJUALAN', $2, 0, $3, '', $4)
                 `, [
                     mOrd.product_id,
                     parseFloat(mOrd.quantity) || 0,
-                    currStock,
                     mOrd.order_number,
-                    `Penjualan Nota ${mOrd.order_number}`,
                     mOrd.created_at || new Date()
                 ]);
             }
+
+            // 3. Kalibrasi ulang sisa stok (balance_after) per produk secara kronologis
+            const allProducts = await db.query('SELECT id FROM products');
+            for (const p of allProducts.rows) {
+                const movs = await db.query(`
+                    SELECT id, movement_type, quantity, 
+                           COALESCE(damaged_qty, 0) AS damaged_qty, 
+                           COALESCE(adjustment_qty, 0) AS adjustment_qty, 
+                           balance_after
+                    FROM stock_movements
+                    WHERE product_id = $1
+                    ORDER BY created_at ASC, id ASC
+                `, [p.id]);
+
+                let running = 0;
+                for (const m of movs.rows) {
+                    const q = parseFloat(m.quantity) || 0;
+                    const dmg = parseFloat(m.damaged_qty) || 0;
+                    const adj = parseFloat(m.adjustment_qty) || 0;
+
+                    if (m.movement_type === 'BARANG_MASUK') {
+                        running += q;
+                    } else if (m.movement_type === 'PENJUALAN') {
+                        running -= q;
+                    }
+
+                    if (dmg > 0) {
+                        running -= dmg;
+                    }
+                    if (adj !== 0) {
+                        running += adj;
+                    }
+
+                    if (parseFloat(m.balance_after) !== running) {
+                        await db.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
+                    }
+                }
+            }
+
+            // 4. Bersihkan teks otomatis bawaan agar kolom Keterangan bersih untuk diketik manual
+            await db.query(`
+                UPDATE stock_movements 
+                SET notes = '' 
+                WHERE notes = 'Stok Awal Sistem' 
+                   OR notes = 'Stok Awal' 
+                   OR notes LIKE 'Penjualan Nota%'
+            `);
         } catch (syncErr) {
             console.warn('Notice (stock movements auto-sync):', syncErr.message);
         }
@@ -324,10 +391,25 @@ async function deleteProduct(req, res) {
     }
 }
 
+// Update Keterangan / Notes pada baris Kartu Stok secara manual
+async function updateStockLedgerNotes(req, res) {
+    try {
+        const { id } = req.params;
+        const { notes } = req.body;
+        const noteVal = notes !== undefined && notes !== null ? String(notes) : '';
+        await db.query('UPDATE stock_movements SET notes = $1 WHERE id = $2', [noteVal, id]);
+        return res.json({ success: true, message: 'Keterangan berhasil disimpan', id, notes: noteVal });
+    } catch (error) {
+        console.error('Error updateStockLedgerNotes:', error);
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     recordIncomingGoods,
     recordStockAdjustment,
     getStockLedger,
+    updateStockLedgerNotes,
     getProducts,
     createProduct,
     updateProduct,

@@ -147,8 +147,8 @@ async function createOrder(req, res) {
                     : `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes)
                        VALUES ($1, 'PENJUALAN', $2, $3, $4, $5)`,
                 orderDateTimestamp
-                    ? [pItem.product_id, pItem.quantity, newStock, orderNum, `Penjualan Nota ${orderNum}`, orderDateTimestamp]
-                    : [pItem.product_id, pItem.quantity, newStock, orderNum, `Penjualan Nota ${orderNum}`]
+                    ? [pItem.product_id, pItem.quantity, newStock, orderNum, '', orderDateTimestamp]
+                    : [pItem.product_id, pItem.quantity, newStock, orderNum, '']
             );
         }
 

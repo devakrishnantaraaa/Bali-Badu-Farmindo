@@ -31,6 +31,7 @@ router.delete('/products/:id', authorizeRoles('SUPER_ADMIN'), stockController.de
 router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN'), stockController.recordIncomingGoods);
 router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN'), stockController.recordStockAdjustment);
 router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getStockLedger);
+router.put('/stock/ledger/:id/notes', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.updateStockLedgerNotes);
 
 // Sales Orders & Credit Check (Access: SUPER_ADMIN & MARKETING)
 router.post('/orders', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.createOrder);
