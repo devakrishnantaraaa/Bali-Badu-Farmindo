@@ -261,7 +261,7 @@ async function getStockLedger(req, res) {
             params.push(product_id);
         }
 
-        queryText += ` ORDER BY sm.created_at DESC, sm.id DESC LIMIT 500`;
+        queryText += ` ORDER BY sm.created_at ASC, sm.id ASC LIMIT 1000`;
 
         const result = await db.query(queryText, params);
         return res.json(result.rows);

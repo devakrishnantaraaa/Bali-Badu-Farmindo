@@ -2819,7 +2819,7 @@
                 let latestSisa = 0;
 
                 if (data.length > 0) {
-                    latestSisa = Number(data[0].balance_after || 0);
+                    latestSisa = Number(data[data.length - 1].balance_after || 0);
                 }
 
                 body.innerHTML = data.map(item => {
@@ -3833,7 +3833,7 @@
                         totalDamaged += Number(c[4].innerText.replace(/\./g, '')) || 0;
                         const adjVal = c[6].innerText.replace('+', '').replace(/\./g, '');
                         totalAdj += Number(adjVal) || 0;
-                        if (idx === 0) lastSisa = Number(c[7].innerText.replace(/\./g, '')) || 0;
+                        lastSisa = Number(c[7].innerText.replace(/\./g, '')) || 0;
                     }
                 });
 
