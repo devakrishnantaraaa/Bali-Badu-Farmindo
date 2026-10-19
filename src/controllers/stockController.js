@@ -332,24 +332,65 @@ async function createProduct(req, res) {
 async function updateProduct(req, res) {
     try {
         const { id } = req.params;
-        const { name, unit, price_per_unit } = req.body;
+        const { name, unit, price_per_unit, current_stock } = req.body;
 
         if (!name) return res.status(400).json({ error: 'Nama produk wajib diisi' });
 
-        const result = await db.query(
-            `UPDATE products 
-             SET name = $1, unit = $2, price_per_unit = $3
-             WHERE id = $4
-             RETURNING *`,
-            [name, unit || 'kg', price_per_unit || 0, id]
-        );
+        let result;
+        if (current_stock !== undefined && current_stock !== null && current_stock !== '') {
+            const newStock = parseFloat(current_stock) || 0;
+            result = await db.query(
+                `UPDATE products 
+                 SET name = $1, unit = $2, price_per_unit = $3, current_stock = $4
+                 WHERE id = $5
+                 RETURNING *`,
+                [name, unit || 'kg', price_per_unit || 0, newStock, id]
+            );
+
+            // Perbarui mutasi BARANG_MASUK stok awal agar sinkron dengan stok baru
+            const salesCheck = await db.query('SELECT COUNT(*) FROM stock_movements WHERE product_id = $1 AND movement_type = \'PENJUALAN\'', [id]);
+            const hasSales = parseInt(salesCheck.rows[0]?.count) > 0;
+
+            if (!hasSales) {
+                await db.query(`
+                    UPDATE stock_movements 
+                    SET quantity = $1, balance_after = $1
+                    WHERE product_id = $2 AND movement_type = 'BARANG_MASUK'
+                `, [newStock, id]);
+            } else {
+                const salesAgg = await db.query(`
+                    SELECT COALESCE(SUM(quantity), 0) AS total_out
+                    FROM stock_movements 
+                    WHERE product_id = $1 AND movement_type = 'PENJUALAN'
+                `, [id]);
+                const totalOut = parseFloat(salesAgg.rows[0]?.total_out) || 0;
+                const adjustedInitial = newStock + totalOut;
+                await db.query(`
+                    UPDATE stock_movements 
+                    SET quantity = $1
+                    WHERE id = (
+                        SELECT id FROM stock_movements 
+                        WHERE product_id = $2 AND movement_type = 'BARANG_MASUK' 
+                        ORDER BY created_at ASC LIMIT 1
+                    )
+                `, [adjustedInitial, id]);
+            }
+        } else {
+            result = await db.query(
+                `UPDATE products 
+                 SET name = $1, unit = $2, price_per_unit = $3
+                 WHERE id = $4
+                 RETURNING *`,
+                [name, unit || 'kg', price_per_unit || 0, id]
+            );
+        }
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Produk tidak ditemukan' });
         }
 
         return res.json({
-            message: 'Data produk & harga berhasil diperbarui!',
+            message: 'Data produk & stok berhasil diperbarui!',
             product: result.rows[0]
         });
     } catch (error) {
