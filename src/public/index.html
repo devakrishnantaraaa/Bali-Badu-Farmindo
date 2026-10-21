@@ -1584,27 +1584,58 @@
             };
             document.getElementById('pageTitle').innerText = titles[tabName] || 'Dashboard';
 
-            // Trigger specific loads & inisialisasi filter kolom Excel
+            // Trigger specific loads & inisialisasi filter kolom Excel (dengan caching cerdas 30s)
+            const now = Date.now();
+            const CACHE_TTL = 30000; // 30 detik agar perpindahan tab instan tanpa loading berulang
+
             if (tabName === 'daily-sales') {
                 initExcelTableFilters('dailySalesTable');
-                loadDailySalesReport();
+                if (now - (tabDataCache['daily-sales'] || 0) > CACHE_TTL) {
+                    loadDailySalesReport().then(() => { tabDataCache['daily-sales'] = Date.now(); });
+                }
             }
             if (tabName === 'invoice') {
                 loadInvoiceCustomersDropdown();
             }
             if (tabName === 'daily-deposits') {
                 initExcelTableFilters('dailyDepositsTable');
-                loadDailyDepositsReport();
+                if (now - (tabDataCache['daily-deposits'] || 0) > CACHE_TTL) {
+                    loadDailyDepositsReport().then(() => { tabDataCache['daily-deposits'] = Date.now(); });
+                }
             }
             if (tabName === 'monthly-recap') {
                 initExcelTableFilters('monthlyRecapTable');
-                loadMonthlyRecapReport();
+                if (now - (tabDataCache['monthly-recap'] || 0) > CACHE_TTL) {
+                    loadMonthlyRecapReport().then(() => { tabDataCache['monthly-recap'] = Date.now(); });
+                }
             }
             if (tabName === 'ledger') {
                 initExcelTableFilters('stockLedgerTable');
-                loadStockLedger();
+                if (now - (tabDataCache['ledger'] || 0) > CACHE_TTL) {
+                    loadStockLedger().then(() => { tabDataCache['ledger'] = Date.now(); });
+                }
             }
-            if (tabName === 'debts') loadDebts();
+            if (tabName === 'debts') {
+                if (now - (tabDataCache['debts'] || 0) > CACHE_TTL) {
+                    loadDebts().then(() => { tabDataCache['debts'] = Date.now(); });
+                }
+            }
+        }
+
+        const tabDataCache = {
+            'daily-sales': 0,
+            'daily-deposits': 0,
+            'monthly-recap': 0,
+            'ledger': 0,
+            'debts': 0
+        };
+
+        function invalidateTabCache(tabKey) {
+            if (tabKey) {
+                tabDataCache[tabKey] = 0;
+            } else {
+                Object.keys(tabDataCache).forEach(k => tabDataCache[k] = 0);
+            }
         }
 
         // --- COLLAPSIBLE SIDEBAR ENGINE ---
@@ -2064,7 +2095,13 @@
 
         async function loadInitialData() {
             try {
-                const cRes = await fetch(`${API_BASE}/customers`, { headers: getAuthHeaders() });
+                // Ambil data esensial secara paralel (Promise.all) agar dashboard terbuka instan tanpa jeda
+                const [cRes, pRes, dRes] = await Promise.all([
+                    fetch(`${API_BASE}/customers`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/products`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/reports/outstanding-debts`, { headers: getAuthHeaders() })
+                ]);
+
                 if (cRes.ok) {
                     const customers = await cRes.json();
                     document.getElementById('statCustomers').innerText = customers.length;
@@ -2113,7 +2150,6 @@
                     }
                 }
 
-                const pRes = await fetch(`${API_BASE}/products`, { headers: getAuthHeaders() });
                 if (pRes.ok) {
                     const products = await pRes.json();
                     if (products.length > 0) {
@@ -2195,17 +2231,26 @@
                     }
                 }
 
-                loadStockLedger();
-                loadDebts();
-                if (currentUser && currentUser.role === 'SUPER_ADMIN') loadPendingPayments();
+                // Render statistik hutang langsung dari hasil paralel tanpa fetch ulang
+                if (dRes && dRes.ok) {
+                    const debtsData = await dRes.json();
+                    let totalPiutangGrand = 0;
+                    debtsData.forEach(cust => {
+                        const custTotal = Number(cust.total_remaining_debt || cust.total_customer_debt || 0);
+                        totalPiutangGrand += custTotal;
+                    });
+                    const statDebtsEl = document.getElementById('statDebts');
+                    if (statDebtsEl) statDebtsEl.innerText = `Rp ${totalPiutangGrand.toLocaleString('id-ID')}`;
+                    tabDataCache['debts'] = Date.now();
 
-                // Cek pengingat jadwal tagihan termin (Tgl 14/29 & 30)
-                checkScheduledTermsReminders();
+                    // Cek pengingat jadwal tagihan termin memakai data yang sudah diambil
+                    checkScheduledTermsReminders(debtsData);
+                }
 
-                // Build custom UI dropdown overlays for all selects
+                // Inisialisasi custom select dropdowns
                 setTimeout(() => {
                     initCustomSelects();
-                }, 50);
+                }, 30);
             } catch (err) {
                 showAlert('Gagal memuat data awal: ' + err.message, true);
             }
@@ -2554,10 +2599,11 @@
                 if (!res.ok) throw new Error(data.error || 'Gagal memperbarui status');
 
                 showAlert(data.message || 'Data berhasil diperbarui!');
+                // Invalidate cache tab lain agar saat diklik akan ambil data baru
+                invalidateTabCache('daily-deposits');
+                invalidateTabCache('monthly-recap');
+                invalidateTabCache('debts');
                 loadDailySalesReport();
-                loadDailyDepositsReport();
-                loadMonthlyRecapReport();
-                loadDebts();
             } catch (err) {
                 showAlert(err.message, true);
             }
@@ -2595,11 +2641,8 @@
 
                 closeDeleteOrderModal();
                 showAlert(data.message || 'Transaksi penjualan berhasil dihapus!');
+                invalidateTabCache();
                 loadDailySalesReport();
-                loadDailyDepositsReport();
-                loadMonthlyRecapReport();
-                loadStockLedger();
-                loadDebts();
                 loadInitialData();
             } catch (err) {
                 closeDeleteOrderModal();
@@ -2938,14 +2981,10 @@
                 showAlert(data.message || 'Data penjualan harian berhasil diimpor!');
                 closeImportExcelModal();
 
-                // Segera refresh semua tabel rekap terkait
+                // Invalidate semua cache agar data terbaru tersaji saat tab dikunjungi
+                invalidateTabCache();
                 if (typeof loadDailySalesReport === 'function') loadDailySalesReport();
-                if (typeof loadDailyDepositsReport === 'function') loadDailyDepositsReport();
-                if (typeof loadMonthlyRecapReport === 'function') loadMonthlyRecapReport();
-                if (typeof loadStockLedger === 'function') loadStockLedger();
-                if (typeof loadDebts === 'function') loadDebts();
-                if (typeof loadProducts === 'function') loadProducts();
-                if (typeof loadCustomers === 'function') loadCustomers();
+                if (typeof loadInitialData === 'function') loadInitialData();
 
             } catch (err) {
                 showAlert(err.message, true);
@@ -3516,6 +3555,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
                 showAlert(data.message || 'Setoran berhasil divalidasi!');
+                invalidateTabCache();
                 loadDailySalesReport();
                 loadInitialData();
             } catch (err) {
@@ -3860,7 +3900,7 @@
         }
 
         // --- PENGINGAT JADWAL TAGIHAN TERMIN (TGL 14/29 & TGL 30) ---
-        async function checkScheduledTermsReminders() {
+        async function checkScheduledTermsReminders(providedDebts) {
             const today = new Date();
             const dateNum = today.getDate();
 
@@ -3875,9 +3915,12 @@
             if (sessionStorage.getItem(sessionKey)) return;
 
             try {
-                const res = await fetch(`${API_BASE}/reports/outstanding-debts`, { headers: getAuthHeaders() });
-                if (!res.ok) return;
-                const debts = await res.json();
+                let debts = providedDebts;
+                if (!debts) {
+                    const res = await fetch(`${API_BASE}/reports/outstanding-debts`, { headers: getAuthHeaders() });
+                    if (!res.ok) return;
+                    debts = await res.json();
+                }
                 if (!debts || debts.length === 0) return;
 
                 const matched = [];

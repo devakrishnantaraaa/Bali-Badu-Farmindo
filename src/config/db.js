@@ -4,17 +4,23 @@ require('dotenv').config();
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000
     })
   : new Pool({
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || 5432,
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'inventory_telor'
+      database: process.env.DB_NAME || 'inventory_telor',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000
     });
 
-// Pastikan kolom-kolom penting ada di database
+// Pastikan kolom-kolom penting dan indeks performa ada di database
 let migrationsExecuted = false;
 async function runAutoMigrations() {
   if (migrationsExecuted) return;
@@ -34,6 +40,18 @@ async function runAutoMigrations() {
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS notes TEXT;
       ALTER TABLE products DROP CONSTRAINT IF EXISTS products_current_stock_check;
       ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_balance_after_check;
+
+      CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+      CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+      CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_order_id ON invoices(order_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_invoices_customer_id ON invoices(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_customer_id ON payments(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_stock_movements_prod_date ON stock_movements(product_id, created_at);
     `);
     try {
       // Penyesuaian jadwal stok masuk September sesuai data user:

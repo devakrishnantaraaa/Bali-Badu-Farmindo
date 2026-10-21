@@ -49,23 +49,19 @@ async function getDailySales(req, res) {
                 COALESCE(p.name, 'Telur') AS product_name,
                 COALESCE(p.unit, 'kg') AS product_unit,
                 i.transfer_date,
-                (
-                    SELECT p2.payment_method 
-                    FROM payments p2 
-                    WHERE p2.invoice_id = i.id 
-                    ORDER BY p2.created_at DESC LIMIT 1
-                ) AS last_payment_method,
-                (
-                    SELECT p2.created_at 
-                    FROM payments p2 
-                    WHERE p2.invoice_id = i.id 
-                    ORDER BY p2.created_at DESC LIMIT 1
-                ) AS last_payment_date
+                p2.payment_method AS last_payment_method,
+                p2.created_at AS last_payment_date
             FROM orders o
             JOIN customers c ON o.customer_id = c.id
             JOIN invoices i ON o.id = i.order_id
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products p ON oi.product_id = p.id
+            LEFT JOIN LATERAL (
+                SELECT payment_method, created_at
+                FROM payments
+                WHERE invoice_id = i.id
+                ORDER BY created_at DESC LIMIT 1
+            ) p2 ON TRUE
             ${whereClause}
             ORDER BY o.created_at ASC, o.id ASC
         `;
