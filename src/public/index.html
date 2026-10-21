@@ -2658,10 +2658,25 @@
         // ==========================================
         let importDailySalesRows = [];
 
+        function showImportModalError(msg) {
+            const errBox = document.getElementById('importExcelErrorBox');
+            const errMsg = document.getElementById('importExcelErrorMsg');
+            if (errBox && errMsg) {
+                errMsg.innerText = msg;
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        function clearImportModalError() {
+            const errBox = document.getElementById('importExcelErrorBox');
+            if (errBox) errBox.classList.add('hidden');
+        }
+
         function openImportExcelModal() {
             importDailySalesRows = [];
             const fileInput = document.getElementById('importExcelFileInput');
             if (fileInput) fileInput.value = '';
+            clearImportModalError();
             document.getElementById('importExcelPreviewSection').classList.add('hidden');
             document.getElementById('btnExecuteImportExcel').disabled = true;
             document.getElementById('importPreviewTableBody').innerHTML = '';
@@ -2696,13 +2711,15 @@
 
         function closeImportExcelModal() {
             document.getElementById('importExcelModal').classList.add('hidden');
+            clearImportModalError();
             importDailySalesRows = [];
         }
 
         function handleExcelFileSelect(event) {
             const files = event.target.files;
             if (!files || !files.length) return;
-            processExcelFile(files[0]);
+            const file = files[0];
+            processExcelFile(file);
         }
 
         function cleanNumeric(val) {
@@ -2804,59 +2821,104 @@
 
         function processExcelFile(file) {
             if (!file) return;
+            clearImportModalError();
+            document.getElementById('importExcelPreviewSection').classList.add('hidden');
+            document.getElementById('btnExecuteImportExcel').disabled = true;
+
+            const dropzoneStatus = document.getElementById('importExcelDropzoneStatus');
+            if (dropzoneStatus) {
+                dropzoneStatus.innerText = `⏳ Membaca file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`;
+                dropzoneStatus.className = 'text-xs font-bold text-blue-600 mt-1 animate-pulse';
+            }
+
+            if (typeof XLSX === 'undefined') {
+                showImportModalError('Pustaka pembaca Excel (XLSX) belum siap atau gagal dimuat dari internet. Mohon muat ulang halaman (Refresh / tekan F5).');
+                if (dropzoneStatus) {
+                    dropzoneStatus.innerText = 'Mendukung file .xlsx / .xls sesuai format kolom rekap penjualan';
+                    dropzoneStatus.className = 'text-[11px] text-slate-400';
+                }
+                return;
+            }
+
             const reader = new FileReader();
+
+            reader.onerror = function(err) {
+                console.error('FileReader error:', err);
+                showImportModalError('Gagal membaca file dari komputer Anda: ' + (err.target?.error?.message || 'Akses file ditolak atau file sedang dibuka aplikasi lain.'));
+                const fileInput = document.getElementById('importExcelFileInput');
+                if (fileInput) fileInput.value = '';
+                if (dropzoneStatus) {
+                    dropzoneStatus.innerText = 'Mendukung file .xlsx / .xls sesuai format kolom rekap penjualan';
+                    dropzoneStatus.className = 'text-[11px] text-slate-400';
+                }
+            };
+
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-
-                    // Ubah sheet menjadi array 2D
-                    const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-                    if (!sheetData || !sheetData.length) {
-                        throw new Error('File Excel kosong atau tidak dapat dibaca.');
+                    if (!workbook.SheetNames || !workbook.SheetNames.length) {
+                        throw new Error('File spreadsheet tidak memiliki sheet data.');
                     }
 
-                    // Cari baris header secara fleksibel (di baris ke-1 s/d ke-10)
+                    // Cari sheet yang memiliki baris header yang valid
+                    let selectedSheetData = null;
                     let headerRowIdx = -1;
                     const colMap = {};
+                    let detectedSheetName = '';
 
-                    for (let r = 0; r < Math.min(10, sheetData.length); r++) {
-                        const row = sheetData[r] || [];
-                        const rowStr = row.map(c => String(c || '').trim().toUpperCase());
-                        const hasCust = rowStr.some(c => c.includes('CUSTOMER') || c.includes('NAMA'));
-                        const hasTgl = rowStr.some(c => c === 'TGL' || c.includes('TANGGAL') || c === 'PERIODE');
+                    for (const sName of workbook.SheetNames) {
+                        const worksheet = workbook.Sheets[sName];
+                        if (!worksheet) continue;
+                        const sData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                        if (!sData || !sData.length) continue;
 
-                        if (hasCust && hasTgl) {
-                            headerRowIdx = r;
-                            rowStr.forEach((colName, cIdx) => {
-                                if (colName.includes('PERIODE')) colMap.periode = cIdx;
-                                else if (colName === 'TGL' || colName.includes('TANGGAL')) colMap.tgl = cIdx;
-                                else if (colName.includes('CUSTOMER') || colName.includes('NAMA')) colMap.customer = cIdx;
-                                else if (colName.includes('PENJUALAN') || colName === 'QTY') colMap.penjualan = cIdx;
-                                else if (colName === 'KET' || colName.includes('KETERANGAN') || colName.includes('PRODUK')) colMap.ket = cIdx;
-                                else if (colName === 'HARGA' || colName.includes('PRICE')) colMap.harga = cIdx;
-                                else if (colName === 'TOTAL' && !colName.includes('TERFILTER')) colMap.total = cIdx;
-                                else if (colName === 'TOP' || colName.includes('STATUS')) colMap.top = cIdx;
-                                else if (colName.includes('PEMBAYARAN') && !colName.includes('SISA')) colMap.pembayaran = cIdx;
-                                else if (colName.includes('SISA')) colMap.sisa = cIdx;
-                                else if (colName === 'CEK') colMap.cek = cIdx;
-                                else if (colName.includes('TRANSFER')) colMap.transfer = cIdx;
-                            });
-                            break;
+                        // Cari baris header hingga 30 baris ke bawah
+                        for (let r = 0; r < Math.min(30, sData.length); r++) {
+                            const row = sData[r] || [];
+                            const rowStr = row.map(c => String(c || '').trim().toUpperCase());
+                            
+                            const hasCust = rowStr.some(c => 
+                                c.includes('CUSTOMER') || c.includes('NAMA') || c.includes('PELANGGAN') || 
+                                c.includes('PEMBELI') || c.includes('TOKO') || c.includes('KLIEN')
+                            );
+                            const hasTgl = rowStr.some(c => 
+                                c === 'TGL' || c.includes('TANGGAL') || c === 'PERIODE' || c.includes('DATE')
+                            );
+
+                            if (hasCust && hasTgl) {
+                                headerRowIdx = r;
+                                selectedSheetData = sData;
+                                detectedSheetName = sName;
+                                rowStr.forEach((colName, cIdx) => {
+                                    if (colName.includes('PERIODE')) colMap.periode = cIdx;
+                                    else if (colName === 'TGL' || colName.includes('TANGGAL') || colName.includes('DATE')) colMap.tgl = cIdx;
+                                    else if (colName.includes('CUSTOMER') || colName.includes('NAMA') || colName.includes('PELANGGAN') || colName.includes('TOKO') || colName.includes('PEMBELI')) colMap.customer = cIdx;
+                                    else if (colName.includes('PENJUALAN') || colName === 'QTY' || colName.includes('JUMLAH') || colName.includes('KRAT') || colName.includes('VOL')) colMap.penjualan = cIdx;
+                                    else if (colName === 'KET' || colName.includes('KETERANGAN') || colName.includes('PRODUK') || colName.includes('JENIS') || colName.includes('ITEM') || colName.includes('BARANG')) colMap.ket = cIdx;
+                                    else if (colName === 'HARGA' || colName.includes('PRICE') || colName.includes('TARIF')) colMap.harga = cIdx;
+                                    else if (colName === 'TOTAL' && !colName.includes('TERFILTER')) colMap.total = cIdx;
+                                    else if (colName === 'TOP' || colName.includes('STATUS') || colName.includes('CARA BAYAR')) colMap.top = cIdx;
+                                    else if (colName.includes('PEMBAYARAN') && !colName.includes('SISA')) colMap.pembayaran = cIdx;
+                                    else if (colName.includes('SISA')) colMap.sisa = cIdx;
+                                    else if (colName === 'CEK') colMap.cek = cIdx;
+                                    else if (colName.includes('TRANSFER')) colMap.transfer = cIdx;
+                                });
+                                break;
+                            }
                         }
+                        if (headerRowIdx !== -1) break;
                     }
 
                     if (headerRowIdx === -1 || colMap.customer === undefined) {
-                        throw new Error('Header kolom tidak ditemukan. Pastikan ada judul kolom TGL dan NAMA CUSTOMER seperti pada contoh.');
+                        throw new Error('Header kolom tidak terdeteksi. Pastikan file Excel memiliki baris judul kolom tanggal ("TGL" / "TANGGAL") dan nama customer ("NAMA CUSTOMER" / "PELANGGAN"). Anda dapat mengunduh contoh format di tombol download di atas.');
                     }
 
                     const rowsToImport = [];
                     const currentYear = new Date().getFullYear();
 
-                    for (let r = headerRowIdx + 1; r < sheetData.length; r++) {
-                        const row = sheetData[r] || [];
+                    for (let r = headerRowIdx + 1; r < selectedSheetData.length; r++) {
+                        const row = selectedSheetData[r] || [];
                         const custRaw = colMap.customer !== undefined ? String(row[colMap.customer] || '').trim() : '';
 
                         // Abaikan baris kosong atau baris ringkasan TOTAL
@@ -2897,18 +2959,33 @@
                     }
 
                     if (rowsToImport.length === 0) {
-                        throw new Error('Tidak ada data transaksi yang valid ditemukan di dalam file Excel.');
+                        throw new Error('Tidak ada baris data transaksi yang valid ditemukan pada file (pastikan kolom PENJUALAN / QTY terisi angka lebih dari 0).');
                     }
 
                     importDailySalesRows = rowsToImport;
-                    document.getElementById('importFileName').innerText = file.name;
+                    document.getElementById('importFileName').innerText = `${file.name} [Sheet: ${detectedSheetName}]`;
+                    clearImportModalError();
                     renderImportPreview(rowsToImport);
+
+                    if (dropzoneStatus) {
+                        dropzoneStatus.innerText = `✅ File ${file.name} berhasil dibaca (${rowsToImport.length} baris data transaksi ditemukan).`;
+                        dropzoneStatus.className = 'text-xs font-bold text-emerald-700 mt-1';
+                    }
 
                 } catch (err) {
                     console.error('Error membaca file Excel:', err);
+                    showImportModalError(err.message);
                     showAlert(err.message, true);
+                    if (dropzoneStatus) {
+                        dropzoneStatus.innerText = 'Mendukung file .xlsx / .xls sesuai format kolom rekap penjualan';
+                        dropzoneStatus.className = 'text-[11px] text-slate-400';
+                    }
+                } finally {
+                    const fileInput = document.getElementById('importExcelFileInput');
+                    if (fileInput) fileInput.value = '';
                 }
             };
+
             reader.readAsArrayBuffer(file);
         }
 
@@ -5203,11 +5280,13 @@
             <!-- Modal Body (Scrollable) -->
             <div class="space-y-4 overflow-y-auto flex-1 pr-1">
                 
+                <!-- Hidden File Input -->
+                <input type="file" id="importExcelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelect(event)">
+
                 <!-- File Upload Box -->
                 <div id="importExcelDropzone"
                     class="border-2 border-dashed border-blue-200 hover:border-blue-400 bg-blue-50/40 rounded-xl p-5 text-center transition cursor-pointer flex flex-col items-center justify-center gap-2"
                     onclick="document.getElementById('importExcelFileInput').click()">
-                    <input type="file" id="importExcelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelect(event)">
                     <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">
                         📊
                     </div>
@@ -5215,7 +5294,16 @@
                         <span class="text-sm font-bold text-blue-700 hover:underline">Klik untuk pilih file Excel</span>
                         <span class="text-xs text-slate-500"> atau seret dan letakkan file ke sini</span>
                     </div>
-                    <p class="text-[11px] text-slate-400">Mendukung file .xlsx / .xls sesuai format kolom rekap penjualan</p>
+                    <p id="importExcelDropzoneStatus" class="text-[11px] text-slate-400">Mendukung file .xlsx / .xls sesuai format kolom rekap penjualan</p>
+                </div>
+
+                <!-- Error Box inside Modal -->
+                <div id="importExcelErrorBox" class="hidden bg-rose-50 border border-rose-200 text-rose-800 text-xs p-3 rounded-xl flex items-start gap-2.5 animate-pulse">
+                    <span class="text-rose-600 font-bold text-base leading-none">⚠️</span>
+                    <div class="flex-1">
+                        <div class="font-bold text-rose-900 mb-0.5">File tidak dapat diproses:</div>
+                        <div id="importExcelErrorMsg" class="text-rose-700 leading-relaxed font-medium"></div>
+                    </div>
                 </div>
 
                 <!-- Template Hint / Download Sample -->
