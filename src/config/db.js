@@ -32,6 +32,8 @@ async function runAutoMigrations() {
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS adjustment_qty NUMERIC(12, 2) DEFAULT 0.00;
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reference_id VARCHAR(100);
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS notes TEXT;
+      ALTER TABLE products DROP CONSTRAINT IF EXISTS products_current_stock_check;
+      ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_balance_after_check;
     `);
     try {
       // Penyesuaian jadwal stok masuk September sesuai data user:
@@ -74,44 +76,20 @@ async function runAutoMigrations() {
       await pool.query("UPDATE products SET name = 'TG' WHERE id = $1 AND name != 'TG'", [tgId]);
       await pool.query("UPDATE products SET name = 'OMEGA' WHERE id = $1 AND name != 'OMEGA'", [omegaId]);
 
-      // Hapus mutasi BARANG_MASUK stok awal lama untuk 3 produk ini (termasuk yang 475)
+      // Hapus hanya duplikat transaksi 475 pada tgl 06-Sep jika ada lebih dari 1 baris (karena dobel klik)
       await pool.query(`
-        DELETE FROM stock_movements 
-        WHERE movement_type = 'BARANG_MASUK'
-          AND product_id IN ($1, $2, $3)
-      `, [tbId, tgId, omegaId]);
-
-      // Hapus juga secara spesifik jika ada sisa data 475
-      await pool.query('DELETE FROM stock_movements WHERE quantity = 475');
-
-      // Masukkan transaksi stok masuk sesuai kebutuhan user (TB cukup 300):
-      // 1. 01-Sep: TB 300
-      await pool.query(`
-        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-        VALUES ($1, 'BARANG_MASUK', 300, 300, '', '2026-09-01 07:00:00+08')
-      `, [tbId]);
-
-      // 2. 01-Sep: TG 150
-      await pool.query(`
-        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-        VALUES ($1, 'BARANG_MASUK', 150, 150, '', '2026-09-01 07:00:00+08')
-      `, [tgId]);
-
-      // 3. 05-Sep: OMEGA 5
-      await pool.query(`
-        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-        VALUES ($1, 'BARANG_MASUK', 5, 5, '', '2026-09-05 07:00:00+08')
-      `, [omegaId]);
-
-      // 4. 07-Sep: TG 150
-      await pool.query(`
-        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-        VALUES ($1, 'BARANG_MASUK', 150, 291, '', '2026-09-07 07:00:00+08')
-      `, [tgId]);
-
-      // Update stok TB di tabel products menjadi 300
-      await pool.query('UPDATE products SET current_stock = 300 WHERE id = $1', [tbId]);
-
+        DELETE FROM stock_movements
+        WHERE id IN (
+          SELECT id FROM (
+            SELECT id, ROW_NUMBER() OVER (
+              PARTITION BY product_id, movement_type, quantity, DATE(created_at) 
+              ORDER BY id ASC
+            ) as rnum
+            FROM stock_movements
+            WHERE quantity = 475
+          ) t WHERE t.rnum > 1
+        );
+      `);
     } catch (err) {
       console.warn('Notice (September stock schedule migration):', err.message);
     }

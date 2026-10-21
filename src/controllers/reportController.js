@@ -78,18 +78,9 @@ async function getDailySales(req, res) {
     }
 }
 
-// Rekap Setoran Harian (Hanya memunculkan transaksi yang status CEK nya OK)
+// Rekap Setoran Harian (Hanya memunculkan transaksi yang status CEK nya OK, tanggal berapapun itu)
 async function getDailyDeposits(req, res) {
     try {
-        const { date } = req.query;
-        let whereClause = "WHERE UPPER(TRIM(COALESCE(p.payment_method, ''))) = 'OK'";
-        let queryParams = [];
-
-        if (date && date !== 'ALL') {
-            whereClause += " AND DATE(COALESCE(i.transfer_date, p.created_at) AT TIME ZONE 'UTC') = $1";
-            queryParams.push(date);
-        }
-
         const queryText = `
             SELECT 
                 p.id AS payment_id,
@@ -119,10 +110,10 @@ async function getDailyDeposits(req, res) {
             JOIN orders o ON i.order_id = o.id
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products prod ON oi.product_id = prod.id
-            ${whereClause}
+            WHERE UPPER(TRIM(COALESCE(p.payment_method, ''))) = 'OK'
             ORDER BY COALESCE(i.transfer_date, p.created_at) ASC, p.id ASC
         `;
-        const result = await db.query(queryText, queryParams);
+        const result = await db.query(queryText);
         return res.json(result.rows);
     } catch (error) {
         return res.status(500).json({ error: error.message });

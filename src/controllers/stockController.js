@@ -448,14 +448,69 @@ async function updateStockLedgerNotes(req, res) {
     }
 }
 
+// Hapus baris pergerakan stok manual/duplikat dan hitung ulang saldo stok
+async function deleteStockMovement(req, res) {
+    const { id } = req.params;
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
+        const check = await client.query('SELECT product_id FROM stock_movements WHERE id = $1', [id]);
+        if (check.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Data mutasi stok tidak ditemukan' });
+        }
+        const productId = check.rows[0].product_id;
+        await client.query('DELETE FROM stock_movements WHERE id = $1', [id]);
+
+        // Kalibrasi ulang saldo stok berjalan dan stok produk saat ini
+        const movs = await client.query(`
+            SELECT id, movement_type, quantity, 
+                   COALESCE(damaged_qty, 0) AS damaged_qty, 
+                   COALESCE(adjustment_qty, 0) AS adjustment_qty
+            FROM stock_movements
+            WHERE product_id = $1
+            ORDER BY created_at ASC, id ASC
+        `, [productId]);
+
+        let running = 0;
+        for (const m of movs.rows) {
+            const q = parseFloat(m.quantity) || 0;
+            const dmg = parseFloat(m.damaged_qty) || 0;
+            const adj = parseFloat(m.adjustment_qty) || 0;
+
+            if (m.movement_type === 'BARANG_MASUK') {
+                running += q;
+            } else if (m.movement_type === 'PENJUALAN') {
+                running -= q;
+            }
+            if (dmg > 0) running -= dmg;
+            if (adj !== 0) running += adj;
+
+            await client.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
+        }
+        await client.query('UPDATE products SET current_stock = $1 WHERE id = $2', [running, productId]);
+
+        await client.query('COMMIT');
+        return res.json({ message: 'Riwayat mutasi stok berhasil dihapus', new_stock: running });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error deleteStockMovement:', error);
+        return res.status(500).json({ error: error.message });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     recordIncomingGoods,
     recordStockAdjustment,
     getStockLedger,
     updateStockLedgerNotes,
+    deleteStockMovement,
     getProducts,
     createProduct,
     updateProduct,
     deleteProduct
 };
+
 

@@ -214,49 +214,53 @@ async function updateInvoiceFields(req, res) {
             );
         }
 
-        // 2. Update atau catat pembayaran/metode (CEK: Transfer / Setor / OK)
+        // 2. Update atau catat pembayaran/metode (CEK: Transfer / Setor / OK / -)
         const existingPayment = await client.query(
             `SELECT * FROM payments WHERE invoice_id = $1 ORDER BY created_at DESC LIMIT 1`,
             [invoice.id]
         );
 
-        const method = payment_method || invoice.payment_type || 'TRANSFER';
-
         if (existingPayment.rows.length > 0) {
-            // JANGAN ubah tanggal jika user hanya mengganti kolom CEK atau status
+            const currentPayment = existingPayment.rows[0];
+            const updates = [];
+            const values = [];
+            let idx = 1;
+
+            // HANYA ubah payment_method (kolom CEK) jika payment_method dikirim secara eksplisit di body
+            if (payment_method !== undefined && payment_method !== null) {
+                const cleanMethod = (payment_method === '' || payment_method === '-') ? '-' : payment_method;
+                updates.push(`payment_method = $${idx++}`);
+                values.push(cleanMethod);
+            }
+
+            // HANYA ubah tanggal pada payment jika transfer_date dikirim di body
             if (transfer_date !== undefined) {
-                if (transfer_date) {
-                    await client.query(
-                        `UPDATE payments 
-                         SET payment_method = $1, created_at = $2, is_validated = TRUE
-                         WHERE id = $3`,
-                        [method, new Date(transfer_date), existingPayment.rows[0].id]
-                    );
-                } else {
-                    // Jika transfer_date dikosongkan, kembalikan tanggal ke created_at invoice semula
-                    await client.query(
-                        `UPDATE payments 
-                         SET payment_method = $1, created_at = $2, is_validated = TRUE
-                         WHERE id = $3`,
-                        [method, invoice.created_at, existingPayment.rows[0].id]
-                    );
-                }
-            } else {
-                // Hanya update kolom CEK (payment_method), tanggal sama sekali TIDAK BOLEH BERUBAH
+                const targetDate = transfer_date ? new Date(transfer_date) : invoice.created_at;
+                updates.push(`created_at = $${idx++}`);
+                values.push(targetDate);
+            }
+
+            if (updates.length > 0) {
+                updates.push(`is_validated = TRUE`);
+                values.push(currentPayment.id);
                 await client.query(
                     `UPDATE payments 
-                     SET payment_method = $1, is_validated = TRUE
-                     WHERE id = $2`,
-                    [method, existingPayment.rows[0].id]
+                     SET ${updates.join(', ')} 
+                     WHERE id = $${idx}`,
+                    values
                 );
             }
-        } else if (top_status === 'LUNAS' || payment_method || transfer_date) {
+        } else if (top_status === 'LUNAS' || (payment_method !== undefined && payment_method !== null && payment_method !== '' && payment_method !== '-')) {
             const payNum = `PAY-${Date.now()}`;
-            const pDate = transfer_date ? new Date(transfer_date) : invoice.created_at;
+            const pDate = transfer_date ? new Date(transfer_date) : (invoice.transfer_date ? new Date(invoice.transfer_date) : invoice.created_at);
+            const finalMethod = (payment_method !== undefined && payment_method !== null && payment_method !== '' && payment_method !== '-')
+                ? payment_method
+                : '-';
+
             await client.query(
                 `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
                  VALUES ($1, $2, $3, $4, $5, TRUE, CURRENT_TIMESTAMP, $6)`,
-                [payNum, invoice.id, invoice.customer_id, invoice.amount_due, method, pDate]
+                [payNum, invoice.id, invoice.customer_id, invoice.amount_due, finalMethod, pDate]
             );
         }
 

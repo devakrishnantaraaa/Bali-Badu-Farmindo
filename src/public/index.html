@@ -995,6 +995,10 @@
                                 class="hidden text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1.5 rounded-lg font-bold border border-amber-300 transition items-center gap-1">
                                 <span>🧹</span> Reset Filter Excel
                             </button>
+                            <button onclick="openImportExcelModal()"
+                                class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition">
+                                📤 Import Excel
+                            </button>
                             <button onclick="exportTableToExcel('dailySalesTable', 'Rekap_Penjualan_Harian')"
                                 class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition">
                                 📥 Tarik Excel
@@ -1117,11 +1121,6 @@
                         class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
                         <h3 class="text-base font-bold text-slate-900">Rekap Setoran Harian (Cash & Bank Transfer)</h3>
                         <div class="flex items-center gap-2">
-                            <label class="text-xs font-semibold text-slate-600">Pilih Tanggal:</label>
-                            <input type="date" id="filterDepositDate" onchange="loadDailyDepositsReport()"
-                                class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs">
-                            <button onclick="loadDailyDepositsReport()"
-                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded font-medium border border-slate-200">Filter</button>
                             <button onclick="exportTableToExcel('dailyDepositsTable', 'Rekap_Setoran_Harian')"
                                 class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
                                 📥 Tarik Excel
@@ -1146,8 +1145,6 @@
                                         class="p-2 border border-slate-300 text-right bg-amber-200/80 text-amber-950 font-black">
                                         PEMBAYARAN</th>
                                     <th class="p-2 border border-slate-300 text-right">SISA PEMBAYARAN</th>
-                                    <th class="p-2 border border-slate-300 text-center">CEK</th>
-                                    <th class="p-2 border border-slate-300 text-center">TRANSFER</th>
                                 </tr>
                             </thead>
                             <tbody id="dailyDepositsBody" class="divide-y divide-slate-200">
@@ -1308,8 +1305,9 @@
                                     <th class="p-2 border border-slate-300 text-right text-rose-700">RUSAK</th>
                                     <th class="p-2 border border-slate-300 text-right text-blue-700">STOK FISIK</th>
                                     <th class="p-2 border border-slate-300 text-right text-purple-700">PENYESUAIAN</th>
-                                    <th class="p-2 border border-slate-300 text-right font-black bg-blue-100">SISA</th>
+                                    <th class="p-2 border border-slate-300 font-black bg-blue-100 text-right">SISA</th>
                                     <th class="p-2 border border-slate-300">KETERANGAN</th>
+                                    <th class="p-2 border border-slate-300 text-center">AKSI</th>
                                 </tr>
                             </thead>
                             <tbody id="stockLedgerBody" class="divide-y divide-slate-200 font-medium">
@@ -2286,13 +2284,34 @@
             }
         }
 
-        async function submitIncomingStock() {
+        let isSubmittingIncomingStock = false;
+        async function submitIncomingStock(btnEl) {
+            if (isSubmittingIncomingStock) return;
+            const btn = btnEl || document.querySelector('#stockForm button');
+            const originalText = btn ? btn.innerHTML : 'Simpan Barang Masuk';
+
             const product_id = document.getElementById('incomingProduct').value;
             const quantity = document.getElementById('incomingQty').value;
             const notes = document.getElementById('incomingNotes').value;
             const incoming_date = document.getElementById('incomingDate').value;
 
+            if (!product_id) {
+                showAlert('Silakan pilih produk terlebih dahulu!', true);
+                return;
+            }
+            if (!quantity || parseFloat(quantity) <= 0) {
+                showAlert('Silakan isi jumlah masuk yang valid!', true);
+                return;
+            }
+
             try {
+                isSubmittingIncomingStock = true;
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '⏳ Menyimpan...';
+                    btn.classList.add('opacity-60', 'cursor-not-allowed');
+                }
+
                 const res = await fetch(`${API_BASE}/stock/incoming`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
@@ -2311,6 +2330,13 @@
                 loadInitialData();
             } catch (err) {
                 showAlert(err.message, true);
+            } finally {
+                isSubmittingIncomingStock = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
             }
         }
 
@@ -2403,7 +2429,8 @@
                 const code = getProductDisplayCode(item.product_name);
 
                 const currentTop = item.invoice_status === 'LUNAS' ? 'LUNAS' : 'PENDING';
-                const currentCek = item.last_payment_method || item.payment_type || 'TRANSFER';
+                const rawCek = item.last_payment_method || (item.payment_type && item.payment_type !== 'CREDIT' ? item.payment_type : '');
+                const currentCek = (rawCek && rawCek !== '-') ? rawCek : '';
                 
                 // Kolom transfer dikosongkan di awal sampai user mengisi saat setoran uang
                 let transferDateVal = '';
@@ -2457,9 +2484,10 @@
                         <td class="p-1.5 border border-slate-300 text-center">
                             <select onchange="updateInvoiceInlineFields(${item.invoice_id}, null, this.value, null)"
                                 class="text-[10px] font-semibold px-1 py-1 bg-slate-50 border border-slate-300 rounded focus:outline-none text-slate-800">
-                                <option value="Transfer" ${currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>Transfer</option>
-                                <option value="Setor" ${currentCek.toUpperCase() === 'SETOR' ? 'selected' : ''}>Setor</option>
-                                <option value="OK" ${currentCek.toUpperCase() === 'OK' ? 'selected' : ''}>OK</option>
+                                <option value="-" ${!currentCek || currentCek === '-' ? 'selected' : ''}>-</option>
+                                <option value="Transfer" ${currentCek && currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>Transfer</option>
+                                <option value="Setor" ${currentCek && currentCek.toUpperCase() === 'SETOR' ? 'selected' : ''}>Setor</option>
+                                <option value="OK" ${currentCek && currentCek.toUpperCase() === 'OK' ? 'selected' : ''}>OK</option>
                             </select>
                         </td>
 
@@ -2582,9 +2610,374 @@
             }
         }
 
+        // ==========================================
+        // FITUR IMPORT EXCEL PENJUALAN HARIAN
+        // ==========================================
+        let importDailySalesRows = [];
+
+        function openImportExcelModal() {
+            importDailySalesRows = [];
+            const fileInput = document.getElementById('importExcelFileInput');
+            if (fileInput) fileInput.value = '';
+            document.getElementById('importExcelPreviewSection').classList.add('hidden');
+            document.getElementById('btnExecuteImportExcel').disabled = true;
+            document.getElementById('importPreviewTableBody').innerHTML = '';
+            document.getElementById('importExcelModal').classList.remove('hidden');
+
+            // Setup drag-and-drop jika belum terpasang
+            const dropzone = document.getElementById('importExcelDropzone');
+            if (dropzone && !dropzone.dataset.dndInit) {
+                dropzone.dataset.dndInit = 'true';
+                ['dragenter', 'dragover'].forEach(name => {
+                    dropzone.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.add('border-blue-500', 'bg-blue-100/60');
+                    });
+                });
+                ['dragleave', 'drop'].forEach(name => {
+                    dropzone.addEventListener(name, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('border-blue-500', 'bg-blue-100/60');
+                    });
+                });
+                dropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    if (dt && dt.files && dt.files.length) {
+                        processExcelFile(dt.files[0]);
+                    }
+                });
+            }
+        }
+
+        function closeImportExcelModal() {
+            document.getElementById('importExcelModal').classList.add('hidden');
+            importDailySalesRows = [];
+        }
+
+        function handleExcelFileSelect(event) {
+            const files = event.target.files;
+            if (!files || !files.length) return;
+            processExcelFile(files[0]);
+        }
+
+        function cleanNumeric(val) {
+            if (val === null || val === undefined) return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            const str = String(val).trim();
+            if (!str || str === '-') return 0;
+            // Bersihkan simbol mata uang Rp, spasi, titik ribuan dan koma
+            const cleaned = str.replace(/[^\d.-]/g, '');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
+        function parseExcelDate(val, periodeStr) {
+            if (!val && val !== 0) return null;
+
+            // 1. Jika tipe data sudah berupa Date object dari SheetJS
+            if (val instanceof Date) {
+                if (!isNaN(val.getTime())) {
+                    const y = val.getFullYear();
+                    const m = String(val.getMonth() + 1).padStart(2, '0');
+                    const d = String(val.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                }
+            }
+
+            // 2. Jika tipe data berupa serial number Excel (contoh: 46266)
+            if (typeof val === 'number') {
+                try {
+                    const parsed = XLSX.SSF.parse_date_code(val);
+                    if (parsed) {
+                        const y = parsed.y;
+                        const m = String(parsed.m).padStart(2, '0');
+                        const d = String(parsed.d).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    }
+                } catch (e) {}
+            }
+
+            let str = String(val).trim();
+            if (!str || str === '-') return null;
+
+            // Normalisasi spasi berlebih, misal "01 / 10 / 2026" -> "01/10/2026"
+            str = str.replace(/\s*([/\-.])\s*/g, '$1');
+
+            // Format baku ISO YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                return str;
+            }
+
+            const currentYear = new Date().getFullYear();
+            const monthsMap = {
+                'jan': 1, 'januari': 1, 'january': 1,
+                'feb': 2, 'februari': 2, 'february': 2,
+                'mar': 3, 'maret': 3, 'march': 3,
+                'apr': 4, 'april': 4,
+                'mei': 5, 'may': 5,
+                'jun': 6, 'juni': 6, 'june': 6,
+                'jul': 7, 'juli': 7, 'july': 7,
+                'agu': 8, 'agustus': 8, 'aug': 8, 'august': 8,
+                'sep': 9, 'september': 9,
+                'okt': 10, 'oktober': 10, 'oct': 10, 'october': 10,
+                'nov': 11, 'november': 11,
+                'des': 12, 'desember': 12, 'dec': 12, 'december': 12
+            };
+
+            // Format tanggal teks (misal: "1-Sep", "01-Sep", "1-Sep-2026", "1 Sep 2026")
+            const textMatch = str.match(/^(\d{1,2})[\s\-\/\.]([a-zA-Z]+)(?:[\s\-\/\.](\d{2,4}))?$/);
+            if (textMatch) {
+                const day = parseInt(textMatch[1], 10);
+                const mKey = textMatch[2].toLowerCase();
+                let month = monthsMap[mKey] || monthsMap[mKey.substring(0, 3)] || 1;
+                let year = textMatch[3] ? parseInt(textMatch[3], 10) : currentYear;
+                if (year < 100) year += 2000;
+                return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
+            // Format angka tanggal & bulan (misal: "01/10/2026", "01-10-2026")
+            const numMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?$/);
+            if (numMatch) {
+                const day = parseInt(numMatch[1], 10);
+                const month = parseInt(numMatch[2], 10);
+                let year = numMatch[3] ? parseInt(numMatch[3], 10) : currentYear;
+                if (year < 100) year += 2000;
+                return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
+            // Jika hanya angka hari (misal "1") dan ada kolom PERIODE (misal "SEPTEMBER")
+            const dayOnlyMatch = str.match(/^(\d{1,2})$/);
+            if (dayOnlyMatch && periodeStr) {
+                const day = parseInt(dayOnlyMatch[1], 10);
+                const pKey = String(periodeStr).trim().toLowerCase();
+                let month = monthsMap[pKey] || monthsMap[pKey.substring(0, 3)] || (new Date().getMonth() + 1);
+                return `${currentYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
+            return null;
+        }
+
+        function processExcelFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+
+                    // Ubah sheet menjadi array 2D
+                    const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                    if (!sheetData || !sheetData.length) {
+                        throw new Error('File Excel kosong atau tidak dapat dibaca.');
+                    }
+
+                    // Cari baris header secara fleksibel (di baris ke-1 s/d ke-10)
+                    let headerRowIdx = -1;
+                    const colMap = {};
+
+                    for (let r = 0; r < Math.min(10, sheetData.length); r++) {
+                        const row = sheetData[r] || [];
+                        const rowStr = row.map(c => String(c || '').trim().toUpperCase());
+                        const hasCust = rowStr.some(c => c.includes('CUSTOMER') || c.includes('NAMA'));
+                        const hasTgl = rowStr.some(c => c === 'TGL' || c.includes('TANGGAL') || c === 'PERIODE');
+
+                        if (hasCust && hasTgl) {
+                            headerRowIdx = r;
+                            rowStr.forEach((colName, cIdx) => {
+                                if (colName.includes('PERIODE')) colMap.periode = cIdx;
+                                else if (colName === 'TGL' || colName.includes('TANGGAL')) colMap.tgl = cIdx;
+                                else if (colName.includes('CUSTOMER') || colName.includes('NAMA')) colMap.customer = cIdx;
+                                else if (colName.includes('PENJUALAN') || colName === 'QTY') colMap.penjualan = cIdx;
+                                else if (colName === 'KET' || colName.includes('KETERANGAN') || colName.includes('PRODUK')) colMap.ket = cIdx;
+                                else if (colName === 'HARGA' || colName.includes('PRICE')) colMap.harga = cIdx;
+                                else if (colName === 'TOTAL' && !colName.includes('TERFILTER')) colMap.total = cIdx;
+                                else if (colName === 'TOP' || colName.includes('STATUS')) colMap.top = cIdx;
+                                else if (colName.includes('PEMBAYARAN') && !colName.includes('SISA')) colMap.pembayaran = cIdx;
+                                else if (colName.includes('SISA')) colMap.sisa = cIdx;
+                                else if (colName === 'CEK') colMap.cek = cIdx;
+                                else if (colName.includes('TRANSFER')) colMap.transfer = cIdx;
+                            });
+                            break;
+                        }
+                    }
+
+                    if (headerRowIdx === -1 || colMap.customer === undefined) {
+                        throw new Error('Header kolom tidak ditemukan. Pastikan ada judul kolom TGL dan NAMA CUSTOMER seperti pada contoh.');
+                    }
+
+                    const rowsToImport = [];
+                    const currentYear = new Date().getFullYear();
+
+                    for (let r = headerRowIdx + 1; r < sheetData.length; r++) {
+                        const row = sheetData[r] || [];
+                        const custRaw = colMap.customer !== undefined ? String(row[colMap.customer] || '').trim() : '';
+
+                        // Abaikan baris kosong atau baris ringkasan TOTAL
+                        if (!custRaw || custRaw.toUpperCase().includes('TOTAL')) continue;
+
+                        const periodeVal = colMap.periode !== undefined ? String(row[colMap.periode] || '').trim() : '';
+                        const tglVal = colMap.tgl !== undefined ? row[colMap.tgl] : '';
+                        const parsedDate = parseExcelDate(tglVal, periodeVal) || `${currentYear}-09-01`;
+
+                        const qty = colMap.penjualan !== undefined ? cleanNumeric(row[colMap.penjualan]) : 0;
+                        if (qty <= 0) continue; // Jangan masukkan baris jika qty 0
+
+                        const ket = colMap.ket !== undefined ? String(row[colMap.ket] || 'TG').trim().toUpperCase() : 'TG';
+                        const harga = colMap.harga !== undefined ? cleanNumeric(row[colMap.harga]) : 0;
+                        let total = colMap.total !== undefined ? cleanNumeric(row[colMap.total]) : 0;
+                        if (!total && qty > 0 && harga > 0) total = qty * harga;
+
+                        const top = colMap.top !== undefined ? String(row[colMap.top] || 'LUNAS').trim().toUpperCase() : 'LUNAS';
+                        const pembayaran = colMap.pembayaran !== undefined ? cleanNumeric(row[colMap.pembayaran]) : (top === 'LUNAS' ? total : 0);
+                        const cek = colMap.cek !== undefined ? String(row[colMap.cek] || '').trim() : '';
+                        
+                        const transferVal = colMap.transfer !== undefined ? row[colMap.transfer] : '';
+                        const parsedTransfer = parseExcelDate(transferVal, null);
+
+                        rowsToImport.push({
+                            periode: periodeVal || 'SEPTEMBER',
+                            order_date: parsedDate,
+                            customer_name: custRaw,
+                            penjualan: qty,
+                            ket: ket,
+                            harga: harga,
+                            total: total,
+                            top: top || 'LUNAS',
+                            pembayaran: pembayaran,
+                            cek: cek,
+                            transfer: parsedTransfer
+                        });
+                    }
+
+                    if (rowsToImport.length === 0) {
+                        throw new Error('Tidak ada data transaksi yang valid ditemukan di dalam file Excel.');
+                    }
+
+                    importDailySalesRows = rowsToImport;
+                    document.getElementById('importFileName').innerText = file.name;
+                    renderImportPreview(rowsToImport);
+
+                } catch (err) {
+                    console.error('Error membaca file Excel:', err);
+                    showAlert(err.message, true);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderImportPreview(rows) {
+            const tbody = document.getElementById('importPreviewTableBody');
+            tbody.innerHTML = '';
+
+            let totalQty = 0;
+            let totalOmset = 0;
+
+            rows.forEach((r, idx) => {
+                totalQty += r.penjualan;
+                totalOmset += r.total;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 text-[11px]';
+                tr.innerHTML = `
+                    <td class="p-2 border border-slate-200 text-slate-400 font-mono text-center">${idx + 1}</td>
+                    <td class="p-2 border border-slate-200 whitespace-nowrap font-medium text-slate-800">${r.order_date}</td>
+                    <td class="p-2 border border-slate-200 font-bold text-slate-900">${r.customer_name}</td>
+                    <td class="p-2 border border-slate-200 text-right font-black text-slate-800">${r.penjualan.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-200 text-center font-bold text-amber-700">${r.ket}</td>
+                    <td class="p-2 border border-slate-200 text-right text-slate-700">${r.harga ? r.harga.toLocaleString('id-ID') : '-'}</td>
+                    <td class="p-2 border border-slate-200 text-right font-bold text-slate-900">${r.total.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-200 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.top === 'LUNAS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                            ${r.top}
+                        </span>
+                    </td>
+                    <td class="p-2 border border-slate-200 text-right font-bold text-emerald-700">${r.pembayaran ? r.pembayaran.toLocaleString('id-ID') : '-'}</td>
+                    <td class="p-2 border border-slate-200 text-center text-slate-700">${r.cek || '-'}</td>
+                    <td class="p-2 border border-slate-200 text-center text-slate-600 whitespace-nowrap">${r.transfer || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('importPreviewCount').innerText = `${rows.length} Nota`;
+            document.getElementById('importPreviewQty').innerText = `${totalQty.toLocaleString('id-ID')} Krat`;
+            document.getElementById('importPreviewTotal').innerText = `Rp ${totalOmset.toLocaleString('id-ID')}`;
+            document.getElementById('importPreviewSection').classList.remove('hidden');
+            document.getElementById('btnExecuteImportExcel').disabled = false;
+        }
+
+        async function executeImportExcel() {
+            if (!importDailySalesRows || !importDailySalesRows.length) {
+                return showAlert('Tidak ada data yang akan disimpan.', true);
+            }
+
+            const btn = document.getElementById('btnExecuteImportExcel');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                Menyimpan ${importDailySalesRows.length} Data...
+            `;
+
+            try {
+                const res = await fetch(`${API_BASE}/orders/import-daily-sales`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ rows: importDailySalesRows })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal mengimpor data ke server');
+
+                showAlert(data.message || 'Data penjualan harian berhasil diimpor!');
+                closeImportExcelModal();
+
+                // Segera refresh semua tabel rekap terkait
+                if (typeof loadDailySalesReport === 'function') loadDailySalesReport();
+                if (typeof loadDailyDepositsReport === 'function') loadDailyDepositsReport();
+                if (typeof loadMonthlyRecapReport === 'function') loadMonthlyRecapReport();
+                if (typeof loadStockLedger === 'function') loadStockLedger();
+                if (typeof loadDebts === 'function') loadDebts();
+                if (typeof loadProducts === 'function') loadProducts();
+                if (typeof loadCustomers === 'function') loadCustomers();
+
+            } catch (err) {
+                showAlert(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function downloadSampleExcelTemplate() {
+            try {
+                // Header baris ke-3 sesuai contoh user
+                const wsData = [
+                    [], // Baris 1 kosong
+                    [], // Baris 2 kosong
+                    ["PERIODE", "TGL", "NAMA CUSTOMER", "PENJUALAN", "KET", "HARGA", "TOTAL", "TOP", "PEMBAYARAN", "SISA PEMBAYARAN", "CEK", "TRANSFER"],
+                    ["SEPTEMBER", "1-Sep", "CHAN TING", 2, "TG", 47000, 94000, "LUNAS", 94000, "-", "Setor", "01/10/2026"],
+                    ["SEPTEMBER", "1-Sep", "NASI TELUR PIPO", 10, "TB", 50000, 500000, "LUNAS", 500000, "-", "Transfer", "24/09/2026"],
+                    ["SEPTEMBER", "4-Sep", "CHAN TING", 3, "TG", 47000, 141000, "LUNAS", 141000, "-", "Setor", "01/10/2026"]
+                ];
+
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Rekap Penjualan");
+                XLSX.writeFile(wb, "Contoh_Format_Import_Penjualan.xlsx");
+            } catch (err) {
+                showAlert("Gagal mendownload template: " + err.message, true);
+            }
+        }
+
         async function loadDailyDepositsReport() {
-            const date = document.getElementById('filterDepositDate').value;
-            const res = await fetch(`${API_BASE}/reports/daily-deposits?date=${date || ''}`, { headers: getAuthHeaders() });
+            const res = await fetch(`${API_BASE}/reports/daily-deposits`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
 
@@ -2619,14 +3012,6 @@
 
                 const code = getProductDisplayCode(item.product_name);
 
-                let transferTglStr = '-';
-                if (item.transfer_date) {
-                    const dtTransfer = new Date(item.transfer_date);
-                    if (!isNaN(dtTransfer.getTime())) {
-                        transferTglStr = `${String(dtTransfer.getDate()).padStart(2, '0')}-${dtTransfer.toLocaleString('en-US', { month: 'short' })}`;
-                    }
-                }
-
                 return `
                     <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
                         <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
@@ -2639,11 +3024,9 @@
                         <td class="p-2 border border-slate-300 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">LUNAS</span></td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-amber-950 bg-amber-100/70">${depositAmt.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-slate-400">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
-                        <td class="p-2 border border-slate-300 text-center"><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">OK</span></td>
-                        <td class="p-2 border border-slate-300 text-center font-bold text-slate-800">${transferTglStr}</td>
                     </tr>
                 `;
-            }).join('') || '<tr><td colspan="12" class="p-4 text-center text-slate-400">Tidak ada setoran pada filter ini (hanya menampilkan data dengan CEK: OK)</td></tr>';
+            }).join('') || '<tr><td colspan="10" class="p-4 text-center text-slate-400">Tidak ada setoran dengan status CEK: OK</td></tr>';
 
             const foot = document.getElementById('dailyDepositsFoot');
             foot.innerHTML = `
@@ -2656,8 +3039,6 @@
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400 text-right text-amber-950 font-black bg-amber-200/80">${totalDepositSum.toLocaleString('id-ID')}</td>
                     <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalSisaSum > 0 ? totalSisaSum.toLocaleString('id-ID') : '-'}</td>
-                    <td class="p-2 border border-slate-400"></td>
-                    <td class="p-2 border border-slate-400"></td>
                 </tr>
             `;
 
@@ -2734,7 +3115,12 @@
             document.getElementById('adjustmentFormBox').classList.add('hidden');
         }
 
-        async function submitStockAdjustment() {
+        let isSubmittingAdjustment = false;
+        async function submitStockAdjustment(btnEl) {
+            if (isSubmittingAdjustment) return;
+            const btn = btnEl || document.querySelector('#adjustmentFormBox button.bg-emerald-600');
+            const originalText = btn ? btn.innerHTML : 'Simpan Audit Stok';
+
             const product_id = document.getElementById('adjProduct').value;
             const damaged_qty = document.getElementById('adjDamaged').value || 0;
             const physical_stock = document.getElementById('adjPhysical').value || 0;
@@ -2742,11 +3128,18 @@
             const notes = document.getElementById('adjNotes').value;
 
             if (!product_id) {
-                alert('Pilih produk terlebih dahulu!');
+                showAlert('Pilih produk terlebih dahulu!', true);
                 return;
             }
 
             try {
+                isSubmittingAdjustment = true;
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '⏳ Menyimpan...';
+                    btn.classList.add('opacity-60', 'cursor-not-allowed');
+                }
+
                 const res = await fetch(`${API_BASE}/stock/adjustment`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
@@ -2759,6 +3152,13 @@
                 loadInitialData();
             } catch (err) {
                 showAlert(err.message, true);
+            } finally {
+                isSubmittingAdjustment = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
             }
         }
 
@@ -2784,7 +3184,7 @@
                     if (body) {
                         body.innerHTML = `
                             <tr>
-                                <td colspan="9" class="p-8 text-center text-slate-400">
+                                <td colspan="10" class="p-8 text-center text-slate-400">
                                     <div class="text-3xl mb-2">📦</div>
                                     <div class="font-bold text-slate-600 text-sm">Belum ada riwayat pergerakan stok</div>
                                     <div class="text-xs text-slate-400 mt-1">Stok akan tercatat otomatis saat ada penerimaan barang masuk, nota penjualan, atau opname fisik.</div>
@@ -2803,6 +3203,7 @@
                                 <td class="p-2 border border-slate-400"></td>
                                 <td class="p-2 border border-slate-400 text-right">-</td>
                                 <td class="p-2 border border-slate-400 text-right font-black bg-blue-200/80">0</td>
+                                <td class="p-2 border border-slate-400"></td>
                                 <td class="p-2 border border-slate-400"></td>
                             </tr>
                         `;
@@ -2871,6 +3272,12 @@
                                     <span id="saveStatus-${item.id}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
                                 </div>
                             </td>
+                            <td class="p-1 border border-slate-300 text-center whitespace-nowrap">
+                                <button onclick="confirmDeleteStockMovement(${item.id}, '${tglStr}', '${escapeHtml(item.product_name || '')}')"
+                                    class="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-200 rounded font-bold text-[10px] transition" title="Hapus mutasi stok ini">
+                                    🗑️ Hapus
+                                </button>
+                            </td>
                         </tr>
                     `;
                 }).join('');
@@ -2887,6 +3294,7 @@
                             <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${totalAdj !== 0 ? totalAdj.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-blue-200/80">${latestSisa.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-400"></td>
+                            <td class="p-2 border border-slate-400"></td>
                         </tr>
                     `;
                 }
@@ -2896,7 +3304,27 @@
                 applyExcelFilters('stockLedgerTable');
             } catch (err) {
                 console.error(err);
-                if (body) body.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-rose-500 font-semibold">Gagal memuat kartu stok: ' + err.message + '</td></tr>';
+                if (body) body.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-rose-500 font-semibold">Gagal memuat kartu stok: ' + err.message + '</td></tr>';
+            }
+        }
+
+        // Hapus mutasi kartu stok secara manual
+        async function confirmDeleteStockMovement(movementId, dateStr, productName) {
+            if (!confirm(`Yakin ingin menghapus baris mutasi stok ${productName || ''} tanggal ${dateStr || ''} ini?\n\nSaldo stok dan sisa akhir produk akan dikalkulasi ulang secara otomatis.`)) {
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/stock/ledger/${movementId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Gagal menghapus mutasi stok');
+                showAlert(data.message || 'Mutasi stok berhasil dihapus!');
+                loadStockLedger();
+                loadInitialData();
+            } catch (err) {
+                showAlert(err.message, true);
             }
         }
 
@@ -3291,6 +3719,17 @@
             try {
                 // Clone tabel agar nilai yang diketik manual di input/select terbawa ke file Excel
                 const clone = table.cloneNode(true);
+
+                // 1. Singkirkan baris yang sedang disembunyikan oleh filter di UI
+                const origRows = table.querySelectorAll('tbody tr');
+                const cloneRows = clone.querySelectorAll('tbody tr');
+                origRows.forEach((r, idx) => {
+                    if (r.style.display === 'none' && cloneRows[idx]) {
+                        cloneRows[idx].remove();
+                    }
+                });
+
+                // 2. Ganti semua input / select / textarea dengan nilai teks aslinya
                 const origInputs = table.querySelectorAll('input, select, textarea');
                 const cloneInputs = clone.querySelectorAll('input, select, textarea');
                 origInputs.forEach((orig, idx) => {
@@ -3301,7 +3740,63 @@
                         c.parentNode.replaceChild(textNode, c);
                     }
                 });
-                const wb = XLSX.utils.table_to_book(clone, { sheet: "Laporan" });
+
+                // 3. Bersihkan tombol aksi / tombol filter header dari clone agar hasil Excel bersih
+                clone.querySelectorAll('.excel-filter-btn, button').forEach(btn => btn.remove());
+
+                // Hapus kolom AKSI jika ada di tabel (kolom tombol hapus/validasi)
+                const theadRow = clone.querySelector('thead tr');
+                if (theadRow) {
+                    const thList = Array.from(theadRow.children);
+                    const aksiIdx = thList.findIndex(th => th.innerText.trim().toUpperCase() === 'AKSI');
+                    if (aksiIdx !== -1) {
+                        clone.querySelectorAll('tr').forEach(tr => {
+                            if (tr.children[aksiIdx]) {
+                                tr.children[aksiIdx].remove();
+                            }
+                        });
+                    }
+                }
+
+                // 4. Normalisasi angka ribuan Indonesia:
+                // Masalah: SheetJS menganggap titik (.) sebagai desimal sehingga "47.000" terbaca 47 dan "500.000" terbaca 500!
+                // Solusi: Hapus titik pemisah ribuan agar terbaca sebagai angka murni (47000, 500000, 1064000),
+                // lalu diatur format Excel-nya (#,##0) agar tetap tampil rapi dengan pemisah ribuan.
+                clone.querySelectorAll('td, th').forEach(cell => {
+                    const txt = (cell.innerText || '').replace(/\u00A0/g, ' ').trim();
+                    // Cocokkan pola angka ribuan Indonesia: misal 47.000, 1.064.000, Rp 470.000, -141.000
+                    const match = txt.match(/^([+-]?)\s*(?:Rp\.?\s*)?(\d{1,3}(?:\.\d{3})+)$/i);
+                    if (match) {
+                        const sign = match[1] === '-' ? '-' : '';
+                        const cleanNum = sign + match[2].replace(/\./g, '');
+                        cell.innerText = cleanNum;
+                    }
+                });
+
+                const wb = XLSX.utils.table_to_book(clone, { sheet: "Laporan", raw: false });
+
+                // 5. Berikan format angka ribuan (#,##0) pada setiap sel numerik di worksheet
+                const ws = wb.Sheets["Laporan"];
+                if (ws) {
+                    for (const cellKey in ws) {
+                        if (cellKey[0] === '!') continue;
+                        const cell = ws[cellKey];
+                        if (cell && cell.t === 'n') {
+                            cell.z = '#,##0';
+                        }
+                    }
+
+                    // Atur lebar kolom otomatis agar angka tidak terpotong (###)
+                    const colWidths = [];
+                    clone.querySelectorAll('tr').forEach(tr => {
+                        Array.from(tr.children).forEach((cell, i) => {
+                            const len = (cell.innerText || '').length;
+                            colWidths[i] = Math.max(colWidths[i] || 10, len + 3);
+                        });
+                    });
+                    ws['!cols'] = colWidths.map(w => ({ wch: Math.min(w, 40) }));
+                }
+
                 const dateStr = new Date().toISOString().split('T')[0];
                 XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
             } catch (err) {
@@ -3854,13 +4349,14 @@
                     `;
                 }
             } else if (tableId === 'dailyDepositsTable') {
-                let totalQty = 0, totalAmount = 0, totalDeposit = 0;
+                let totalQty = 0, totalAmount = 0, totalDeposit = 0, totalSisa = 0;
                 rows.forEach(r => {
                     const c = r.querySelectorAll('td');
                     if (c.length >= 10) {
                         totalQty += Number(c[3].innerText.replace(/\./g, '')) || 0;
                         totalAmount += Number(c[6].innerText.replace(/\./g, '')) || 0;
                         totalDeposit += Number(c[8].innerText.replace(/\./g, '')) || 0;
+                        totalSisa += Number(c[9].innerText.replace(/\./g, '')) || 0;
                     }
                 });
 
@@ -3875,9 +4371,7 @@
                             <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalAmount.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400 text-right text-amber-950 font-black bg-amber-200/80">${totalDeposit.toLocaleString('id-ID')}</td>
-                            <td class="p-2 border border-slate-400"></td>
-                            <td class="p-2 border border-slate-400"></td>
-                            <td class="p-2 border border-slate-400"></td>
+                            <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalSisa > 0 ? totalSisa.toLocaleString('id-ID') : '-'}</td>
                         </tr>
                     `;
                 }
@@ -4139,8 +4633,8 @@
             document.getElementById('billPrintCustName').innerText = custName;
             document.getElementById('billPrintCustPhone').innerText = `Telp: ${custPhone}`;
             document.getElementById('billPrintCustAddr').innerText = custAddr && custAddr !== '-' ? `Alamat: ${custAddr}` : '';
-            document.getElementById('billPrintPeriod').innerText = periodStr;
-            document.getElementById('billPrintTotalNotesCount').innerText = `Total: ${selected.length} Nota Penjualan`;
+            if (document.getElementById('billPrintPeriod')) document.getElementById('billPrintPeriod').innerText = periodStr;
+            if (document.getElementById('billPrintTotalNotesCount')) document.getElementById('billPrintTotalNotesCount').innerText = `Total: ${selected.length} Nota Penjualan`;
 
             let totalQty = 0;
             let totalAmount = 0;
@@ -4191,8 +4685,7 @@
                     <img src="/images/DJS.png" class="h-12 w-12 object-contain rounded-lg border">
                     <div>
                         <h2 class="text-sm font-black text-slate-900 leading-none uppercase">DEWATA JAYA SUPPLIER</h2>
-                        <p class="text-[11px] font-bold text-amber-600">BALI BADU FARMINDO</p>
-                        <p class="text-[9px] text-slate-500">Distribusi Telur Ayam Ras & Kampong | WA: 081234567890</p>
+                        <p class="text-[9px] text-slate-500 mt-0.5">Distribusi Telur Ayam Ras & Kampong | WA: 081234567890</p>
                     </div>
                 </div>
                 <div class="text-right">
@@ -4278,35 +4771,22 @@
                     <img src="/images/DJS.png" class="h-14 w-14 object-contain rounded-lg border bg-white">
                     <div>
                         <h2 class="text-base font-black text-slate-950 leading-tight uppercase tracking-wider">DEWATA JAYA SUPPLIER</h2>
-                        <p class="text-xs font-bold text-amber-600">BALI BADU FARMINDO</p>
-                        <p class="text-[10px] text-slate-500">Distribusi Telur Ayam Ras & Kampong Segar</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Distribusi Telur Ayam Ras & Kampong Segar</p>
                         <p class="text-[10px] text-slate-500">WhatsApp / Call: <span class="font-bold text-slate-800">081234567890</span></p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <span class="inline-block text-[11px] font-black uppercase px-2.5 py-1 rounded bg-slate-950 text-amber-400 tracking-wider">
-                        INVOICE PENAGIHAN
-                    </span>
-                    <p id="billPrintInvNo" class="text-xs font-mono font-black text-slate-900 mt-1">INV-202610-001</p>
+                    <p id="billPrintInvNo" class="text-xs font-mono font-black text-slate-900">INV-202610-001</p>
                     <p id="billPrintDate" class="text-[10px] text-slate-600">Tgl Cetak: 17/10/2026</p>
                 </div>
             </div>
 
-            <!-- Customer & Periode Penagihan Info Box -->
-            <div class="grid grid-cols-2 gap-3 text-xs border border-slate-300 p-3 rounded-xl bg-slate-50/80">
-                <div>
-                    <span class="text-[9px] text-slate-500 uppercase font-bold block tracking-wider">Kepada Yth. (Pelanggan):</span>
-                    <h3 id="billPrintCustName" class="font-black text-slate-950 text-sm">-</h3>
-                    <p id="billPrintCustPhone" class="text-[10px] text-slate-600">-</p>
-                    <p id="billPrintCustAddr" class="text-[10px] text-slate-500 mt-0.5 line-clamp-2">-</p>
-                </div>
-                <div class="text-right">
-                    <span class="text-[9px] text-slate-500 uppercase font-bold block tracking-wider">Periode Nota Tagihan:</span>
-                    <span id="billPrintPeriod" class="inline-block px-2 py-0.5 text-[11px] font-extrabold rounded bg-amber-100 text-amber-900 border border-amber-300 mt-0.5">
-                        01 Okt 2026 s/d 15 Okt 2026
-                    </span>
-                    <p id="billPrintTotalNotesCount" class="text-[10px] text-slate-500 mt-1">Total: 3 Nota Penjualan</p>
-                </div>
+            <!-- Customer Info Box -->
+            <div class="text-xs border border-slate-300 p-3 rounded-xl bg-slate-50/80">
+                <span class="text-[9px] text-slate-500 uppercase font-bold block tracking-wider">Kepada Yth. (Pelanggan):</span>
+                <h3 id="billPrintCustName" class="font-black text-slate-950 text-sm">-</h3>
+                <p id="billPrintCustPhone" class="text-[10px] text-slate-600">-</p>
+                <p id="billPrintCustAddr" class="text-[10px] text-slate-500 mt-0.5 line-clamp-2">-</p>
             </div>
 
             <!-- Rincian Nota Yang Ditagih -->
@@ -4328,7 +4808,7 @@
                     </tbody>
                     <tfoot class="bg-slate-100 font-extrabold text-slate-950 border-t-2 border-slate-300">
                         <tr>
-                            <td colspan="4" class="p-2 border border-slate-300 text-center uppercase tracking-wider text-[11px]">Total Keseluruhan</td>
+                            <td colspan="4" class="p-2 border border-slate-300 text-center uppercase tracking-wider text-[11px]">TOTAL</td>
                             <td id="billPrintTotalQty" class="p-2 border border-slate-300 text-right font-black">0</td>
                             <td class="p-2 border border-slate-300"></td>
                             <td id="billPrintGrandTotal" class="p-2 border border-slate-300 text-right font-black text-sm text-slate-950">Rp 0</td>
@@ -4337,15 +4817,9 @@
                 </table>
             </div>
 
-            <!-- Info Pembayaran Bank & Rekening -->
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-2 border-t border-slate-200 text-xs">
-                <div class="text-[10px] text-slate-600 bg-amber-50/80 p-2.5 rounded-lg border border-amber-200/80 w-full sm:w-auto">
-                    <p class="font-bold text-slate-900 uppercase">Informasi Pembayaran:</p>
-                    <p>• Bank BCA: <span class="font-black text-slate-950 tracking-wider">1468924624</span></p>
-                    <p>• Rekening a.n: <span class="font-bold text-slate-800">BALI BADU FARMINDO</span></p>
-                    <p class="italic text-[9px] text-slate-500 mt-0.5">Mohon cantumkan nama customer / no invoice saat konfirmasi transfer</p>
-                </div>
-                <div class="text-right w-full sm:w-auto">
+            <!-- Total Yang Harus Dibayar -->
+            <div class="flex justify-end items-center pt-2 border-t border-slate-200 text-xs">
+                <div class="text-right">
                     <span class="text-[10px] text-slate-500 uppercase font-bold block">Total Yang Harus Dibayar:</span>
                     <span id="billPrintGrandTotalBox" class="text-lg font-black text-slate-950">Rp 0</span>
                 </div>
@@ -4659,6 +5133,137 @@
                     <span>Ya, Kosongkan Transaksi Sekarang</span>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: IMPORT EXCEL PENJUALAN HARIAN -->
+    <div id="importExcelModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-4xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 text-slate-900 space-y-4 max-h-[90vh] flex flex-col my-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold border border-blue-100">
+                        📤
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Import Penjualan Harian dari Excel</h3>
+                        <p class="text-xs text-slate-500">Pilih file spreadsheet (.xlsx / .xls) untuk mengimpor transaksi penjualan.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeImportExcelModal()"
+                    class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="space-y-4 overflow-y-auto flex-1 pr-1">
+                
+                <!-- File Upload Box -->
+                <div id="importExcelDropzone"
+                    class="border-2 border-dashed border-blue-200 hover:border-blue-400 bg-blue-50/40 rounded-xl p-5 text-center transition cursor-pointer flex flex-col items-center justify-center gap-2"
+                    onclick="document.getElementById('importExcelFileInput').click()">
+                    <input type="file" id="importExcelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelect(event)">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">
+                        📊
+                    </div>
+                    <div>
+                        <span class="text-sm font-bold text-blue-700 hover:underline">Klik untuk pilih file Excel</span>
+                        <span class="text-xs text-slate-500"> atau seret dan letakkan file ke sini</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Mendukung file .xlsx / .xls sesuai format kolom rekap penjualan</p>
+                </div>
+
+                <!-- Template Hint / Download Sample -->
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-amber-500 font-bold">💡 Format Kolom:</span>
+                        <span class="text-[11px] text-slate-500">PERIODE, TGL, NAMA CUSTOMER, PENJUALAN, KET, HARGA, TOTAL, TOP, PEMBAYARAN, CEK, TRANSFER</span>
+                    </div>
+                    <button type="button" onclick="downloadSampleExcelTemplate()"
+                        class="text-[11px] text-blue-600 hover:text-blue-800 font-bold underline flex items-center gap-1">
+                        📥 Download Contoh Format Excel
+                    </button>
+                </div>
+
+                <!-- Preview Area (Initially Hidden) -->
+                <div id="importExcelPreviewSection" class="hidden space-y-3">
+                    
+                    <!-- Statistics Badge -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="bg-blue-50 border border-blue-100 p-2.5 rounded-lg text-center">
+                            <div class="text-[10px] uppercase font-bold text-blue-600">Total Transaksi</div>
+                            <div id="importPreviewCount" class="text-lg font-black text-blue-900">0</div>
+                        </div>
+                        <div class="bg-indigo-50 border border-indigo-100 p-2.5 rounded-lg text-center">
+                            <div class="text-[10px] uppercase font-bold text-indigo-600">Total Qty (Penjualan)</div>
+                            <div id="importPreviewQty" class="text-lg font-black text-indigo-900">0</div>
+                        </div>
+                        <div class="bg-emerald-50 border border-emerald-100 p-2.5 rounded-lg text-center">
+                            <div class="text-[10px] uppercase font-bold text-emerald-600">Total Omset</div>
+                            <div id="importPreviewTotal" class="text-lg font-black text-emerald-900">Rp 0</div>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-100 p-2.5 rounded-lg text-center">
+                            <div class="text-[10px] uppercase font-bold text-amber-600">Status Validasi</div>
+                            <div id="importPreviewStatus" class="text-xs font-bold text-emerald-700 mt-1">Siap Diimpor</div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Table -->
+                    <div class="border border-slate-200 rounded-lg overflow-hidden">
+                        <div class="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-700">Pratinjau Data yang Terbaca:</span>
+                            <span id="importFileName" class="text-[11px] text-slate-500 font-mono"></span>
+                        </div>
+                        <div class="max-h-60 overflow-y-auto overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 text-[11px] whitespace-nowrap">
+                                    <tr>
+                                        <th class="p-2 border border-slate-200">#</th>
+                                        <th class="p-2 border border-slate-200">TGL</th>
+                                        <th class="p-2 border border-slate-200">CUSTOMER</th>
+                                        <th class="p-2 border border-slate-200 text-right">PENJUALAN</th>
+                                        <th class="p-2 border border-slate-200 text-center">KET</th>
+                                        <th class="p-2 border border-slate-200 text-right">HARGA</th>
+                                        <th class="p-2 border border-slate-200 text-right">TOTAL</th>
+                                        <th class="p-2 border border-slate-200 text-center">TOP</th>
+                                        <th class="p-2 border border-slate-200 text-right">PEMBAYARAN</th>
+                                        <th class="p-2 border border-slate-200 text-center">CEK</th>
+                                        <th class="p-2 border border-slate-200 text-center">TRANSFER</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="importPreviewTableBody" class="divide-y divide-slate-100 font-medium">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="text-[11px] text-slate-500 bg-amber-50/60 border border-amber-200 p-2.5 rounded-lg flex items-start gap-2">
+                        <span class="text-amber-600 font-bold">ℹ️</span>
+                        <div>
+                            <span>Customer baru akan didaftarkan otomatis jika belum ada di master data. Transaksi berstatus LUNAS akan otomatis tercatat ke rekap setoran.</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeImportExcelModal()"
+                    class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">
+                    Batal
+                </button>
+                <button type="button" id="btnExecuteImportExcel" onclick="executeImportExcel()" disabled
+                    class="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <span>💾 Simpan ke Database</span>
+                </button>
+            </div>
+
         </div>
     </div>
 

@@ -182,15 +182,15 @@ async function createOrder(req, res) {
                 : [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId]
         );
 
-        // Jika transaksi langsung LUNAS, otomatis catat payment validated agar masuk ke laporan setoran
+        // Jika transaksi langsung LUNAS, otomatis catat payment validated (metode CEK awal '-' sampai user memilih)
         if (!isPending) {
             const payNum = `PAY-${Date.now()}`;
             await client.query(
                 orderDateTimestamp
                     ? `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
-                       VALUES ($1, $2, $3, $4, 'TRANSFER', TRUE, $5, $6)`
+                       VALUES ($1, $2, $3, $4, '-', TRUE, $5, $6)`
                     : `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at)
-                       VALUES ($1, $2, $3, $4, 'TRANSFER', TRUE, CURRENT_TIMESTAMP)`,
+                       VALUES ($1, $2, $3, $4, '-', TRUE, CURRENT_TIMESTAMP)`,
                 orderDateTimestamp
                     ? [payNum, invoiceRes.rows[0].id, customer_id, totalAmount, orderDateTimestamp, orderDateTimestamp]
                     : [payNum, invoiceRes.rows[0].id, customer_id, totalAmount]
@@ -263,7 +263,200 @@ async function deleteOrderById(req, res) {
     }
 }
 
+async function importDailySales(req, res) {
+    const client = await db.getClient();
+    try {
+        const { rows } = req.body;
+        if (!rows || !Array.isArray(rows) || rows.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada data transaksi yang dikirim untuk di-import.' });
+        }
+
+        await client.query('BEGIN');
+
+        // 1. Ambil semua master customer untuk pencocokan fleksibel (case-insensitive & spasi berlebih)
+        const custRes = await client.query('SELECT id, name FROM customers');
+        const customerMap = new Map();
+        custRes.rows.forEach(c => {
+            const key = (c.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            if (key) customerMap.set(key, c.id);
+        });
+
+        // 2. Ambil semua master produk yang ada di database
+        const prodRes = await client.query('SELECT id, name, current_stock, price_per_unit FROM products');
+        let productList = prodRes.rows;
+
+        function resolveProduct(codeOrName) {
+            if (!productList.length) return null;
+            if (!codeOrName) return productList[0];
+            const target = String(codeOrName).trim().toUpperCase();
+
+            // Cek nama persis
+            for (const p of productList) {
+                const pName = (p.name || '').trim().toUpperCase();
+                if (pName === target) return p;
+            }
+
+            // Pemetaan kode standar: TG, TB, TK, OMEGA
+            if (target === 'TG' || target.includes('MEDIUM') || target.includes('GEMUK')) {
+                const found = productList.find(p => {
+                    const n = p.name.toUpperCase();
+                    return n === 'TG' || n.includes('TG') || n.includes('MEDIUM') || n.includes('GEMUK');
+                });
+                if (found) return found;
+            }
+            if (target === 'TB' || target.includes('SUPER') || target.includes('BESAR')) {
+                const found = productList.find(p => {
+                    const n = p.name.toUpperCase();
+                    return n === 'TB' || n.includes('TB') || n.includes('SUPER') || n.includes('BESAR');
+                });
+                if (found) return found;
+            }
+            if (target === 'TK' || target.includes('KAMPONG') || target.includes('KECIL')) {
+                const found = productList.find(p => {
+                    const n = p.name.toUpperCase();
+                    return n === 'TK' || n.includes('TK') || n.includes('KAMPONG') || n.includes('KECIL');
+                });
+                if (found) return found;
+            }
+            if (target === 'OMEGA' || target === 'OMG') {
+                const found = productList.find(p => {
+                    const n = p.name.toUpperCase();
+                    return n === 'OMEGA' || n.includes('OMEGA') || n.includes('OMG');
+                });
+                if (found) return found;
+            }
+
+            return productList[0];
+        }
+
+        let importedCount = 0;
+        const now = Date.now();
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rawCustName = (row.customer_name || 'Customer Umum').trim();
+            const custKey = rawCustName.toLowerCase().replace(/\s+/g, ' ');
+
+            // Customer lookup / auto create
+            let customerId = customerMap.get(custKey);
+            if (!customerId) {
+                const randomPhone = `08${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+                const newCustRes = await client.query(
+                    `INSERT INTO customers (name, phone, address) 
+                     VALUES ($1, $2, 'Dibuat otomatis via Import Excel') 
+                     RETURNING id`,
+                    [rawCustName, randomPhone]
+                );
+                customerId = newCustRes.rows[0].id;
+                customerMap.set(custKey, customerId);
+            }
+
+            // Product lookup / fallback
+            let product = resolveProduct(row.ket || row.product_code);
+            if (!product) {
+                const defaultProdName = row.ket ? String(row.ket).toUpperCase() : 'TG';
+                const newProdRes = await client.query(
+                    `INSERT INTO products (name, unit, current_stock, price_per_unit) 
+                     VALUES ($1, 'krat', 0, $2) RETURNING id, name, current_stock, price_per_unit`,
+                    [defaultProdName, Number(row.harga) || 0]
+                );
+                product = newProdRes.rows[0];
+                productList.push(product);
+            }
+
+            const qty = Math.max(0, parseFloat(row.penjualan || row.quantity || 0));
+            if (qty <= 0) continue; // Lewati jika tidak ada jumlah penjualan
+
+            const unitPrice = parseFloat(row.harga || row.unit_price || product.price_per_unit || 0);
+            const totalAmount = parseFloat(row.total || row.total_amount || (qty * unitPrice));
+            const topStatus = String(row.top || 'LUNAS').trim().toUpperCase();
+            const isLunas = (topStatus === 'LUNAS');
+            const amountPaid = isLunas ? totalAmount : Math.max(0, parseFloat(row.pembayaran || row.amount_paid || 0));
+            const paymentType = isLunas ? 'CASH' : 'CREDIT';
+            const invoiceStatus = isLunas ? 'LUNAS' : 'GANTUNG';
+            const cekMethod = (row.cek && String(row.cek).trim() !== '-') ? String(row.cek).trim() : (isLunas ? 'Setor' : '-');
+            const transferDate = (row.transfer && /^\d{4}-\d{2}-\d{2}$/.test(String(row.transfer).trim())) ? String(row.transfer).trim() : null;
+
+            // Tanggal order
+            const orderDateStr = (row.order_date && /^\d{4}-\d{2}-\d{2}$/.test(String(row.order_date).trim())) 
+                ? String(row.order_date).trim() 
+                : new Date().toISOString().split('T')[0];
+            const orderTimestamp = `${orderDateStr} 12:00:00`;
+
+            const orderNum = `ORD-IMP-${now}-${i + 1}`;
+
+            // 1. Insert order
+            const orderRes = await client.query(
+                `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, created_at)
+                 VALUES ($1, $2, $3, 'CONFIRMED', 'Import Excel', $4)
+                 RETURNING id`,
+                [orderNum, customerId, totalAmount, orderTimestamp]
+            );
+            const orderId = orderRes.rows[0].id;
+
+            // 2. Insert order item
+            await client.query(
+                `INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [orderId, product.id, qty, unitPrice, totalAmount]
+            );
+
+            // 3. Update stock (diizinkan minus)
+            const currentStockNum = parseFloat(product.current_stock || 0);
+            const newStock = currentStockNum - qty;
+            product.current_stock = newStock;
+            await client.query(
+                `UPDATE products SET current_stock = $1 WHERE id = $2`,
+                [newStock, product.id]
+            );
+
+            // 4. Catat stock movement
+            await client.query(
+                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes, created_at)
+                 VALUES ($1, 'PENJUALAN', $2, $3, $4, $5, $6)`,
+                [product.id, qty, newStock, orderNum, `Penjualan Import Excel: ${rawCustName}`, orderTimestamp]
+            );
+
+            // 5. Insert invoice
+            const invNum = `INV-IMP-${now}-${i + 1}`;
+            const invRes = await client.query(
+                `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, transfer_date, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                 RETURNING id`,
+                [invNum, orderId, customerId, paymentType, totalAmount, amountPaid, invoiceStatus, transferDate, orderTimestamp]
+            );
+            const invoiceId = invRes.rows[0].id;
+
+            // 6. Insert payment jika lunas atau ada pembayaran
+            if (amountPaid > 0 || isLunas) {
+                const payNum = `PAY-IMP-${now}-${i + 1}`;
+                await client.query(
+                    `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
+                     VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7)`,
+                    [payNum, invoiceId, customerId, amountPaid, cekMethod, orderTimestamp, orderTimestamp]
+                );
+            }
+
+            importedCount++;
+        }
+
+        await client.query('COMMIT');
+        return res.status(201).json({
+            message: `Berhasil mengimpor ${importedCount} data transaksi penjualan harian!`,
+            imported_count: importedCount
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error importing daily sales:', err);
+        return res.status(500).json({ error: `Gagal mengimpor data: ${err.message}` });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     createOrder,
-    deleteOrderById
+    deleteOrderById,
+    importDailySales
 };

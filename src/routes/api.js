@@ -32,9 +32,11 @@ router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN'), stockController.re
 router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN'), stockController.recordStockAdjustment);
 router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getStockLedger);
 router.put('/stock/ledger/:id/notes', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.updateStockLedgerNotes);
+router.delete('/stock/ledger/:id', authorizeRoles('SUPER_ADMIN'), stockController.deleteStockMovement);
 
 // Sales Orders & Credit Check (Access: SUPER_ADMIN & MARKETING)
 router.post('/orders', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.createOrder);
+router.post('/orders/import-daily-sales', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.importDailySales);
 router.delete('/orders/:order_id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.deleteOrderById);
 
 // Payments & Deposit Validation
