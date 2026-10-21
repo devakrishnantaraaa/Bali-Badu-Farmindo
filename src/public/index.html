@@ -3022,11 +3022,20 @@
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('importPreviewCount').innerText = `${rows.length} Nota`;
-            document.getElementById('importPreviewQty').innerText = `${totalQty.toLocaleString('id-ID')} Krat`;
-            document.getElementById('importPreviewTotal').innerText = `Rp ${totalOmset.toLocaleString('id-ID')}`;
-            document.getElementById('importPreviewSection').classList.remove('hidden');
-            document.getElementById('btnExecuteImportExcel').disabled = false;
+            const previewCount = document.getElementById('importPreviewCount');
+            if (previewCount) previewCount.innerText = `${rows.length} Nota`;
+
+            const previewQty = document.getElementById('importPreviewQty');
+            if (previewQty) previewQty.innerText = `${totalQty.toLocaleString('id-ID')} Krat`;
+
+            const previewTotal = document.getElementById('importPreviewTotal');
+            if (previewTotal) previewTotal.innerText = `Rp ${totalOmset.toLocaleString('id-ID')}`;
+
+            const previewSection = document.getElementById('importExcelPreviewSection');
+            if (previewSection) previewSection.classList.remove('hidden');
+
+            const btnExecute = document.getElementById('btnExecuteImportExcel');
+            if (btnExecute) btnExecute.disabled = false;
         }
 
         async function executeImportExcel() {
