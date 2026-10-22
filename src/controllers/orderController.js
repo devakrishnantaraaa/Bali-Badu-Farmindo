@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const googleCalendarService = require('../services/googleCalendarService');
+const { recalibrateProductStock } = require('./stockController');
 
 async function createOrder(req, res) {
     const client = await db.getClient();
@@ -132,7 +133,7 @@ async function createOrder(req, res) {
                 [order.id, pItem.product_id, pItem.quantity, pItem.unit_price, pItem.subtotal]
             );
 
-            // Deduct stock
+            // Deduct stock (initial)
             const newStock = pItem.current_stock - pItem.quantity;
             await client.query(
                 `UPDATE products SET current_stock = $1 WHERE id = $2`,
@@ -150,6 +151,9 @@ async function createOrder(req, res) {
                     ? [pItem.product_id, pItem.quantity, newStock, orderNum, '', orderDateTimestamp]
                     : [pItem.product_id, pItem.quantity, newStock, orderNum, '']
             );
+
+            // Recalibrate stock movements chronologically
+            await recalibrateProductStock(client, pItem.product_id);
         }
 
         // 5. Create Invoice
@@ -251,6 +255,11 @@ async function deleteOrderById(req, res) {
         // Hapus item pesanan dan order
         await client.query(`DELETE FROM order_items WHERE order_id = $1`, [order_id]);
         await client.query(`DELETE FROM orders WHERE id = $1`, [order_id]);
+
+        // Kalibrasi ulang sisa stok berjalan untuk setiap produk terkait
+        for (const item of itemsRes.rows) {
+            await recalibrateProductStock(client, item.product_id);
+        }
 
         await client.query('COMMIT');
         return res.json({ message: 'Transaksi penjualan berhasil dihapus dan stok barang telah dikembalikan!' });
@@ -438,6 +447,12 @@ async function importDailySales(req, res) {
             }
 
             importedCount++;
+        }
+
+        // 7. Kalibrasi ulang semua produk yang terkena dampak import penjualan secara kronologis
+        const uniqueProductIds = Array.from(new Set(productList.map(p => p.id)));
+        for (const pid of uniqueProductIds) {
+            await recalibrateProductStock(client, pid);
         }
 
         await client.query('COMMIT');

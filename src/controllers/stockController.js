@@ -1,5 +1,51 @@
 const db = require('../config/db');
 
+// Helper: Kalibrasi ulang saldo stok berjalan (balance_after) dan stok produk saat ini (current_stock)
+// berdasarkan urutan kronologis transaksi (created_at ASC, id ASC)
+async function recalibrateProductStock(clientOrDb, productId) {
+    if (!productId || productId === 'ALL') return 0;
+    try {
+        const movs = await clientOrDb.query(`
+            SELECT id, movement_type, quantity, 
+                   COALESCE(damaged_qty, 0) AS damaged_qty, 
+                   physical_stock,
+                   COALESCE(adjustment_qty, 0) AS adjustment_qty, 
+                   balance_after
+            FROM stock_movements
+            WHERE product_id = $1
+            ORDER BY created_at ASC, id ASC
+        `, [productId]);
+
+        let running = 0;
+        for (const m of movs.rows) {
+            const q = parseFloat(m.quantity) || 0;
+            const dmg = parseFloat(m.damaged_qty) || 0;
+            const adj = parseFloat(m.adjustment_qty) || 0;
+
+            if (m.physical_stock !== null && m.physical_stock !== undefined && m.movement_type === 'PENYESUAIAN') {
+                running = parseFloat(m.physical_stock);
+            } else {
+                if (m.movement_type === 'BARANG_MASUK') {
+                    running += q;
+                } else if (m.movement_type === 'PENJUALAN') {
+                    running -= q;
+                }
+                if (dmg > 0) running -= dmg;
+                if (adj !== 0) running += adj;
+            }
+
+            if (parseFloat(m.balance_after) !== running) {
+                await clientOrDb.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
+            }
+        }
+        await clientOrDb.query('UPDATE products SET current_stock = $1 WHERE id = $2', [running, productId]);
+        return running;
+    } catch (err) {
+        console.warn('Notice (recalibrateProductStock):', err.message);
+        return 0;
+    }
+}
+
 // Add Incoming Goods (Barang Masuk)
 async function recordIncomingGoods(req, res) {
     const client = await db.getClient();
@@ -12,39 +58,17 @@ async function recordIncomingGoods(req, res) {
 
         await client.query('BEGIN');
 
-        // 1. Update product stock
-        const updateRes = await client.query(
-            `UPDATE products 
-             SET current_stock = current_stock + $1 
-             WHERE id = $2 
-             RETURNING current_stock`,
-            [quantity, product_id]
+        // 1. Log stock movement
+        const dateVal = incoming_date ? new Date(incoming_date) : new Date();
+        const movementRes = await client.query(
+            `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
+             VALUES ($1, 'BARANG_MASUK', $2, 0, $3, $4)
+             RETURNING *`,
+            [product_id, quantity, notes || 'Penerimaan Barang Masuk', dateVal]
         );
 
-        if (updateRes.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
-        const balanceAfter = updateRes.rows[0].current_stock;
-
-        // 2. Log stock movement
-        let movementRes;
-        if (incoming_date) {
-            movementRes = await client.query(
-                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-                 VALUES ($1, 'BARANG_MASUK', $2, $3, $4, $5)
-                 RETURNING *`,
-                [product_id, quantity, balanceAfter, notes || 'Penerimaan Barang Masuk', new Date(incoming_date)]
-            );
-        } else {
-            movementRes = await client.query(
-                `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes)
-                 VALUES ($1, 'BARANG_MASUK', $2, $3, $4)
-                 RETURNING *`,
-                [product_id, quantity, balanceAfter, notes || 'Penerimaan Barang Masuk']
-            );
-        }
+        // 2. Kalibrasi ulang sisa stok berjalan secara kronologis
+        const balanceAfter = await recalibrateProductStock(client, product_id);
 
         await client.query('COMMIT');
         return res.status(201).json({
@@ -65,7 +89,7 @@ async function recordIncomingGoods(req, res) {
 async function recordStockAdjustment(req, res) {
     const client = await db.getClient();
     try {
-        const { product_id, damaged_qty, physical_stock, adjustment_qty, notes } = req.body;
+        const { product_id, damaged_qty, physical_stock, adjustment_qty, notes, adjustment_date } = req.body;
         
         if (!product_id) {
             return res.status(400).json({ error: 'product_id is required' });
@@ -73,34 +97,21 @@ async function recordStockAdjustment(req, res) {
 
         await client.query('BEGIN');
 
-        // Fetch current product stock
-        const pRes = await client.query('SELECT current_stock FROM products WHERE id = $1 FOR UPDATE', [product_id]);
-        if (pRes.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
-        const currentStock = parseFloat(pRes.rows[0].current_stock);
         const damaged = damaged_qty ? parseFloat(damaged_qty) : 0;
         const adj = adjustment_qty ? parseFloat(adjustment_qty) : 0;
-        
-        // Target balance can be set by physical stock or adjustment math
-        let balanceAfter = physical_stock !== undefined && physical_stock !== '' 
-            ? parseFloat(physical_stock) 
-            : currentStock - damaged + adj;
-
-        if (balanceAfter < 0) balanceAfter = 0;
-
-        // Update product stock
-        await client.query('UPDATE products SET current_stock = $1 WHERE id = $2', [balanceAfter, product_id]);
+        const phys = (physical_stock !== undefined && physical_stock !== null && physical_stock !== '') ? parseFloat(physical_stock) : null;
+        const dateVal = adjustment_date ? new Date(adjustment_date) : new Date();
 
         // Log movement with damaged_qty, physical_stock, adjustment_qty, and notes
         const movementRes = await client.query(
-            `INSERT INTO stock_movements (product_id, movement_type, quantity, damaged_qty, physical_stock, adjustment_qty, balance_after, notes)
-             VALUES ($1, 'PENYESUAIAN', $2, $3, $4, $5, $6, $7)
+            `INSERT INTO stock_movements (product_id, movement_type, quantity, damaged_qty, physical_stock, adjustment_qty, balance_after, notes, created_at)
+             VALUES ($1, 'PENYESUAIAN', $2, $3, $4, $5, 0, $6, $7)
              RETURNING *`,
-            [product_id, Math.abs(adj), damaged, balanceAfter, adj, balanceAfter, notes || 'Penyesuaian Stok Audit']
+            [product_id, Math.abs(adj), damaged, phys, adj, notes || 'Penyesuaian Stok Audit', dateVal]
         );
+
+        // Kalibrasi ulang sisa stok berjalan secara kronologis
+        const balanceAfter = await recalibrateProductStock(client, product_id);
 
         await client.query('COMMIT');
         return res.status(201).json({
@@ -121,108 +132,22 @@ async function getStockLedger(req, res) {
     try {
         const { product_id } = req.query;
 
-        // Auto-sync hanya jika diminta secara eksplisit via query ?sync=true (bukan di setiap request biasa)
-        if (req.query.sync === 'true') {
-            try {
-                // 1. Cari produk yang BELUM memiliki mutasi BARANG_MASUK (Stok Awal)
-                const productsWithoutInitialStock = await db.query(`
-                    SELECT p.id, p.name, p.current_stock, p.created_at 
-                    FROM products p
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM stock_movements sm 
-                        WHERE sm.product_id = p.id AND sm.movement_type = 'BARANG_MASUK'
-                    )
-                `);
-
-                for (const prod of productsWithoutInitialStock.rows) {
-                    const salesAgg = await db.query(`
-                        SELECT 
-                            COALESCE(SUM(quantity), 0) AS total_out,
-                            MIN(created_at) AS earliest_movement_date
-                        FROM stock_movements 
-                        WHERE product_id = $1 AND movement_type = 'PENJUALAN'
-                    `, [prod.id]);
-
-                    const totalOut = parseFloat(salesAgg.rows[0]?.total_out) || 0;
-                    const currStock = parseFloat(prod.current_stock) || 0;
-                    const initialStock = currStock + totalOut;
-
-                    const earliestDate = salesAgg.rows[0]?.earliest_movement_date;
-                    let initialDate;
-                    if (earliestDate) {
-                        const d = new Date(earliestDate);
-                        initialDate = new Date(d.getTime() - 5 * 60 * 1000);
-                    } else {
-                        initialDate = prod.created_at || new Date();
-                    }
-
-                    await db.query(`
-                        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-                        VALUES ($1, 'BARANG_MASUK', $2, $3, $4, $5)
-                    `, [prod.id, initialStock, initialStock, '', initialDate]);
-                }
-
-                // 2. Auto-sync pesanan penjualan yang belum tercatat di stock_movements
-                const missingOrders = await db.query(`
-                    SELECT oi.product_id, oi.quantity, o.order_number, o.created_at
-                    FROM order_items oi
-                    JOIN orders o ON oi.order_id = o.id
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM stock_movements sm 
-                        WHERE sm.product_id = oi.product_id AND sm.reference_id = o.order_number
-                    )
-                `);
-
-                for (const mOrd of missingOrders.rows) {
-                    await db.query(`
-                        INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes, created_at)
-                        VALUES ($1, 'PENJUALAN', $2, 0, $3, '', $4)
-                    `, [
-                        mOrd.product_id,
-                        parseFloat(mOrd.quantity) || 0,
-                        mOrd.order_number,
-                        mOrd.created_at || new Date()
-                    ]);
-                }
-
-                // 3. Kalibrasi ulang sisa stok (balance_after) per produk
+        // Selalu pastikan sisa stok (balance_after) dan stok produk sinkron kronologis
+        try {
+            if (product_id && product_id !== 'ALL' && product_id !== 'undefined' && product_id !== 'null') {
+                await recalibrateProductStock(db, product_id);
+            } else {
                 const allProducts = await db.query('SELECT id FROM products');
                 for (const p of allProducts.rows) {
-                    const movs = await db.query(`
-                        SELECT id, movement_type, quantity, 
-                               COALESCE(damaged_qty, 0) AS damaged_qty, 
-                               COALESCE(adjustment_qty, 0) AS adjustment_qty, 
-                               balance_after
-                        FROM stock_movements
-                        WHERE product_id = $1
-                        ORDER BY created_at ASC, id ASC
-                    `, [p.id]);
-
-                    let running = 0;
-                    for (const m of movs.rows) {
-                        const q = parseFloat(m.quantity) || 0;
-                        const dmg = parseFloat(m.damaged_qty) || 0;
-                        const adj = parseFloat(m.adjustment_qty) || 0;
-
-                        if (m.movement_type === 'BARANG_MASUK') running += q;
-                        else if (m.movement_type === 'PENJUALAN') running -= q;
-
-                        if (dmg > 0) running -= dmg;
-                        if (adj !== 0) running += adj;
-
-                        if (parseFloat(m.balance_after) !== running) {
-                            await db.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
-                        }
-                    }
-                    await db.query('UPDATE products SET current_stock = $1 WHERE id = $2', [running, p.id]);
+                    await recalibrateProductStock(db, p.id);
                 }
-            } catch (syncErr) {
-                console.warn('Notice (stock movements sync):', syncErr.message);
             }
+        } catch (syncErr) {
+            console.warn('Notice (stock movements sync):', syncErr.message);
         }
 
         let queryText = `
-            SELECT sm.id, sm.created_at, p.name AS product_name, p.unit, p.price_per_unit, sm.movement_type, 
+            SELECT sm.id, sm.created_at, sm.product_id, p.name AS product_name, p.unit, p.price_per_unit, sm.movement_type, 
                    sm.quantity, 
                    COALESCE(sm.damaged_qty, 0) AS damaged_qty, 
                    sm.physical_stock, 
@@ -238,7 +163,7 @@ async function getStockLedger(req, res) {
             params.push(product_id);
         }
 
-        queryText += ` ORDER BY sm.created_at ASC, sm.id ASC LIMIT 1000`;
+        queryText += ` ORDER BY sm.created_at ASC, sm.id ASC LIMIT 2000`;
 
         const result = await db.query(queryText, params);
         return res.json(result.rows);
@@ -440,32 +365,7 @@ async function deleteStockMovement(req, res) {
         await client.query('DELETE FROM stock_movements WHERE id = $1', [id]);
 
         // Kalibrasi ulang saldo stok berjalan dan stok produk saat ini
-        const movs = await client.query(`
-            SELECT id, movement_type, quantity, 
-                   COALESCE(damaged_qty, 0) AS damaged_qty, 
-                   COALESCE(adjustment_qty, 0) AS adjustment_qty
-            FROM stock_movements
-            WHERE product_id = $1
-            ORDER BY created_at ASC, id ASC
-        `, [productId]);
-
-        let running = 0;
-        for (const m of movs.rows) {
-            const q = parseFloat(m.quantity) || 0;
-            const dmg = parseFloat(m.damaged_qty) || 0;
-            const adj = parseFloat(m.adjustment_qty) || 0;
-
-            if (m.movement_type === 'BARANG_MASUK') {
-                running += q;
-            } else if (m.movement_type === 'PENJUALAN') {
-                running -= q;
-            }
-            if (dmg > 0) running -= dmg;
-            if (adj !== 0) running += adj;
-
-            await client.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
-        }
-        await client.query('UPDATE products SET current_stock = $1 WHERE id = $2', [running, productId]);
+        const running = await recalibrateProductStock(client, productId);
 
         await client.query('COMMIT');
         return res.json({ message: 'Riwayat mutasi stok berhasil dihapus', new_stock: running });
@@ -479,6 +379,7 @@ async function deleteStockMovement(req, res) {
 }
 
 module.exports = {
+    recalibrateProductStock,
     recordIncomingGoods,
     recordStockAdjustment,
     getStockLedger,
