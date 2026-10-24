@@ -1226,11 +1226,18 @@
                             <select id="filterMonthlyRecapMonth" onchange="loadMonthlyRecapReport()"
                                 class="bg-blue-50 border border-blue-300 font-bold text-blue-900 rounded px-3 py-1 text-xs">
                                 <option value="ALL">SEMUA PERIODE</option>
-                                <option value="10" selected>OKTOBER</option>
-                                <option value="9">SEPTEMBER</option>
-                                <option value="8">AGUSTUS</option>
-                                <option value="7">JULI</option>
+                                <option value="1">JANUARI</option>
+                                <option value="2">FEBRUARI</option>
+                                <option value="3">MARET</option>
+                                <option value="4">APRIL</option>
+                                <option value="5">MEI</option>
                                 <option value="6">JUNI</option>
+                                <option value="7">JULI</option>
+                                <option value="8">AGUSTUS</option>
+                                <option value="9">SEPTEMBER</option>
+                                <option value="10" selected>OKTOBER</option>
+                                <option value="11">NOVEMBER</option>
+                                <option value="12">DESEMBER</option>
                             </select>
                             <button onclick="loadMonthlyRecapReport()"
                                 class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded font-medium border border-slate-200">Refresh</button>
@@ -3269,13 +3276,20 @@
                     dateFormatted = `${dd}/${mm}/${yyyy}`;
                 }
 
+                const hasTrx = item.has_transaction !== undefined ? item.has_transaction : (penjualan > 0 || lunas > 0 || pending > 0 || krat > 0);
+
+                const displayPenjualan = hasTrx && penjualan > 0 ? penjualan.toLocaleString('id-ID') : (hasTrx && (lunas > 0 || pending > 0) ? '0' : '-');
+                const displayLunas = hasTrx ? (lunas > 0 ? lunas.toLocaleString('id-ID') : '0') : '-';
+                const displayPending = hasTrx ? (pending > 0 ? pending.toLocaleString('id-ID') : '0') : '-';
+                const displayKrat = hasTrx && krat > 0 ? krat.toLocaleString('id-ID') : (hasTrx ? '0' : '-');
+
                 return `
-                    <tr class="hover:bg-blue-50/60 border-b border-slate-200">
-                        <td class="py-1 px-2 border border-slate-300 font-semibold text-slate-800">${dateFormatted || '-'}</td>
-                        <td class="py-1 px-2 border border-slate-300 text-right font-bold text-slate-900">${penjualan.toLocaleString('id-ID')}</td>
-                        <td class="py-1 px-2 border border-slate-300 text-right font-bold text-emerald-800">${lunas.toLocaleString('id-ID')}</td>
-                        <td class="py-1 px-2 border border-slate-300 text-right font-bold text-rose-700">${pending.toLocaleString('id-ID')}</td>
-                        <td class="py-1 px-2 border border-slate-300 text-right font-extrabold text-blue-900">${krat.toLocaleString('id-ID')}</td>
+                    <tr class="hover:bg-blue-50/60 border-b border-slate-200 ${hasTrx ? '' : 'text-slate-400 bg-slate-50/40'}">
+                        <td class="py-1 px-2 border border-slate-300 font-semibold ${hasTrx ? 'text-slate-800' : 'text-slate-400'}">${dateFormatted || '-'}</td>
+                        <td class="py-1 px-2 border border-slate-300 text-right font-bold ${hasTrx ? 'text-slate-900' : 'text-slate-400'}">${displayPenjualan}</td>
+                        <td class="py-1 px-2 border border-slate-300 text-right font-bold ${hasTrx ? 'text-emerald-800' : 'text-slate-400'}">${displayLunas}</td>
+                        <td class="py-1 px-2 border border-slate-300 text-right font-bold ${hasTrx ? 'text-rose-700' : 'text-slate-400'}">${displayPending}</td>
+                        <td class="py-1 px-2 border border-slate-300 text-right font-extrabold ${hasTrx ? 'text-blue-900' : 'text-slate-400'}">${displayKrat}</td>
                     </tr>
                 `;
             }).join('') || '<tr><td colspan="5" class="p-3 text-center text-slate-400">Belum ada data rekap penjualan</td></tr>';

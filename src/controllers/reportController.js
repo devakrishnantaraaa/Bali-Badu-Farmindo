@@ -145,6 +145,52 @@ async function getMonthlyRecap(req, res) {
             ORDER BY DATE(o.created_at) ASC
         `;
         const result = await db.query(queryText, queryParams);
+
+        if (month && month !== 'ALL') {
+            const targetMonth = Number(month);
+            const targetYear = Number(year || new Date().getFullYear());
+            const totalDaysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+            const daysMap = {};
+
+            result.rows.forEach(r => {
+                let key = r.date_label;
+                if (!key && r.date_raw) {
+                    const dt = new Date(r.date_raw);
+                    const dd = String(dt.getDate()).padStart(2, '0');
+                    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                    const yyyy = dt.getFullYear();
+                    key = `${dd}/${mm}/${yyyy}`;
+                }
+                if (key) daysMap[key] = r;
+            });
+
+            const fullMonthlyRows = [];
+            for (let day = 1; day <= totalDaysInMonth; day++) {
+                const dd = String(day).padStart(2, '0');
+                const mm = String(targetMonth).padStart(2, '0');
+                const dateLabel = `${dd}/${mm}/${targetYear}`;
+                const dateRaw = `${targetYear}-${mm}-${dd}`;
+
+                if (daysMap[dateLabel]) {
+                    fullMonthlyRows.push({
+                        ...daysMap[dateLabel],
+                        has_transaction: true
+                    });
+                } else {
+                    fullMonthlyRows.push({
+                        date_raw: dateRaw,
+                        date_label: dateLabel,
+                        total_sales: 0,
+                        total_lunas: 0,
+                        total_pending: 0,
+                        total_krat: 0,
+                        has_transaction: false
+                    });
+                }
+            }
+            return res.json(fullMonthlyRows);
+        }
+
         return res.json(result.rows);
     } catch (error) {
         return res.status(500).json({ error: error.message });
