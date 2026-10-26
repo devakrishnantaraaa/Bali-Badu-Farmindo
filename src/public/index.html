@@ -1144,8 +1144,8 @@
                                     </th>
                                     <th class="p-2 border border-slate-300 th-excel-filter text-center">
                                         <div class="th-excel-header-content justify-center">
-                                            <span>KETERANGAN</span>
-                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="4" title="Filter & Urutkan KETERANGAN">▼</button>
+                                            <span>JENIS</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="4" title="Filter & Urutkan JENIS">▼</button>
                                         </div>
                                     </th>
                                     <th class="p-2 border border-slate-300 th-excel-filter text-right">
@@ -1188,6 +1188,12 @@
                                         <div class="th-excel-header-content justify-center">
                                             <span>TRANSFER</span>
                                             <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="11" title="Filter & Urutkan TRANSFER">▼</button>
+                                        </div>
+                                    </th>
+                                    <th class="p-2 border border-slate-300 th-excel-filter text-center min-w-[140px]">
+                                        <div class="th-excel-header-content justify-center">
+                                            <span>KETERANGAN</span>
+                                            <button type="button" class="excel-filter-btn" data-table="dailySalesTable" data-col="12" title="Filter & Urutkan KETERANGAN">▼</button>
                                         </div>
                                     </th>
                                     <th class="p-2 border border-slate-300 text-center bg-amber-200 text-amber-950">AKSI</th>
@@ -2600,6 +2606,9 @@
                     }
                 }
 
+                const savedNote = localStorage.getItem(`sales_note_${item.invoice_id}`);
+                const displayNote = savedNote !== null ? savedNote : (item.notes || '');
+
                 const printPayload = JSON.stringify({
                     invoice_number: item.invoice_number || `INV-${item.id}`,
                     date: tglStr,
@@ -2650,6 +2659,21 @@
                                 class="text-[10px] bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none w-28">
                         </td>
 
+                        <!-- KOLOM KETERANGAN / NOTE (BISA DIINPUT MANUAL ANGKA MAUPUN HURUF) -->
+                        <td class="p-1 border border-slate-300 text-center min-w-[130px]">
+                            <div class="relative flex items-center w-full">
+                                <input type="text"
+                                    class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-amber-500 rounded px-2 py-1 text-[11px] text-slate-800 placeholder:text-slate-400 focus:outline-none transition shadow-none focus:ring-1 focus:ring-amber-400"
+                                    placeholder="Tulis note..."
+                                    value="${escapeHtml(displayNote)}"
+                                    onchange="updateDailySalesNote(${item.invoice_id}, this.value, this)"
+                                    onkeydown="if(event.key==='Enter') this.blur()"
+                                    title="Klik untuk input catatan / keterangan (angka maupun huruf)"
+                                />
+                                <span id="saveNoteStatus-${item.invoice_id}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
+                            </div>
+                        </td>
+
                         <td class="p-2 border border-slate-300 text-center whitespace-nowrap">
                             <div class="flex items-center justify-center gap-1">
                                 ${sisa > 0 ? `
@@ -2666,7 +2690,7 @@
                         </td>
                     </tr>
                 `;
-            }).join('') || '<tr><td colspan="13" class="p-4 text-center text-slate-400">Tidak ada transaksi penjualan pada filter ini</td></tr>';
+            }).join('') || '<tr><td colspan="14" class="p-4 text-center text-slate-400">Tidak ada transaksi penjualan pada filter ini</td></tr>';
 
             // Render Footer Totals Row
             const foot = document.getElementById('dailySalesFoot');
@@ -2680,6 +2704,7 @@
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400 text-right text-emerald-900 font-black bg-amber-200/60">${totalPaidSum.toLocaleString('id-ID')}</td>
                     <td class="p-2 border border-slate-400 text-right text-rose-900 font-black">${totalSisaSum.toLocaleString('id-ID')}</td>
+                    <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
@@ -2714,6 +2739,38 @@
                 loadDailySalesReport();
             } catch (err) {
                 showAlert(err.message, true);
+            }
+        }
+
+        // Simpan catatan / note manual (angka maupun huruf) pada Rekap Penjualan Harian
+        async function updateDailySalesNote(invoiceId, noteVal, inputEl) {
+            const cleanVal = (noteVal !== undefined && noteVal !== null) ? String(noteVal) : '';
+            localStorage.setItem(`sales_note_${invoiceId}`, cleanVal);
+            const statusEl = document.getElementById(`saveNoteStatus-${invoiceId}`);
+
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${invoiceId}/fields`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ notes: cleanVal })
+                });
+
+                if (res.ok) {
+                    if (statusEl) {
+                        statusEl.classList.remove('hidden');
+                        setTimeout(() => statusEl.classList.add('hidden'), 1500);
+                    }
+                    if (inputEl) {
+                        inputEl.classList.add('bg-emerald-50', 'border-emerald-300');
+                        setTimeout(() => {
+                            inputEl.classList.remove('bg-emerald-50', 'border-emerald-300');
+                        }, 1000);
+                    }
+                } else {
+                    console.warn('Gagal sinkron catatan ke database, tersimpan di browser.');
+                }
+            } catch (err) {
+                console.error('Error updateDailySalesNote:', err);
             }
         }
 
@@ -4887,6 +4944,7 @@
                             <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400 text-right text-emerald-900 font-black bg-amber-200/60">${totalPaid.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-400 text-right text-rose-900 font-black">${totalSisa.toLocaleString('id-ID')}</td>
+                            <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400"></td>

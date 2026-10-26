@@ -27,8 +27,10 @@ async function runAutoMigrations() {
   migrationsExecuted = true;
   try {
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS transfer_date DATE');
+    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT');
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT');
   } catch (err) {
-    console.warn('Notice (transfer_date column check):', err.message);
+    console.warn('Notice (transfer_date/notes column check):', err.message);
   }
 
   try {

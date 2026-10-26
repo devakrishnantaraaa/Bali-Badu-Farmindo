@@ -49,6 +49,7 @@ async function getDailySales(req, res) {
                 COALESCE(p.name, 'Telur') AS product_name,
                 COALESCE(p.unit, 'kg') AS product_unit,
                 i.transfer_date,
+                COALESCE(i.notes, o.notes, '') AS notes,
                 p2.payment_method AS last_payment_method,
                 p2.created_at AS last_payment_date
             FROM orders o

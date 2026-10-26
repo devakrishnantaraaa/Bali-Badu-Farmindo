@@ -393,13 +393,14 @@ async function importDailySales(req, res) {
             const orderTimestamp = `${orderDateStr} 12:00:00`;
 
             const orderNum = `ORD-IMP-${now}-${i + 1}`;
+            const rowNote = (row.notes || row.note || row.keterangan_tambahan || '').trim();
 
             // 1. Insert order
             const orderRes = await client.query(
-                `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, created_at)
-                 VALUES ($1, $2, $3, 'CONFIRMED', 'Import Excel', $4)
+                `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, created_at, notes)
+                 VALUES ($1, $2, $3, 'CONFIRMED', 'Import Excel', $4, $5)
                  RETURNING id`,
-                [orderNum, customerId, totalAmount, orderTimestamp]
+                [orderNum, customerId, totalAmount, orderTimestamp, rowNote]
             );
             const orderId = orderRes.rows[0].id;
 
@@ -429,10 +430,10 @@ async function importDailySales(req, res) {
             // 5. Insert invoice
             const invNum = `INV-IMP-${now}-${i + 1}`;
             const invRes = await client.query(
-                `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, transfer_date, created_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, transfer_date, created_at, notes)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                  RETURNING id`,
-                [invNum, orderId, customerId, paymentType, totalAmount, amountPaid, invoiceStatus, transferDate, orderTimestamp]
+                [invNum, orderId, customerId, paymentType, totalAmount, amountPaid, invoiceStatus, transferDate, orderTimestamp, rowNote]
             );
             const invoiceId = invRes.rows[0].id;
 

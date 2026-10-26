@@ -173,7 +173,7 @@ async function updateInvoiceFields(req, res) {
     const client = await db.getClient();
     try {
         const { invoice_id } = req.params;
-        const { top_status, payment_method, transfer_date } = req.body;
+        const { top_status, payment_method, transfer_date, notes } = req.body;
 
         await client.query('BEGIN');
 
@@ -212,6 +212,25 @@ async function updateInvoiceFields(req, res) {
                  WHERE id = $2`,
                 [formattedTransferDate, invoice.id]
             );
+        }
+
+        // 1c. Update catatan / notes (angka maupun huruf)
+        if (notes !== undefined) {
+            const cleanNotes = notes !== null ? String(notes) : '';
+            await client.query(
+                `UPDATE invoices 
+                 SET notes = $1, updated_at = CURRENT_TIMESTAMP 
+                 WHERE id = $2`,
+                [cleanNotes, invoice.id]
+            );
+            if (invoice.order_id) {
+                await client.query(
+                    `UPDATE orders 
+                     SET notes = $1 
+                     WHERE id = $2`,
+                    [cleanNotes, invoice.order_id]
+                );
+            }
         }
 
         // 2. Update atau catat pembayaran/metode (CEK: Transfer / Setor / OK / -)
