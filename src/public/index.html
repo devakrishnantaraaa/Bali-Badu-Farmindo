@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="/images/DJS.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body {
@@ -162,11 +163,14 @@
             #printModal,
             #printModal *,
             #printBillingInvoiceModal,
-            #printBillingInvoiceModal * {
+            #printBillingInvoiceModal *,
+            #salesReceiptModal,
+            #salesReceiptModal * {
                 visibility: visible !important;
             }
 
             #printBillingInvoiceModal,
+            #salesReceiptModal,
             #printModal {
                 position: absolute !important;
                 left: 0 !important;
@@ -179,6 +183,7 @@
             }
 
             .print-invoice-sheet,
+            #salesReceiptPaper,
             #printInvoiceArea {
                 box-shadow: none !important;
                 border: none !important;
@@ -2440,6 +2445,30 @@
                 return showAlert('Silakan isi Harga Satuan penjualan (bisa diketik manual)!', true);
             }
 
+            // Ambil nama customer & nama produk untuk struk nota sebelum form direset
+            let customerName = 'Pelanggan';
+            if (window.globalCustomersList && window.globalCustomersList.length) {
+                const foundCust = window.globalCustomersList.find(c => String(c.id) === String(customer_id));
+                if (foundCust) customerName = foundCust.name;
+            }
+            if (customerName === 'Pelanggan' && customerSelect.selectedIndex >= 0) {
+                const optText = customerSelect.options[customerSelect.selectedIndex]?.text || '';
+                customerName = optText.split(' (')[0].trim() || 'Pelanggan';
+            }
+
+            let productName = 'Telur Ayam Ras';
+            if (window.globalProductsList && window.globalProductsList.length) {
+                const foundProd = window.globalProductsList.find(p => String(p.id) === String(product_id));
+                if (foundProd) productName = foundProd.name;
+            }
+            if (productName === 'Telur Ayam Ras' && productSelect.selectedIndex >= 0) {
+                const pText = productSelect.options[productSelect.selectedIndex]?.text || '';
+                productName = pText.split(' - Stok:')[0].trim() || 'Telur Ayam Ras';
+            }
+
+            const salesPersonName = (currentUser && currentUser.full_name) ? currentUser.full_name : 'Sales';
+            const totalOrderAmount = quantity * unit_price;
+
             try {
                 const res = await fetch(`${API_BASE}/orders`, {
                     method: 'POST',
@@ -2460,10 +2489,21 @@
                 calculateOrderTotalLive();
                 loadInitialData();
 
-                // Tampilkan popup peringatan nota gantung jika ada catatan piutang sebelumnya
-                if (data.pending_warning) {
-                    showPendingWarningModal(data.pending_warning);
-                }
+                // Tampilkan Popup Struk Nota Otomatis (Format Gambar JPG) untuk Sales
+                openSalesReceiptModal({
+                    invoice_number: data.invoice.invoice_number,
+                    order_date: order_date,
+                    customer_name: customerName,
+                    sales_name: salesPersonName,
+                    product_name: productName,
+                    quantity: quantity,
+                    unit_price: unit_price,
+                    total_amount: totalOrderAmount,
+                    payment_type: payment_type,
+                    due_date: due_date || null,
+                    status: data.invoice.status || (payment_type === 'LUNAS' ? 'LUNAS' : 'PENDING'),
+                    pending_warning: data.pending_warning || null
+                });
             } catch (err) {
                 showAlert(err.message, true);
             }
@@ -2703,6 +2743,10 @@
 
                         <td class="p-2 border border-slate-300 text-center whitespace-nowrap">
                             <div class="flex items-center justify-center gap-1">
+                                <button onclick="openSalesReceiptModal(${printPayload})" 
+                                    class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Cetak / Simpan Struk Nota (Format JPG)">
+                                    🧾 Struk
+                                </button>
                                 ${sisa > 0 ? `
                                 <button onclick="validateDirectInvoice(${item.invoice_id}, '${item.customer_name}', ${sisa})" 
                                     class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Validasi Lunas">
@@ -4518,6 +4562,204 @@
             document.getElementById('pendingWarningModal').classList.add('hidden');
         }
 
+        // --- POPUP NOTA PENJUALAN & CETAK STRUK JPG (ROLE SALES & MOBILE) ---
+        let currentReceiptData = null;
+        let queuedPendingWarning = null;
+
+        function openSalesReceiptModal(receiptData) {
+            if (!receiptData) return;
+            currentReceiptData = receiptData;
+            queuedPendingWarning = receiptData.pending_warning || null;
+
+            document.getElementById('receiptInvNo').innerText = receiptData.invoice_number || 'INV-001';
+            
+            // Format Tanggal
+            let displayDate = receiptData.order_date || receiptData.date || '';
+            if (displayDate) {
+                try {
+                    const cleanDateStr = displayDate.includes('T') ? displayDate.split('T')[0] : displayDate;
+                    const d = new Date(cleanDateStr + 'T00:00:00');
+                    displayDate = !isNaN(d.getTime()) ? d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : displayDate;
+                } catch (e) {
+                    displayDate = receiptData.order_date || receiptData.date;
+                }
+            } else {
+                displayDate = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+            document.getElementById('receiptDate').innerText = displayDate;
+
+            document.getElementById('receiptSales').innerText = receiptData.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS');
+            document.getElementById('receiptCust').innerText = receiptData.customer_name || 'Pelanggan';
+
+            const rawPaymentType = (receiptData.payment_type || receiptData.status || 'LUNAS').toUpperCase();
+            const isLunas = rawPaymentType.includes('LUNAS');
+            const badgeEl = document.getElementById('receiptPaymentBadge');
+            const statusTextEl = document.getElementById('receiptPaymentStatusText');
+            const dueDateRow = document.getElementById('receiptDueDateRow');
+
+            if (isLunas) {
+                badgeEl.className = 'font-bold px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200';
+                badgeEl.innerText = 'LUNAS (CASH/TF)';
+                statusTextEl.className = 'font-bold text-emerald-700';
+                statusTextEl.innerText = 'LUNAS';
+                if (dueDateRow) dueDateRow.classList.add('hidden');
+            } else {
+                badgeEl.className = 'font-bold px-2 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 border border-amber-200';
+                badgeEl.innerText = 'PENDING (TEMPO)';
+                statusTextEl.className = 'font-bold text-amber-700';
+                statusTextEl.innerText = 'BELUM LUNAS (TEMPO)';
+                if (dueDateRow) {
+                    dueDateRow.classList.remove('hidden');
+                    let dueStr = receiptData.due_date ? new Date(receiptData.due_date + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                    document.getElementById('receiptDueDate').innerText = dueStr;
+                }
+            }
+
+            // Render Items Table
+            const itemsBody = document.getElementById('receiptItemsBody');
+            const qty = Number(receiptData.quantity || 1);
+            const price = Number(receiptData.unit_price || receiptData.price || 0);
+            const total = Number(receiptData.total_amount || receiptData.total || (qty * price));
+
+            itemsBody.innerHTML = `
+                <tr class="border-b border-slate-100">
+                    <td class="py-2 pr-1 font-semibold text-slate-900">${receiptData.product_name || 'Telur Ayam Ras'}</td>
+                    <td class="py-2 px-1 text-center font-bold text-slate-800">${qty.toLocaleString('id-ID')} Krat</td>
+                    <td class="py-2 px-1 text-right text-slate-600">Rp ${price.toLocaleString('id-ID')}</td>
+                    <td class="py-2 pl-1 text-right font-black text-slate-950">Rp ${total.toLocaleString('id-ID')}</td>
+                </tr>
+            `;
+
+            document.getElementById('receiptTotalAmount').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+
+            // Tampilkan Modal
+            document.getElementById('salesReceiptModal').classList.remove('hidden');
+        }
+
+        function closeSalesReceiptModal() {
+            document.getElementById('salesReceiptModal').classList.add('hidden');
+            // Jika ada antrean peringatan nota gantung, tampilkan setelah nota ditutup
+            if (queuedPendingWarning) {
+                showPendingWarningModal(queuedPendingWarning);
+                queuedPendingWarning = null;
+            }
+        }
+
+        async function downloadReceiptAsJPG() {
+            const paper = document.getElementById('salesReceiptPaper');
+            if (!paper) return showAlert('Elemen nota tidak ditemukan', true);
+
+            const btn = document.getElementById('btnDownloadReceiptJPG');
+            const originalContent = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Memproses Gambar JPG...`;
+            }
+
+            try {
+                if (typeof html2canvas === 'undefined') {
+                    throw new Error('Pustaka html2canvas belum termuat. Periksa koneksi internet.');
+                }
+
+                const canvas = await html2canvas(paper, {
+                    scale: 2.5,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true
+                });
+
+                const invNo = document.getElementById('receiptInvNo')?.innerText?.trim() || 'Nota';
+                const cleanInv = invNo.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                const link = document.createElement('a');
+                link.download = `Nota_${cleanInv}.jpg`;
+                link.href = imgData;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showAlert('Struk berhasil disimpan dalam format JPG! 📸');
+            } catch (err) {
+                console.error('downloadReceiptAsJPG error:', err);
+                showAlert('Gagal membuat gambar JPG: ' + err.message, true);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                }
+            }
+        }
+
+        async function shareReceiptAsJPG() {
+            const paper = document.getElementById('salesReceiptPaper');
+            if (!paper) return;
+
+            const btn = document.getElementById('btnShareReceiptWA');
+            const originalContent = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span>⏳</span> Memproses...`;
+            }
+
+            try {
+                if (typeof html2canvas === 'undefined') {
+                    throw new Error('Pustaka html2canvas belum termuat.');
+                }
+
+                const canvas = await html2canvas(paper, {
+                    scale: 2.5,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true
+                });
+
+                const invNo = document.getElementById('receiptInvNo')?.innerText?.trim() || 'Nota';
+                const custName = document.getElementById('receiptCust')?.innerText?.trim() || 'Customer';
+                const cleanInv = invNo.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        downloadReceiptAsJPG();
+                        return;
+                    }
+
+                    const file = new File([blob], `Nota_${cleanInv}.jpg`, { type: 'image/jpeg' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: `Nota Penjualan ${invNo}`,
+                                text: `Struk Nota Penjualan ${invNo} untuk ${custName} - Dewata Jaya Supplier`
+                            });
+                        } catch (err) {
+                            if (err.name !== 'AbortError') {
+                                downloadReceiptAsJPG();
+                            }
+                        }
+                    } else {
+                        downloadReceiptAsJPG();
+                        showAlert('Gambar nota JPG berhasil diunduh. Silakan lampirkan langsung ke chat WhatsApp.');
+                    }
+                }, 'image/jpeg', 0.95);
+            } catch (err) {
+                console.error('shareReceiptAsJPG error:', err);
+                downloadReceiptAsJPG();
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                }
+            }
+        }
+
+        function printReceiptPaperDirect() {
+            window.print();
+        }
+
         // --- PENGINGAT JADWAL TAGIHAN TERMIN (TGL 14/29 & TGL 30) ---
         async function checkScheduledTermsReminders(providedDebts) {
             const today = new Date();
@@ -5337,6 +5579,148 @@
             document.getElementById('printBillingInvoiceModal').classList.add('hidden');
         }
     </script>
+
+    <!-- MODAL POPUP NOTA PENJUALAN / CETAK STRUK JPG (SALES MOBILE & DESKTOP) -->
+    <div id="salesReceiptModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full shadow-2xl flex flex-col my-auto max-h-[96vh] overflow-hidden animate-scaleUp">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700 text-white shrink-0 no-print">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🧾</span>
+                    <div>
+                        <h3 class="text-sm font-black text-white leading-tight">Nota Penjualan</h3>
+                        <p class="text-[10px] text-emerald-400 font-semibold">Transaksi Berhasil & Stok Terupdate</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeSalesReceiptModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-700 transition" title="Tutup">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Modal Body: Struk Kertas (Paper) Preview -->
+            <div class="p-3 sm:p-4 overflow-y-auto bg-slate-950/60 flex justify-center items-center">
+                <div id="salesReceiptPaper" style="width: 100%; max-width: 340px; background-color: #ffffff; color: #0f172a;" class="p-4 rounded-xl shadow-lg font-sans text-xs border border-slate-200">
+                    <!-- Brand Header -->
+                    <div class="text-center pb-2.5 border-b-2 border-dashed border-slate-300">
+                        <div class="flex justify-center items-center gap-2 mb-1">
+                            <img src="/images/DJS.png" alt="DJS Logo" class="h-10 w-10 object-contain rounded-md" crossorigin="anonymous">
+                            <div class="text-left">
+                                <h2 class="text-xs font-black text-slate-950 uppercase tracking-wider leading-none">DEWATA JAYA SUPPLIER</h2>
+                                <p class="text-[9px] font-bold text-amber-700 leading-tight">BALI BADU FARMINDO</p>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-500">Distribusi Telur Segar Berkualitas</p>
+                        <p class="text-[9px] text-slate-500">Telp / WA: <span class="font-bold text-slate-700">081234567890</span></p>
+                    </div>
+
+                    <!-- Meta Transaksi -->
+                    <div class="py-2.5 border-b border-dashed border-slate-300 space-y-1 text-[11px]">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">No. Nota:</span>
+                            <span id="receiptInvNo" class="font-mono font-black text-slate-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">INV-XXXX</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">Tanggal:</span>
+                            <span id="receiptDate" class="font-semibold text-slate-800">-</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">Sales:</span>
+                            <span id="receiptSales" class="font-semibold text-slate-800">-</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500">Pelanggan:</span>
+                            <span id="receiptCust" class="font-black text-slate-950 text-xs">-</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-0.5">
+                            <span class="text-slate-500">Tipe Pembayaran:</span>
+                            <span id="receiptPaymentBadge" class="font-bold px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200">LUNAS</span>
+                        </div>
+                        <div id="receiptDueDateRow" class="hidden flex justify-between items-center text-amber-800">
+                            <span>Jatuh Tempo:</span>
+                            <span id="receiptDueDate" class="font-bold">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Table Items -->
+                    <div class="py-2.5 border-b-2 border-dashed border-slate-300">
+                        <table class="w-full text-left border-collapse text-[11px]">
+                            <thead>
+                                <tr class="text-[9px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                                    <th class="pb-1">Produk</th>
+                                    <th class="pb-1 text-center">Qty</th>
+                                    <th class="pb-1 text-right">Harga</th>
+                                    <th class="pb-1 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receiptItemsBody">
+                                <!-- Dynamic Item Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Total Section -->
+                    <div class="py-2.5 border-b border-dashed border-slate-300 space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-extrabold text-slate-800">TOTAL NOTA:</span>
+                            <span id="receiptTotalAmount" class="font-mono font-black text-sm text-slate-950">Rp 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px]">
+                            <span class="text-slate-500">Status Pembayaran:</span>
+                            <span id="receiptPaymentStatusText" class="font-bold text-emerald-700">LUNAS</span>
+                        </div>
+                    </div>
+
+                    <!-- Payment Info & Notes -->
+                    <div class="pt-2 text-center text-[9px] text-slate-500 space-y-1">
+                        <p class="font-semibold text-slate-700">Pembayaran Transfer Bank BCA:</p>
+                        <p class="font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 py-0.5 rounded">1468924624 (Dewata Jaya Supplier)</p>
+                        <p class="italic text-[8.5px] pt-0.5 text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
+                        <p class="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
+                    </div>
+
+                    <!-- Tanda Tangan Ringkas -->
+                    <div class="grid grid-cols-2 text-center text-[9px] text-slate-600 pt-3 mt-2 border-t border-dashed border-slate-200">
+                        <div>
+                            <p class="text-[8px] text-slate-400 mb-6">Penerima / Toko</p>
+                            <p class="font-bold border-t border-slate-300 mx-3 pt-0.5">( ................... )</p>
+                        </div>
+                        <div>
+                            <p class="text-[8px] text-slate-400 mb-6">Hormat Kami</p>
+                            <p class="font-bold border-t border-slate-300 mx-3 pt-0.5">( DJS Farmindo )</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons (Footer) -->
+            <div class="p-3 bg-slate-900 border-t border-slate-800 space-y-2 shrink-0 no-print">
+                <!-- Primary Download Button (JPG FORMAT) -->
+                <button type="button" id="btnDownloadReceiptJPG" onclick="downloadReceiptAsJPG()"
+                    class="w-full bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black py-2.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-xs sm:text-sm">
+                    <svg class="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Cetak / Simpan Struk (JPG)</span>
+                </button>
+
+                <!-- Second Row: WhatsApp Share & Print -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="btnShareReceiptWA" onclick="shareReceiptAsJPG()"
+                        class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow">
+                        <span>📲</span> Bagikan WA
+                    </button>
+                    <button type="button" onclick="printReceiptPaperDirect()"
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 border border-slate-700">
+                        <span>🖨️</span> Print Thermal
+                    </button>
+                </div>
+
+                <!-- Close Button -->
+                <button type="button" onclick="closeSalesReceiptModal()"
+                    class="w-full text-center text-xs text-slate-400 hover:text-white py-1 transition font-medium">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL POPUP CETAK NOTA PENJUALAN -->
     <div id="printModal" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
