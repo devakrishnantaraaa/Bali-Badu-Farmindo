@@ -1393,47 +1393,50 @@
                     <!-- Adjustment Input Box (Super Admin) -->
                     <div id="adjustmentFormBox"
                         class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                        <div class="font-bold text-xs text-slate-800 uppercase tracking-wider">Form Audit Stok: Rusak,
-                            Fisik & Penyesuaian</div>
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div class="font-bold text-xs text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                            <span>📋 Form Audit Stok: Rusak, Fisik & Penyesuaian</span>
+                            <span class="text-[10px] text-slate-500 font-normal">Pilih tanggal untuk mencatat audit pada baris tanggal yang sesuai</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Produk</label>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">📅 Tanggal Audit</label>
+                                <input type="date" id="adjDate"
+                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Produk</label>
                                 <select id="adjProduct"
-                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-amber-500">
                                     <option value="">Pilih Produk...</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-[11px] font-semibold text-rose-600 mb-1">Rusak (Qty)</label>
-                                <input type="number" id="adjDamaged" placeholder="0"
-                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                                <input type="number" id="adjDamaged" placeholder="0" min="0" step="any"
+                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-rose-500">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-blue-600 mb-1">Stok Fisik
-                                    Gudang</label>
-                                <input type="number" id="adjPhysical" placeholder="Hasil Opname"
-                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                                <label class="block text-[11px] font-semibold text-blue-600 mb-1">Stok Fisik Gudang</label>
+                                <input type="number" id="adjPhysical" placeholder="Hasil Opname" min="0" step="any"
+                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Penyesuaian
-                                    (+/-)</label>
-                                <input type="number" id="adjQty" placeholder="0"
-                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                                <label class="block text-[11px] font-semibold text-purple-700 mb-1">Penyesuaian (+/-)</label>
+                                <input type="number" id="adjQty" placeholder="0" step="any"
+                                    class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-purple-500">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Keterangan /
-                                Notes</label>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Keterangan / Notes</label>
                             <input type="text" id="adjNotes"
                                 placeholder="Misal: Retur telur pecah / opname fisik gudang"
-                                class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs">
+                                class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500">
                         </div>
                         <div class="flex justify-end gap-2">
                             <button onclick="hideAdjustmentModal()"
-                                class="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded font-medium">Batal</button>
+                                class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded font-medium transition">Batal</button>
                             <button onclick="submitStockAdjustment()"
-                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-1 rounded shadow-sm">Simpan
-                                Audit Stok</button>
+                                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-1.5 rounded shadow-sm transition">Simpan Audit Stok</button>
                         </div>
                     </div>
 
@@ -3479,10 +3482,18 @@
 
         // --- STOCK AUDIT & ADJUSTMENT MODAL ---
         function showAdjustmentModal() {
-            document.getElementById('adjustmentFormBox').classList.remove('hidden');
+            const formBox = document.getElementById('adjustmentFormBox');
+            if (formBox) {
+                formBox.classList.remove('hidden');
+                const dateEl = document.getElementById('adjDate');
+                if (dateEl && !dateEl.value) {
+                    dateEl.value = new Date().toISOString().split('T')[0];
+                }
+            }
         }
         function hideAdjustmentModal() {
-            document.getElementById('adjustmentFormBox').classList.add('hidden');
+            const formBox = document.getElementById('adjustmentFormBox');
+            if (formBox) formBox.classList.add('hidden');
         }
 
         let isSubmittingAdjustment = false;
@@ -3491,12 +3502,17 @@
             const btn = btnEl || document.querySelector('#adjustmentFormBox button.bg-emerald-600');
             const originalText = btn ? btn.innerHTML : 'Simpan Audit Stok';
 
-            const product_id = document.getElementById('adjProduct').value;
-            const damaged_qty = document.getElementById('adjDamaged').value || 0;
-            const physical_stock = document.getElementById('adjPhysical').value || 0;
-            const adjustment_qty = document.getElementById('adjQty').value || 0;
-            const notes = document.getElementById('adjNotes').value;
+            const adjustment_date = document.getElementById('adjDate')?.value;
+            const product_id = document.getElementById('adjProduct')?.value;
+            const damaged_qty = document.getElementById('adjDamaged')?.value || 0;
+            const physical_stock = document.getElementById('adjPhysical')?.value || '';
+            const adjustment_qty = document.getElementById('adjQty')?.value || 0;
+            const notes = document.getElementById('adjNotes')?.value;
 
+            if (!adjustment_date) {
+                showAlert('Silakan pilih Tanggal Audit terlebih dahulu!', true);
+                return;
+            }
             if (!product_id) {
                 showAlert('Pilih produk terlebih dahulu!', true);
                 return;
@@ -3513,13 +3529,28 @@
                 const res = await fetch(`${API_BASE}/stock/adjustment`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ product_id, damaged_qty, physical_stock, adjustment_qty, notes })
+                    body: JSON.stringify({ 
+                        product_id, 
+                        damaged_qty, 
+                        physical_stock, 
+                        adjustment_qty, 
+                        notes,
+                        adjustment_date 
+                    })
                 });
                 const data = await safeJsonResponse(res);
                 if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan penyesuaian stok');
-                showAlert(data.message);
+                showAlert(data.message || 'Audit stok berhasil disimpan!');
+                
+                // Reset form fields
+                if (document.getElementById('adjDamaged')) document.getElementById('adjDamaged').value = '';
+                if (document.getElementById('adjPhysical')) document.getElementById('adjPhysical').value = '';
+                if (document.getElementById('adjQty')) document.getElementById('adjQty').value = '';
+                if (document.getElementById('adjNotes')) document.getElementById('adjNotes').value = '';
+
                 hideAdjustmentModal();
                 loadInitialData();
+                await loadStockLedger();
             } catch (err) {
                 showAlert(err.message, true);
             } finally {

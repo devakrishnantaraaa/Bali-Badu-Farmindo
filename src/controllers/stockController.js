@@ -101,7 +101,7 @@ async function recordStockAdjustment(req, res) {
         const damaged = damaged_qty ? parseFloat(damaged_qty) : 0;
         const adj = adjustment_qty ? parseFloat(adjustment_qty) : 0;
         const phys = (physical_stock !== undefined && physical_stock !== null && physical_stock !== '') ? parseFloat(physical_stock) : null;
-        const dateVal = adjustment_date ? new Date(adjustment_date) : new Date();
+        const dateVal = adjustment_date ? new Date(adjustment_date.includes('T') ? adjustment_date : `${adjustment_date}T12:00:00`) : new Date();
 
         // Log movement with damaged_qty, physical_stock, adjustment_qty, and notes
         const movementRes = await client.query(
