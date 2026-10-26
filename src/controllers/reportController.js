@@ -124,10 +124,18 @@ async function getMonthlyRecap(req, res) {
         let whereClause = "WHERE o.status = 'CONFIRMED'";
         let queryParams = [];
 
-        if (month && month !== 'ALL') {
-            const currentYear = year || new Date().getFullYear();
+        const hasSpecificMonth = month && month !== 'ALL';
+        const hasSpecificYear = year && year !== 'ALL';
+
+        if (hasSpecificMonth && hasSpecificYear) {
             whereClause += " AND EXTRACT(MONTH FROM o.created_at) = $1 AND EXTRACT(YEAR FROM o.created_at) = $2";
-            queryParams.push(month, currentYear);
+            queryParams.push(Number(month), Number(year));
+        } else if (hasSpecificMonth) {
+            whereClause += " AND EXTRACT(MONTH FROM o.created_at) = $1";
+            queryParams.push(Number(month));
+        } else if (hasSpecificYear) {
+            whereClause += " AND EXTRACT(YEAR FROM o.created_at) = $1";
+            queryParams.push(Number(year));
         }
 
         const queryText = `
@@ -147,9 +155,10 @@ async function getMonthlyRecap(req, res) {
         `;
         const result = await db.query(queryText, queryParams);
 
-        if (month && month !== 'ALL') {
+        // Jika bulan dan tahun spesifik dipilih, tampilkan kalender 1 bulan penuh (misal 1 - 31 Okt 2027)
+        if (hasSpecificMonth && hasSpecificYear) {
             const targetMonth = Number(month);
-            const targetYear = Number(year || new Date().getFullYear());
+            const targetYear = Number(year);
             const totalDaysInMonth = new Date(targetYear, targetMonth, 0).getDate();
             const daysMap = {};
 
