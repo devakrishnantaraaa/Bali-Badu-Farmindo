@@ -40,6 +40,7 @@ async function runAutoMigrations() {
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS adjustment_qty NUMERIC(12, 2) DEFAULT 0.00;
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reference_id VARCHAR(100);
       ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS notes TEXT;
+      ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS price NUMERIC(12, 2) DEFAULT 0.00;
       ALTER TABLE products DROP CONSTRAINT IF EXISTS products_current_stock_check;
       ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS stock_movements_balance_after_check;
 

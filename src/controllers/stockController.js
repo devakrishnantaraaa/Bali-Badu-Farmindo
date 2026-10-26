@@ -50,7 +50,7 @@ async function recalibrateProductStock(clientOrDb, productId) {
 async function recordIncomingGoods(req, res) {
     const client = await db.getClient();
     try {
-        const { product_id, quantity, notes, incoming_date } = req.body;
+        const { product_id, quantity, notes, incoming_date, price } = req.body;
         
         if (!product_id || !quantity || quantity <= 0) {
             return res.status(400).json({ error: 'Valid product_id and positive quantity required' });
@@ -60,11 +60,12 @@ async function recordIncomingGoods(req, res) {
 
         // 1. Log stock movement
         const dateVal = incoming_date ? new Date(incoming_date) : new Date();
+        const priceVal = price ? parseFloat(price) : 0;
         const movementRes = await client.query(
-            `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at)
-             VALUES ($1, 'BARANG_MASUK', $2, 0, $3, $4)
+            `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, notes, created_at, price)
+             VALUES ($1, 'BARANG_MASUK', $2, 0, $3, $4, $5)
              RETURNING *`,
-            [product_id, quantity, notes || 'Penerimaan Barang Masuk', dateVal]
+            [product_id, quantity, notes || 'Penerimaan Barang Masuk', dateVal, priceVal]
         );
 
         // 2. Kalibrasi ulang sisa stok berjalan secara kronologis
