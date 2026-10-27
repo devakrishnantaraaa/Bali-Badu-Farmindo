@@ -281,9 +281,120 @@ async function getOutstandingDebts(req, res) {
     }
 }
 
+// Global Inventory & Valuation Report (Semua Produk, Mutasi & Nilai Aset)
+async function getGlobalInventoryReport(req, res) {
+    try {
+        const { month, year } = req.query;
+
+        // Ambil semua produk
+        const productsRes = await db.query('SELECT * FROM products ORDER BY id ASC');
+        const products = productsRes.rows;
+
+        // Ambil semua pergerakan stok urut kronologis
+        const movQuery = `
+            SELECT sm.product_id, sm.movement_type, sm.quantity, 
+                   COALESCE(sm.damaged_qty, 0) AS damaged_qty, 
+                   sm.physical_stock, 
+                   COALESCE(sm.adjustment_qty, 0) AS adjustment_qty, 
+                   sm.balance_after, sm.created_at, sm.price
+            FROM stock_movements sm
+            ORDER BY sm.created_at ASC, sm.id ASC
+        `;
+        const movRes = await db.query(movQuery);
+        const movements = movRes.rows;
+
+        const hasFilter = (month && month !== 'ALL') || (year && year !== 'ALL');
+        const targetMonth = month && month !== 'ALL' ? parseInt(month, 10) : null;
+        const targetYear = year && year !== 'ALL' ? parseInt(year, 10) : null;
+
+        const report = products.map(p => {
+            const prodMovs = movements.filter(m => m.product_id === p.id);
+
+            let initialStock = 0;
+            let inQty = 0;
+            let outQty = 0;
+            let damagedQty = 0;
+            let adjQty = 0;
+            let finalStock = parseFloat(p.current_stock || 0);
+
+            if (hasFilter) {
+                let lastSeenBalance = 0;
+                let foundInPeriod = false;
+
+                prodMovs.forEach(m => {
+                    const dt = new Date(m.created_at);
+                    const mMonth = dt.getMonth() + 1;
+                    const mYear = dt.getFullYear();
+
+                    let isBefore = false;
+                    if (targetYear !== null && mYear < targetYear) {
+                        isBefore = true;
+                    } else if ((targetYear === null || mYear === targetYear) && targetMonth !== null && mMonth < targetMonth) {
+                        isBefore = true;
+                    }
+
+                    const inPeriod = (targetYear === null || mYear === targetYear) && (targetMonth === null || mMonth === targetMonth);
+
+                    if (isBefore) {
+                        initialStock = parseFloat(m.balance_after || 0);
+                        lastSeenBalance = initialStock;
+                    } else if (inPeriod) {
+                        foundInPeriod = true;
+                        const q = parseFloat(m.quantity || 0);
+                        if (m.movement_type === 'BARANG_MASUK') inQty += q;
+                        if (m.movement_type === 'PENJUALAN') outQty += q;
+                        damagedQty += parseFloat(m.damaged_qty || 0);
+                        adjQty += parseFloat(m.adjustment_qty || 0);
+                        lastSeenBalance = parseFloat(m.balance_after || 0);
+                    }
+                });
+
+                finalStock = foundInPeriod ? lastSeenBalance : initialStock;
+            } else {
+                prodMovs.forEach(m => {
+                    const q = parseFloat(m.quantity || 0);
+                    if (m.movement_type === 'BARANG_MASUK') inQty += q;
+                    if (m.movement_type === 'PENJUALAN') outQty += q;
+                    damagedQty += parseFloat(m.damaged_qty || 0);
+                    adjQty += parseFloat(m.adjustment_qty || 0);
+                });
+                finalStock = parseFloat(p.current_stock || 0);
+                initialStock = 0;
+            }
+
+            const unitPrice = parseFloat(p.price_per_unit || 0);
+            const assetValue = finalStock * unitPrice;
+
+            return {
+                id: p.id,
+                product_id: p.id,
+                name: p.name,
+                product_name: p.name,
+                unit: p.unit || 'krat',
+                unit_price: unitPrice,
+                price_per_unit: unitPrice,
+                initial_stock: initialStock,
+                in_qty: inQty,
+                out_qty: outQty,
+                damaged_qty: damagedQty,
+                adjustment_qty: adjQty,
+                final_stock: finalStock,
+                asset_value: assetValue,
+                status: finalStock <= 10 ? 'KRITIS' : (finalStock <= 50 ? 'MENIPIS' : 'AMAN')
+            };
+        });
+
+        return res.json(report);
+    } catch (error) {
+        console.error('Error getGlobalInventoryReport:', error);
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     getDailySales,
     getDailyDeposits,
     getMonthlyRecap,
-    getOutstandingDebts
+    getOutstandingDebts,
+    getGlobalInventoryReport
 };

@@ -51,6 +51,7 @@ router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'MARKETING'), r
 router.get('/reports/daily-deposits', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getDailyDeposits);
 router.get('/reports/monthly-recap', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getMonthlyRecap);
 router.get('/reports/outstanding-debts', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getOutstandingDebts);
+router.get('/reports/inventory-global', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getGlobalInventoryReport);
 
 // System Utility: Reset Riwayat Transaksi (Access: SUPER_ADMIN only)
 router.post('/system/reset-transactions', authorizeRoles('SUPER_ADMIN'), async (req, res) => {
