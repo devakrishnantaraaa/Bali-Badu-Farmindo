@@ -554,7 +554,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2zM17 21v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2" />
                     </svg>
-                    <span class="sidebar-text truncate font-bold text-amber-300">Cetak Invoice / Tagihan</span>
+                    <span id="navInvoiceText" class="sidebar-text truncate font-bold text-amber-300">Cetak Invoice / Tagihan</span>
                 </button>
 
                 <!-- Rekap Penjualan Bulanan -->
@@ -667,6 +667,14 @@
                         d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span class="text-[10px]">Rincian</span>
+            </button>
+            <button onclick="switchTab('invoice')" id="mobile-nav-invoice"
+                class="flex flex-col items-center gap-1 p-2 hover:text-amber-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span class="text-[10px]">Print Nota</span>
             </button>
             <button onclick="switchTab('debts')" id="mobile-nav-debts"
                 class="flex flex-col items-center gap-1 p-2 hover:text-amber-400">
@@ -1658,10 +1666,10 @@
                     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-3">
                             <div>
-                                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                                <h3 id="invoiceHeaderTitle" class="text-base font-extrabold text-slate-900 flex items-center gap-2">
                                     <span>🧾</span> Menu Cetak Invoice & Penagihan Nota
                                 </h3>
-                                <p class="text-xs text-slate-500">Pilih nama customer dan atur rentang tanggal nota yang ingin ditagihkan (misalnya nota dari tgl 1 - 15 Okt).</p>
+                                <p id="invoiceHeaderSub" class="text-xs text-slate-500">Pilih nama customer dan atur rentang tanggal nota yang ingin ditagihkan (misalnya nota dari tgl 1 - 15 Okt).</p>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button onclick="openBillingInvoicePrintModal()" id="btnOpenPrintInvoice"
@@ -1843,7 +1851,7 @@
                     return;
                 }
             } else if (currentUser && currentUser.role === 'MARKETING') {
-                const marketingAllowed = ['sales', 'customer', 'daily-sales', 'debts'];
+                const marketingAllowed = ['sales', 'customer', 'daily-sales', 'invoice', 'debts'];
                 if (!marketingAllowed.includes(tabName)) {
                     showAlert('Akses ditolak: Menu ini hanya untuk staf Admin / Super Admin.', true);
                     return;
@@ -1886,7 +1894,7 @@
                 sales: 'Input Penjualan',
                 stock: 'Pembelian (Barang Masuk)',
                 'daily-sales': 'Rincian Penjualan',
-                invoice: 'Cetak Faktur & Invoice Penagihan Customer',
+                invoice: (currentUser && currentUser.role === 'MARKETING') ? 'Print Nota (Pending Customer)' : 'Cetak Faktur & Invoice Penagihan Customer',
                 'daily-deposits': 'Setoran',
                 'monthly-recap': 'Rekap Penjualan',
                 ledger: 'Kartu Stok',
@@ -1913,6 +1921,13 @@
                 }
             }
             if (tabName === 'invoice') {
+                const isMkt = (currentUser && currentUser.role === 'MARKETING');
+                const titleEl = document.getElementById('invoiceHeaderTitle');
+                const subEl = document.getElementById('invoiceHeaderSub');
+                const btnPrint = document.getElementById('btnOpenPrintInvoice');
+                if (titleEl) titleEl.innerHTML = isMkt ? '<span>🧾</span> Menu Print Nota (Khusus Nota Pending)' : '<span>🧾</span> Menu Cetak Invoice & Penagihan Nota';
+                if (subEl) subEl.innerText = isMkt ? 'Pilih nama customer untuk memunculkan dan mencetak nota yang pending (belum lunas).' : 'Pilih nama customer dan atur rentang tanggal nota yang ingin ditagihkan (misalnya nota dari tgl 1 - 15 Okt).';
+                if (btnPrint) btnPrint.innerHTML = isMkt ? '<span>🖨️</span> Print Nota Terpilih' : '<span>🖨️</span> Cetak Faktur / Invoice';
                 loadInvoiceCustomersDropdown();
             }
             if (tabName === 'daily-deposits') {
@@ -2059,7 +2074,7 @@
 
             if (currentUser.role === 'MARKETING') {
                 // MARKETING ROLE (Sales Lapangan):
-                const marketingAllowed = ['sales', 'customer', 'daily-sales', 'debts'];
+                const marketingAllowed = ['sales', 'customer', 'daily-sales', 'debts', 'invoice'];
                 allNavIds.forEach(id => {
                     const nav = document.getElementById(`nav-${id}`);
                     if (nav) {
@@ -2067,6 +2082,9 @@
                         else nav.classList.add('hidden');
                     }
                 });
+                const navInvText = document.getElementById('navInvoiceText');
+                if (navInvText) navInvText.innerText = 'Print Nota (Pending)';
+
                 if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
                 if (btnExportDailySales) btnExportDailySales.classList.remove('hidden');
                 if (summaryCardsDailySales) summaryCardsDailySales.classList.remove('hidden');
@@ -2084,6 +2102,9 @@
                         else nav.classList.add('hidden');
                     }
                 });
+                const navInvText = document.getElementById('navInvoiceText');
+                if (navInvText) navInvText.innerText = 'Cetak Invoice / Tagihan';
+
                 // Sembunyikan tombol input audit di kartu stok untuk role Admin
                 if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
 
@@ -2100,6 +2121,9 @@
                     const nav = document.getElementById(`nav-${id}`);
                     if (nav) nav.classList.remove('hidden');
                 });
+                const navInvText = document.getElementById('navInvoiceText');
+                if (navInvText) navInvText.innerText = 'Cetak Invoice / Tagihan';
+
                 if (btnOpenStockAudit) btnOpenStockAudit.classList.remove('hidden');
                 if (btnExportDailySales) btnExportDailySales.classList.remove('hidden');
                 if (summaryCardsDailySales) summaryCardsDailySales.classList.remove('hidden');
@@ -5819,7 +5843,16 @@
 
                 const res = await fetch(url, { headers: getAuthHeaders() });
                 if (!res.ok) throw new Error('Gagal memuat nota customer');
-                const data = await res.json();
+                let data = await res.json();
+
+                // Khusus Role MARKETING: Hanya munculkan nota yang PENDING / belum lunas
+                if (currentUser && currentUser.role === 'MARKETING') {
+                    data = data.filter(item => {
+                        const sisa = Number(item.sisa_pembayaran !== undefined ? item.sisa_pembayaran : (item.total_amount - (item.paid_amount || 0)));
+                        const top = (item.top_status || item.invoice_status || item.status || '').toUpperCase();
+                        return sisa > 0 || top === 'PENDING' || top === 'GANTUNG';
+                    });
+                }
 
                 currentBillingCustomerInvoices = data.map(item => ({
                     ...item,
@@ -5858,7 +5891,10 @@
             const data = currentBillingCustomerInvoices;
 
             if (data.length === 0) {
-                body.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400">Tidak ada nota penjualan untuk customer ini pada rentang tanggal yang dipilih</td></tr>';
+                const emptyMsg = (currentUser && currentUser.role === 'MARKETING')
+                    ? 'Customer ini tidak memiliki nota pending (Semua transaksi sudah lunas atau belum ada nota).'
+                    : 'Tidak ada nota penjualan untuk customer ini pada rentang tanggal yang dipilih';
+                body.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-slate-400">${emptyMsg}</td></tr>`;
                 if (foot) foot.classList.add('hidden');
                 updateBillingTotalsUI(0, 0, 0, 0);
                 return;
