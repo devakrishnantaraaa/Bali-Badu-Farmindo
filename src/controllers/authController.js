@@ -12,9 +12,9 @@ async function registerUser(req, res) {
             return res.status(400).json({ error: 'Username, password, full_name, and role (ADMIN, SALES, GUDANG) are required' });
         }
 
-        const validRoles = ['SUPER_ADMIN', 'MARKETING'];
+        const validRoles = ['SUPER_ADMIN', 'ADMIN', 'MARKETING'];
         if (!validRoles.includes(role.toUpperCase())) {
-            return res.status(400).json({ error: 'Invalid role. Must be SUPER_ADMIN or MARKETING' });
+            return res.status(400).json({ error: 'Invalid role. Must be SUPER_ADMIN, ADMIN, or MARKETING' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -44,25 +44,48 @@ async function loginUser(req, res) {
         const cleanUsername = String(username).trim().toLowerCase();
         const cleanPassword = String(password).trim();
 
-        // 1. Auto-seed users jika tabel masih kosong
+        // 1. Auto-seed & sinkronisasi users jika belum ada
         try {
+            const defaultHash = await bcrypt.hash('123456', 10);
             const countUsers = await db.query('SELECT COUNT(*) FROM users');
             if (parseInt(countUsers.rows[0].count) === 0) {
-                const defaultHash = await bcrypt.hash('123456', 10);
                 await db.query(`
                     INSERT INTO users (username, password_hash, full_name, role) VALUES
-                    ('admin', $1, 'Super Admin Bali Badu', 'SUPER_ADMIN'),
+                    ('superadmin', $1, 'Super Admin Bali Badu', 'SUPER_ADMIN'),
+                    ('admin', $1, 'Admin Operasional', 'ADMIN'),
                     ('marketing1', $1, 'Tim Marketing Field', 'MARKETING')
                 `, [defaultHash]);
+            } else {
+                // Pastikan akun superadmin (SUPER_ADMIN) tersedia
+                const superRes = await db.query("SELECT id FROM users WHERE username = 'superadmin'");
+                if (superRes.rows.length === 0) {
+                    await db.query(
+                        "INSERT INTO users (username, password_hash, full_name, role) VALUES ('superadmin', $1, 'Super Admin Bali Badu', 'SUPER_ADMIN')",
+                        [defaultHash]
+                    );
+                }
+                // Pastikan akun admin (ADMIN) tersedia
+                const adminRes = await db.query("SELECT id, role FROM users WHERE username = 'admin'");
+                if (adminRes.rows.length === 0) {
+                    await db.query(
+                        "INSERT INTO users (username, password_hash, full_name, role) VALUES ('admin', $1, 'Admin Operasional', 'ADMIN')",
+                        [defaultHash]
+                    );
+                } else if (adminRes.rows[0].role !== 'ADMIN') {
+                    // Update role admin menjadi ADMIN jika sebelumnya SUPER_ADMIN
+                    await db.query(
+                        "UPDATE users SET role = 'ADMIN', full_name = 'Admin Operasional' WHERE username = 'admin'"
+                    );
+                }
             }
         } catch (e) {
             console.warn('Notice (auto-seed users check):', e.message);
         }
 
-        // 2. Cari user (toleransi alias super_admin / superadmin -> admin)
+        // 2. Cari user (toleransi alias super_admin -> superadmin)
         let targetUsername = cleanUsername;
-        if (cleanUsername === 'super_admin' || cleanUsername === 'superadmin' || cleanUsername === 'super admin') {
-            targetUsername = 'admin';
+        if (cleanUsername === 'super_admin' || cleanUsername === 'super admin') {
+            targetUsername = 'superadmin';
         }
 
         let userRes = await db.query('SELECT * FROM users WHERE username = $1', [targetUsername]);
@@ -72,7 +95,7 @@ async function loginUser(req, res) {
 
         if (userRes.rows.length === 0) {
             return res.status(401).json({ 
-                error: 'Username tidak terdaftar. Gunakan: admin (Password: 123456)' 
+                error: 'Username tidak terdaftar. Gunakan: superadmin (Super Admin) atau admin (Role Admin) dengan Password: 123456' 
             });
         }
 

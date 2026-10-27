@@ -29,6 +29,11 @@ async function runAutoMigrations() {
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS transfer_date DATE');
     await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT');
     await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes TEXT');
+    try {
+      await pool.query("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'");
+    } catch (eRole) {
+      // Ignore if already added or not supported
+    }
   } catch (err) {
     console.warn('Notice (transfer_date/notes column check):', err.message);
   }

@@ -17,40 +17,44 @@ router.post('/auth/login', authController.loginUser);
 // All protected routes below require valid JWT token
 router.use(authenticateToken);
 
-// Customers (Access: SUPER_ADMIN & MARKETING)
-router.get('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.getCustomers);
-router.post('/customers', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.createCustomer);
-router.put('/customers/:id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), customerController.updateCustomer);
+// Customers (Access: SUPER_ADMIN, ADMIN, & MARKETING)
+router.get('/customers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.getCustomers);
+router.post('/customers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.createCustomer);
+router.put('/customers/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.updateCustomer);
 router.delete('/customers/:id', authorizeRoles('SUPER_ADMIN'), customerController.deleteCustomer);
 
-// Products & Stock (Access: SUPER_ADMIN can input stock, edit & delete products, adjustments, MARKETING can view)
-router.get('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getProducts);
-router.post('/products', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.createProduct);
-router.put('/products/:id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.updateProduct);
+// Products & Stock (Access: SUPER_ADMIN & ADMIN can create/edit, MARKETING can view)
+router.get('/products', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), stockController.getProducts);
+router.post('/products', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.createProduct);
+router.put('/products/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.updateProduct);
 router.delete('/products/:id', authorizeRoles('SUPER_ADMIN'), stockController.deleteProduct);
-router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN'), stockController.recordIncomingGoods);
+
+// Pembelian / Barang Masuk (Access: SUPER_ADMIN & ADMIN)
+router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.recordIncomingGoods);
+
+// Kartu Stok (Audit adjustment: SUPER_ADMIN only, Read ledger: SUPER_ADMIN, ADMIN, MARKETING)
 router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN'), stockController.recordStockAdjustment);
-router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.getStockLedger);
-router.put('/stock/ledger/:id/notes', authorizeRoles('SUPER_ADMIN', 'MARKETING'), stockController.updateStockLedgerNotes);
+router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), stockController.getStockLedger);
+router.put('/stock/ledger/:id/notes', authorizeRoles('SUPER_ADMIN'), stockController.updateStockLedgerNotes);
 router.delete('/stock/ledger/:id', authorizeRoles('SUPER_ADMIN'), stockController.deleteStockMovement);
 
 // Sales Orders & Credit Check (Access: SUPER_ADMIN & MARKETING)
 router.post('/orders', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.createOrder);
-router.post('/orders/import-daily-sales', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.importDailySales);
-router.delete('/orders/:order_id', authorizeRoles('SUPER_ADMIN', 'MARKETING'), orderController.deleteOrderById);
+router.post('/orders/import-daily-sales', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), orderController.importDailySales);
+router.delete('/orders/:order_id', authorizeRoles('SUPER_ADMIN'), orderController.deleteOrderById);
 
 // Payments & Deposit Validation
-router.post('/payments', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.submitPayment);
+router.post('/payments', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), paymentController.submitPayment);
 router.get('/payments/pending', authorizeRoles('SUPER_ADMIN'), paymentController.getPendingPayments);
 router.post('/payments/:payment_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validatePayment);
-router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validateInvoiceDirectly);
-router.put('/invoices/:invoice_id/fields', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.updateInvoiceFields);
+router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN', 'ADMIN'), paymentController.validateInvoiceDirectly);
+router.put('/invoices/:invoice_id/fields', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), paymentController.updateInvoiceFields);
 
-// Reports & Financial Debts (Access: SUPER_ADMIN & MARKETING)
-router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getDailySales);
+// Reports & Financial Debts
+router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), reportController.getDailySales);
 router.get('/reports/daily-deposits', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getDailyDeposits);
 router.get('/reports/monthly-recap', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getMonthlyRecap);
-router.get('/reports/outstanding-debts', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getOutstandingDebts);
+router.get('/reports/outstanding-debts', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), reportController.getOutstandingDebts);
 router.get('/reports/inventory-global', authorizeRoles('SUPER_ADMIN', 'MARKETING'), reportController.getGlobalInventoryReport);
 
 // System Utility: Reset Riwayat Transaksi (Access: SUPER_ADMIN only)

@@ -458,11 +458,12 @@
                 </button>
             </form>
 
-            <div class="border-t border-slate-200 pt-4 text-center">
-                <p class="text-[11px] text-slate-500 font-medium">Akun login default:</p>
-                <div class="mt-2 flex flex-col sm:flex-row justify-center gap-1.5 text-[11px] text-slate-700 font-mono">
-                    <span class="bg-amber-50 px-2.5 py-1 rounded border border-amber-200 font-bold">User: <span class="text-amber-800">admin</span></span>
-                    <span class="bg-amber-50 px-2.5 py-1 rounded border border-amber-200 font-bold">Pass: <span class="text-amber-800">123456</span></span>
+            <div class="border-t border-slate-200 pt-3 text-center">
+                <p class="text-[11px] text-slate-500 font-medium mb-1.5">Pilihan akun login (Password: <span class="font-mono font-bold text-slate-800">123456</span>):</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-1.5 text-[10px] font-mono">
+                    <span class="bg-purple-50 px-2 py-1 rounded border border-purple-200 text-purple-900 font-bold" title="Akses Seluruh Menu">User: <span class="text-purple-700">superadmin</span> (Super Admin)</span>
+                    <span class="bg-amber-50 px-2 py-1 rounded border border-amber-200 text-amber-900 font-bold" title="Akses Khusus Admin Kantor">User: <span class="text-amber-700">admin</span> (Admin)</span>
+                    <span class="bg-blue-50 px-2 py-1 rounded border border-blue-200 text-blue-900 font-bold" title="Akses Sales Lapangan">User: <span class="text-blue-700">marketing1</span> (Marketing)</span>
                 </div>
             </div>
         </div>
@@ -1403,7 +1404,7 @@
                                 class="hidden text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1.5 rounded font-bold border border-rose-200 items-center gap-1">
                                 <span>🧹</span> Reset Filter
                             </button>
-                            <button onclick="showAdjustmentModal()"
+                            <button id="btnOpenStockAudit" onclick="showAdjustmentModal()"
                                 class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
                                 + Input Audit / Rusak / Fisik
                             </button>
@@ -1834,6 +1835,21 @@
         });
 
         function switchTab(tabName) {
+            // Validasi hak akses tab berdasarkan Role
+            if (currentUser && currentUser.role === 'ADMIN') {
+                const adminAllowed = ['customer', 'product', 'daily-sales', 'invoice', 'stock', 'ledger', 'debts'];
+                if (!adminAllowed.includes(tabName)) {
+                    showAlert('Akses ditolak: Menu ini tidak dapat diakses oleh Role Admin.', true);
+                    return;
+                }
+            } else if (currentUser && currentUser.role === 'MARKETING') {
+                const marketingAllowed = ['sales', 'customer', 'daily-sales', 'debts'];
+                if (!marketingAllowed.includes(tabName)) {
+                    showAlert('Akses ditolak: Menu ini hanya untuk staf Admin / Super Admin.', true);
+                    return;
+                }
+            }
+
             const tabs = ['dashboard', 'product', 'customer', 'sales', 'stock', 'daily-sales', 'invoice', 'daily-deposits', 'monthly-recap', 'ledger', 'inventory', 'debts'];
             tabs.forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
@@ -2034,34 +2050,45 @@
             if (roleBadge) roleBadge.innerText = currentUser.role;
 
             const mobileNavbar = document.getElementById('mobileNavbar');
-            const navDashboard = document.getElementById('nav-dashboard');
-            const navStock = document.getElementById('nav-stock');
-            const navCustomer = document.getElementById('nav-customer');
-            const navSales = document.getElementById('nav-sales');
+            const allNavIds = ['dashboard', 'product', 'customer', 'sales', 'stock', 'daily-sales', 'invoice', 'daily-deposits', 'monthly-recap', 'ledger', 'inventory', 'debts'];
+            const btnOpenStockAudit = document.getElementById('btnOpenStockAudit');
 
             if (currentUser.role === 'MARKETING') {
-                // MARKETING ROLE (Sales Mobile Mode):
-                // Hide admin-only tabs
-                if (navDashboard) navDashboard.classList.add('hidden');
-                if (navStock) navStock.classList.add('hidden');
-
-                // Show Mobile Bottom Nav Bar
+                // MARKETING ROLE (Sales Lapangan):
+                const marketingAllowed = ['sales', 'customer', 'daily-sales', 'debts'];
+                allNavIds.forEach(id => {
+                    const nav = document.getElementById(`nav-${id}`);
+                    if (nav) {
+                        if (marketingAllowed.includes(id)) nav.classList.remove('hidden');
+                        else nav.classList.add('hidden');
+                    }
+                });
+                if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
                 if (mobileNavbar) mobileNavbar.classList.remove('hidden');
-
-                // Auto switch to Sales Form view
                 switchTab('sales');
-            } else {
-                // SUPER_ADMIN ROLE (Back Office Admin Mode):
-                // Show all admin tabs
-                if (navDashboard) navDashboard.classList.remove('hidden');
-                if (navStock) navStock.classList.remove('hidden');
-                if (navCustomer) navCustomer.classList.remove('hidden');
-                if (navSales) navSales.classList.remove('hidden');
-
-                // Hide Mobile Bottom Nav Bar on Admin mode
+            } else if (currentUser.role === 'ADMIN') {
+                // ADMIN ROLE:
+                // Akses: Customer, Produk, Rincian Penjualan, Cetak Invoice, Pembelian, Kartu Stok (view-only), Nota Pending
+                const adminAllowed = ['customer', 'product', 'daily-sales', 'invoice', 'stock', 'ledger', 'debts'];
+                allNavIds.forEach(id => {
+                    const nav = document.getElementById(`nav-${id}`);
+                    if (nav) {
+                        if (adminAllowed.includes(id)) nav.classList.remove('hidden');
+                        else nav.classList.add('hidden');
+                    }
+                });
+                // Sembunyikan tombol input audit di kartu stok untuk role Admin
+                if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
                 if (mobileNavbar) mobileNavbar.classList.add('hidden');
-
-                // Auto switch to Back Office Dashboard view
+                switchTab('daily-sales');
+            } else {
+                // SUPER_ADMIN ROLE (Back Office Penuh):
+                allNavIds.forEach(id => {
+                    const nav = document.getElementById(`nav-${id}`);
+                    if (nav) nav.classList.remove('hidden');
+                });
+                if (btnOpenStockAudit) btnOpenStockAudit.classList.remove('hidden');
+                if (mobileNavbar) mobileNavbar.classList.add('hidden');
                 switchTab('dashboard');
             }
         }
@@ -3636,6 +3663,10 @@
 
         // --- STOCK AUDIT & ADJUSTMENT MODAL ---
         function showAdjustmentModal() {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                showAlert('Role Admin hanya memiliki hak lihat (view-only) pada Kartu Stok.', true);
+                return;
+            }
             const formBox = document.getElementById('adjustmentFormBox');
             if (formBox) {
                 formBox.classList.remove('hidden');
@@ -3652,6 +3683,10 @@
 
         let isSubmittingAdjustment = false;
         async function submitStockAdjustment(btnEl) {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                showAlert('Role Admin tidak diizinkan mengubah stok audit.', true);
+                return;
+            }
             if (isSubmittingAdjustment) return;
             const btn = btnEl || document.querySelector('#adjustmentFormBox button.bg-emerald-600');
             const originalText = btn ? btn.innerHTML : 'Simpan Audit Stok';
@@ -3947,6 +3982,7 @@
                     }
 
                     // Keterangan dikosongkan secara default agar pengguna bisa mengisi manual catatan sendiri
+                    const isReadOnly = (currentUser && currentUser.role === 'ADMIN');
                     const storageKey = `stock_note_date_${currentProductVal}_${group.dateKey}`;
                     const savedNote = localStorage.getItem(storageKey);
                     let displayDesc = '';
@@ -3955,7 +3991,7 @@
                     }
                     const manualIdsJson = JSON.stringify(group.manualMovements.map(m => m.id));
 
-                    // Aksi tombol
+                    // Aksi tombol (Admin hanya bisa melihat rincian nota, tidak bisa hapus)
                     let actionsHtml = '';
                     if (salesCount > 0) {
                         actionsHtml += `
@@ -3966,7 +4002,7 @@
                             </button>
                         `;
                     }
-                    if (group.manualMovements.length > 0) {
+                    if (!isReadOnly && group.manualMovements.length > 0) {
                         group.manualMovements.forEach(m => {
                             actionsHtml += `
                                 <button onclick="confirmDeleteStockMovement(${m.id}, '${group.tglStr}', '${escapeHtml(group.product_name || '')}')"
@@ -3977,6 +4013,21 @@
                             `;
                         });
                     }
+
+                    const noteCellHtml = isReadOnly
+                        ? `<div class="px-2 py-1 text-xs text-slate-700 truncate font-normal" title="${escapeHtml(displayDesc)}">${escapeHtml(displayDesc) || '<span class="text-slate-300">-</span>'}</div>`
+                        : `
+                            <div class="relative flex items-center w-full">
+                                <input type="text"
+                                    class="w-full bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 text-xs text-slate-800 placeholder:text-slate-300 focus:outline-none transition shadow-none focus:shadow-xs"
+                                    placeholder="Ketik catatan..."
+                                    value="${escapeHtml(displayDesc)}"
+                                    onchange="saveLedgerDateNote('${group.dateKey}', '${currentProductVal}', this.value, this, ${manualIdsJson})"
+                                    onkeydown="if(event.key==='Enter') this.blur()"
+                                />
+                                <span id="saveStatus-date-${currentProductVal}-${group.dateKey}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
+                            </div>
+                        `;
 
                     return `
                         <tr class="hover:bg-amber-50/50 text-[11px] font-medium border-b border-slate-200 transition">
@@ -3989,16 +4040,7 @@
                             <td class="p-2 border border-slate-300 text-right font-bold text-purple-700">${group.adj !== 0 ? (group.adj > 0 ? `+${group.adj}` : group.adj) : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-black bg-blue-50 text-slate-900 text-xs">${group.sisa.toLocaleString('id-ID')}</td>
                             <td class="p-1 border border-slate-300">
-                                <div class="relative flex items-center w-full">
-                                    <input type="text"
-                                        class="w-full bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-slate-300 focus:border-amber-500 rounded px-2 py-1 text-xs text-slate-800 placeholder:text-slate-300 focus:outline-none transition shadow-none focus:shadow-xs"
-                                        placeholder="Ketik catatan..."
-                                        value="${escapeHtml(displayDesc)}"
-                                        onchange="saveLedgerDateNote('${group.dateKey}', '${currentProductVal}', this.value, this, ${manualIdsJson})"
-                                        onkeydown="if(event.key==='Enter') this.blur()"
-                                    />
-                                    <span id="saveStatus-date-${currentProductVal}-${group.dateKey}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
-                                </div>
+                                ${noteCellHtml}
                             </td>
                             <td class="p-1 border border-slate-300 text-center whitespace-nowrap">
                                 <div class="flex items-center justify-center gap-1">
@@ -4164,8 +4206,12 @@
             }).join('');
         }
 
-        // Hapus mutasi kartu stok secara manual
+        // Hapus mutasi kartu stok secara manual (Super Admin Only)
         async function confirmDeleteStockMovement(movementId, dateStr, productName) {
+            if (currentUser && currentUser.role !== 'SUPER_ADMIN') {
+                showAlert('Hanya Super Admin yang diizinkan menghapus baris mutasi kartu stok.', true);
+                return;
+            }
             if (!confirm(`Yakin ingin menghapus baris mutasi stok ${productName || ''} tanggal ${dateStr || ''} ini?\n\nSaldo stok dan sisa akhir produk akan dikalkulasi ulang secara otomatis.`)) {
                 return;
             }
@@ -4186,6 +4232,10 @@
 
         // Simpan catatan / keterangan manual kartu stok
         async function saveLedgerNote(movementId, newNote, inputEl) {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                showAlert('Role Admin hanya memiliki hak lihat (view-only) pada Kartu Stok.', true);
+                return;
+            }
             const noteVal = (newNote !== undefined && newNote !== null) ? String(newNote) : '';
             localStorage.setItem(`stock_note_${movementId}`, noteVal);
             const statusEl = document.getElementById(`saveStatus-${movementId}`);
@@ -4218,6 +4268,10 @@
 
         // Simpan catatan / keterangan kartu stok per tanggal dan per produk (terisolasi per produk)
         async function saveLedgerDateNote(dateKey, productKey, value, inputEl, movementIds = []) {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                showAlert('Role Admin hanya memiliki hak lihat (view-only) pada Kartu Stok.', true);
+                return;
+            }
             const noteVal = (value !== undefined && value !== null) ? String(value) : '';
             const prodKey = productKey || 'ALL';
             const storageKey = `stock_note_date_${prodKey}_${dateKey}`;
