@@ -47,8 +47,8 @@ router.delete('/orders/:order_id', authorizeRoles('SUPER_ADMIN'), orderControlle
 router.post('/payments', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), paymentController.submitPayment);
 router.get('/payments/pending', authorizeRoles('SUPER_ADMIN'), paymentController.getPendingPayments);
 router.post('/payments/:payment_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validatePayment);
-router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN', 'ADMIN'), paymentController.validateInvoiceDirectly);
-router.put('/invoices/:invoice_id/fields', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), paymentController.updateInvoiceFields);
+router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validateInvoiceDirectly);
+router.put('/invoices/:invoice_id/fields', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.updateInvoiceFields);
 
 // Reports & Financial Debts
 router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), reportController.getDailySales);

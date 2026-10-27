@@ -2911,6 +2911,8 @@
                     product_name: item.product_name || 'Telur Ayam Ras'
                 }).replace(/"/g, '&quot;');
 
+                const isAdmin = (currentUser && currentUser.role === 'ADMIN');
+
                 return `
                     <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
                         <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
@@ -2921,48 +2923,66 @@
                         <td class="p-2 border border-slate-300 text-right text-slate-700">${harga ? harga.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-slate-900">${total.toLocaleString('id-ID')}</td>
                         
-                        <!-- KOLOM TOP (BISA DIINPUT / DIPILIH LANGSUNG) -->
+                        <!-- KOLOM TOP (BISA DIINPUT / DIPILIH LANGSUNG, ATAU READ-ONLY JIKA ADMIN) -->
                         <td class="p-1.5 border border-slate-300 text-center">
-                            <select onchange="updateInvoiceInlineFields(${item.invoice_id}, this.value, null, null)"
-                                class="text-[10px] font-bold px-1.5 py-1 rounded border focus:outline-none cursor-pointer ${currentTop === 'LUNAS' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}">
-                                <option value="PENDING" ${currentTop === 'PENDING' ? 'selected' : ''}>PENDING</option>
-                                <option value="LUNAS" ${currentTop === 'LUNAS' ? 'selected' : ''}>LUNAS</option>
-                            </select>
+                            ${isAdmin ? `
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded border inline-block ${currentTop === 'LUNAS' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}">
+                                    ${currentTop}
+                                </span>
+                            ` : `
+                                <select onchange="updateInvoiceInlineFields(${item.invoice_id}, this.value, null, null)"
+                                    class="text-[10px] font-bold px-1.5 py-1 rounded border focus:outline-none cursor-pointer ${currentTop === 'LUNAS' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300'}">
+                                    <option value="PENDING" ${currentTop === 'PENDING' ? 'selected' : ''}>PENDING</option>
+                                    <option value="LUNAS" ${currentTop === 'LUNAS' ? 'selected' : ''}>LUNAS</option>
+                                </select>
+                            `}
                         </td>
 
                         <td class="p-2 border border-slate-300 text-right font-bold text-emerald-800 bg-amber-50/50">${paid > 0 ? paid.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-right font-bold text-rose-700">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
 
-                        <!-- KOLOM CEK / METODE (BISA DIINPUT / DIPILIH LANGSUNG) -->
+                        <!-- KOLOM CEK / METODE (BISA DIINPUT / DIPILIH LANGSUNG, ATAU READ-ONLY JIKA ADMIN) -->
                         <td class="p-1.5 border border-slate-300 text-center">
-                            <select onchange="updateInvoiceInlineFields(${item.invoice_id}, null, this.value, null)"
-                                class="text-[10px] font-semibold px-1 py-1 bg-slate-50 border border-slate-300 rounded focus:outline-none text-slate-800">
-                                <option value="-" ${!currentCek || currentCek === '-' ? 'selected' : ''}>-</option>
-                                <option value="Transfer" ${currentCek && currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>Transfer</option>
-                                <option value="Setor" ${currentCek && currentCek.toUpperCase() === 'SETOR' ? 'selected' : ''}>Setor</option>
-                                <option value="OK" ${currentCek && currentCek.toUpperCase() === 'OK' ? 'selected' : ''}>OK</option>
-                            </select>
+                            ${isAdmin ? `
+                                <span class="text-[11px] font-semibold text-slate-700">${currentCek || '-'}</span>
+                            ` : `
+                                <select onchange="updateInvoiceInlineFields(${item.invoice_id}, null, this.value, null)"
+                                    class="text-[10px] font-semibold px-1 py-1 bg-slate-50 border border-slate-300 rounded focus:outline-none text-slate-800">
+                                    <option value="-" ${!currentCek || currentCek === '-' ? 'selected' : ''}>-</option>
+                                    <option value="Transfer" ${currentCek && currentCek.toUpperCase() === 'TRANSFER' ? 'selected' : ''}>Transfer</option>
+                                    <option value="Setor" ${currentCek && currentCek.toUpperCase() === 'SETOR' ? 'selected' : ''}>Setor</option>
+                                    <option value="OK" ${currentCek && currentCek.toUpperCase() === 'OK' ? 'selected' : ''}>OK</option>
+                                </select>
+                            `}
                         </td>
 
-                        <!-- KOLOM TRANSFER / TGL SETOR (BISA DIINPUT LANGSUNG) -->
+                        <!-- KOLOM TRANSFER / TGL SETOR (BISA DIINPUT LANGSUNG, ATAU READ-ONLY JIKA ADMIN) -->
                         <td class="p-1.5 border border-slate-300 text-center">
-                            <input type="date" value="${transferDateVal}" onchange="updateInvoiceInlineFields(${item.invoice_id}, null, null, this.value)"
-                                class="text-[10px] bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none w-28">
+                            ${isAdmin ? `
+                                <span class="text-[11px] text-slate-700 whitespace-nowrap">${transferDateVal || '-'}</span>
+                            ` : `
+                                <input type="date" value="${transferDateVal}" onchange="updateInvoiceInlineFields(${item.invoice_id}, null, null, this.value)"
+                                    class="text-[10px] bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none w-28">
+                            `}
                         </td>
 
-                        <!-- KOLOM KETERANGAN / NOTE (BISA DIINPUT MANUAL ANGKA MAUPUN HURUF) -->
+                        <!-- KOLOM KETERANGAN / NOTE (BISA DIINPUT MANUAL, ATAU READ-ONLY JIKA ADMIN) -->
                         <td class="p-1 border border-slate-300 text-center min-w-[130px]">
-                            <div class="relative flex items-center w-full">
-                                <input type="text"
-                                    class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-amber-500 rounded px-2 py-1 text-[11px] text-slate-800 placeholder:text-slate-400 focus:outline-none transition shadow-none focus:ring-1 focus:ring-amber-400"
-                                    placeholder="Tulis note..."
-                                    value="${escapeHtml(displayNote)}"
-                                    onchange="updateDailySalesNote(${item.invoice_id}, this.value, this)"
-                                    onkeydown="if(event.key==='Enter') this.blur()"
-                                    title="Klik untuk input catatan / keterangan (angka maupun huruf)"
-                                />
-                                <span id="saveNoteStatus-${item.invoice_id}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
-                            </div>
+                            ${isAdmin ? `
+                                <span class="text-[11px] text-slate-700 font-medium px-2 py-1 block">${escapeHtml(displayNote) || '-'}</span>
+                            ` : `
+                                <div class="relative flex items-center w-full">
+                                    <input type="text"
+                                        class="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-amber-500 rounded px-2 py-1 text-[11px] text-slate-800 placeholder:text-slate-400 focus:outline-none transition shadow-none focus:ring-1 focus:ring-amber-400"
+                                        placeholder="Tulis note..."
+                                        value="${escapeHtml(displayNote)}"
+                                        onchange="updateDailySalesNote(${item.invoice_id}, this.value, this)"
+                                        onkeydown="if(event.key==='Enter') this.blur()"
+                                        title="Klik untuk input catatan / keterangan (angka maupun huruf)"
+                                    />
+                                    <span id="saveNoteStatus-${item.invoice_id}" class="hidden absolute right-1.5 text-emerald-600 text-[10px] font-bold pointer-events-none bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">✓</span>
+                                </div>
+                            `}
                         </td>
 
                         <td class="p-2 border border-slate-300 text-center whitespace-nowrap">
@@ -2971,13 +2991,13 @@
                                     class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Cetak / Simpan Struk Nota (Format JPG)">
                                     🧾 Struk
                                 </button>
-                                ${sisa > 0 ? `
+                                ${(!isAdmin && sisa > 0) ? `
                                 <button onclick="validateDirectInvoice(${item.invoice_id}, '${item.customer_name}', ${sisa})" 
                                     class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Validasi Lunas">
                                     ✅ Validasi
                                 </button>
                                 ` : ''}
-                                ${(currentUser && currentUser.role === 'SUPER_ADMIN') ? `
+                                ${(!isAdmin && currentUser && currentUser.role === 'SUPER_ADMIN') ? `
                                 <button onclick="confirmDeleteSalesOrder(${item.order_id}, '${item.invoice_number}', '${item.customer_name}', ${total})" 
                                     class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Hapus Transaksi Nota">
                                     🗑️ Hapus
@@ -3022,6 +3042,10 @@
         }
 
         async function updateInvoiceInlineFields(invoiceId, topStatus, paymentMethod, transferDate) {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                showAlert('Akses ditolak: Role Admin tidak memiliki izin untuk mengedit rincian penjualan.', true);
+                return;
+            }
             try {
                 const payload = {};
                 if (topStatus) payload.top_status = topStatus;
@@ -3049,6 +3073,9 @@
 
         // Simpan catatan / note manual (angka maupun huruf) pada Rekap Penjualan Harian
         async function updateDailySalesNote(invoiceId, noteVal, inputEl) {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                return;
+            }
             const cleanVal = (noteVal !== undefined && noteVal !== null) ? String(noteVal) : '';
             localStorage.setItem(`sales_note_${invoiceId}`, cleanVal);
             const statusEl = document.getElementById(`saveNoteStatus-${invoiceId}`);
@@ -4643,6 +4670,10 @@
         }
 
         async function validateDirectInvoice(invoice_id, customerName, sisa) {
+            if (currentUser && currentUser.role === 'ADMIN') {
+                showAlert('Akses ditolak: Role Admin tidak memiliki izin untuk memvalidasi transaksi.', true);
+                return;
+            }
             if (!confirm(`Konfirmasi pelunasan setoran untuk ${customerName} sebesar Rp ${Number(sisa).toLocaleString('id-ID')}?`)) {
                 return;
             }
