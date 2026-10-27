@@ -1116,7 +1116,7 @@
                                 class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition">
                                 📤 Import Excel
                             </button>
-                            <button onclick="exportTableToExcel('dailySalesTable', 'Rekap_Penjualan_Harian')"
+                            <button id="btnExportExcelDailySales" onclick="exportTableToExcel('dailySalesTable', 'Rekap_Penjualan_Harian')"
                                 class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition">
                                 📥 Tarik Excel
                             </button>
@@ -1124,7 +1124,7 @@
                     </div>
 
                     <!-- Summary Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div id="dailySalesSummaryCards" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
                             <div class="text-[11px] font-semibold text-slate-500 uppercase">Total Transaksi</div>
                             <div id="dailySalesCount" class="text-xl font-bold text-slate-900">0 Nota</div>
@@ -2053,6 +2053,10 @@
             const allNavIds = ['dashboard', 'product', 'customer', 'sales', 'stock', 'daily-sales', 'invoice', 'daily-deposits', 'monthly-recap', 'ledger', 'inventory', 'debts'];
             const btnOpenStockAudit = document.getElementById('btnOpenStockAudit');
 
+            const btnExportDailySales = document.getElementById('btnExportExcelDailySales');
+            const summaryCardsDailySales = document.getElementById('dailySalesSummaryCards');
+            const footDailySales = document.getElementById('dailySalesFoot');
+
             if (currentUser.role === 'MARKETING') {
                 // MARKETING ROLE (Sales Lapangan):
                 const marketingAllowed = ['sales', 'customer', 'daily-sales', 'debts'];
@@ -2064,6 +2068,9 @@
                     }
                 });
                 if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
+                if (btnExportDailySales) btnExportDailySales.classList.remove('hidden');
+                if (summaryCardsDailySales) summaryCardsDailySales.classList.remove('hidden');
+                if (footDailySales) footDailySales.classList.remove('hidden');
                 if (mobileNavbar) mobileNavbar.classList.remove('hidden');
                 switchTab('sales');
             } else if (currentUser.role === 'ADMIN') {
@@ -2079,6 +2086,12 @@
                 });
                 // Sembunyikan tombol input audit di kartu stok untuk role Admin
                 if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
+
+                // Tampilan khusus Rekap Penjualan untuk Admin: sembunyikan Tarik Excel, Cards Omset/Total, & Footer Total
+                if (btnExportDailySales) btnExportDailySales.classList.add('hidden');
+                if (summaryCardsDailySales) summaryCardsDailySales.classList.add('hidden');
+                if (footDailySales) footDailySales.classList.add('hidden');
+
                 if (mobileNavbar) mobileNavbar.classList.add('hidden');
                 switchTab('daily-sales');
             } else {
@@ -2088,6 +2101,9 @@
                     if (nav) nav.classList.remove('hidden');
                 });
                 if (btnOpenStockAudit) btnOpenStockAudit.classList.remove('hidden');
+                if (btnExportDailySales) btnExportDailySales.classList.remove('hidden');
+                if (summaryCardsDailySales) summaryCardsDailySales.classList.remove('hidden');
+                if (footDailySales) footDailySales.classList.remove('hidden');
                 if (mobileNavbar) mobileNavbar.classList.add('hidden');
                 switchTab('dashboard');
             }
@@ -2937,19 +2953,28 @@
                                     ✅ Validasi
                                 </button>
                                 ` : ''}
+                                ${(currentUser && currentUser.role === 'SUPER_ADMIN') ? `
                                 <button onclick="confirmDeleteSalesOrder(${item.order_id}, '${item.invoice_number}', '${item.customer_name}', ${total})" 
                                     class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold text-[10px] shadow-sm flex items-center justify-center gap-0.5 transition" title="Hapus Transaksi Nota">
                                     🗑️ Hapus
                                 </button>
+                                ` : ''}
                             </div>
                         </td>
                     </tr>
                 `;
             }).join('') || '<tr><td colspan="14" class="p-4 text-center text-slate-400">Tidak ada transaksi penjualan pada filter ini</td></tr>';
 
-            // Render Footer Totals Row
+            // Render Footer Totals Row (Sembunyikan untuk role ADMIN)
             const foot = document.getElementById('dailySalesFoot');
-            foot.innerHTML = `
+            if (currentUser && currentUser.role === 'ADMIN') {
+                if (foot) {
+                    foot.innerHTML = '';
+                    foot.classList.add('hidden');
+                }
+            } else if (foot) {
+                foot.classList.remove('hidden');
+                foot.innerHTML = `
                 <tr>
                     <td colspan="3" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
                     <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalQty.toLocaleString('id-ID')}</td>
@@ -2965,6 +2990,7 @@
                     <td class="p-2 border border-slate-400"></td>
                 </tr>
             `;
+            }
 
             // Hubungkan filter kolom model Excel
             initExcelTableFilters('dailySalesTable');
@@ -5594,7 +5620,13 @@
                 if (revEl) revEl.innerText = `Rp ${totalAmount.toLocaleString('id-ID')}`;
 
                 const foot = document.getElementById('dailySalesFoot');
-                if (foot) {
+                if (currentUser && currentUser.role === 'ADMIN') {
+                    if (foot) {
+                        foot.innerHTML = '';
+                        foot.classList.add('hidden');
+                    }
+                } else if (foot) {
+                    foot.classList.remove('hidden');
                     foot.innerHTML = `
                         <tr>
                             <td colspan="3" class="p-2 border border-slate-400 text-center uppercase tracking-wider font-extrabold">TOTAL (TERFILTER)</td>
