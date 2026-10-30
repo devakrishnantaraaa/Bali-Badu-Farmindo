@@ -297,12 +297,74 @@ async function updateInvoiceFields(req, res) {
     }
 }
 
+// Bulk Update Setoran (Ubah CEK ke Setor & set transfer_date untuk banyak nota sekaligus)
+async function bulkUpdateDeposits(req, res) {
+    const client = await db.getClient();
+    try {
+        const { invoice_ids, payment_method = 'Setor', transfer_date } = req.body;
+
+        if (!Array.isArray(invoice_ids) || invoice_ids.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada nota yang dipilih.' });
+        }
+
+        const targetTransferDate = transfer_date ? transfer_date : new Date().toISOString().split('T')[0];
+        const cleanMethod = (payment_method && payment_method.trim()) ? payment_method.trim() : 'Setor';
+
+        await client.query('BEGIN');
+
+        // 1. Update transfer_date pada invoices
+        await client.query(
+            `UPDATE invoices 
+             SET transfer_date = $1, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = ANY($2::int[])`,
+            [targetTransferDate, invoice_ids]
+        );
+
+        // 2. Update existing payments for these invoices (ubah payment_method ke 'Setor' & update tanggal)
+        await client.query(
+            `UPDATE payments 
+             SET payment_method = $1, created_at = $2, is_validated = TRUE 
+             WHERE invoice_id = ANY($3::int[])`,
+            [cleanMethod, new Date(targetTransferDate), invoice_ids]
+        );
+
+        // 3. Jaga-jaga jika ada invoice terpilih yang belum punya row di payments
+        const unpaidInvoices = await client.query(
+            `SELECT i.id, i.customer_id, i.amount_due 
+             FROM invoices i 
+             WHERE i.id = ANY($1::int[]) 
+               AND NOT EXISTS (SELECT 1 FROM payments p WHERE p.invoice_id = i.id)`,
+            [invoice_ids]
+        );
+
+        for (const row of unpaidInvoices.rows) {
+            const payNum = `PAY-${Date.now()}-${row.id}`;
+            await client.query(
+                `INSERT INTO payments (payment_number, invoice_id, customer_id, amount, payment_method, is_validated, validated_at, created_at)
+                 VALUES ($1, $2, $3, $4, $5, TRUE, CURRENT_TIMESTAMP, $6)`,
+                [payNum, row.id, row.customer_id, row.amount_due, cleanMethod, new Date(targetTransferDate)]
+            );
+        }
+
+        await client.query('COMMIT');
+
+        return res.json({
+            message: `Berhasil mengubah ${invoice_ids.length} transaksi menjadi "${cleanMethod}" dengan tanggal transfer ${targetTransferDate}!`,
+            updated_count: invoice_ids.length
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: error.message });
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     submitPayment,
     validatePayment,
     getPendingPayments,
     validateInvoiceDirectly,
-    updateInvoiceFields
+    updateInvoiceFields,
+    bulkUpdateDeposits
 };
-
-

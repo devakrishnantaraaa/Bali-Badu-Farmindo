@@ -1255,6 +1255,11 @@
                         class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
                         <h3 class="text-base font-bold text-slate-900">Rekap Setoran Harian (Cash & Bank Transfer)</h3>
                         <div class="flex items-center gap-2">
+                            <button id="btnBulkDeposit" onclick="openBulkDepositModal()"
+                                class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1.5 transition">
+                                <span>⚡ Tandai Sudah Setor</span>
+                                <span id="badgeSelectedDepositsCount" class="bg-blue-800 text-white text-[10px] px-1.5 py-0.5 rounded-full hidden">0 dipilih</span>
+                            </button>
                             <button onclick="exportTableToExcel('dailyDepositsTable', 'Rekap_Setoran_Harian')"
                                 class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded shadow-sm flex items-center gap-1">
                                 📥 Tarik Excel
@@ -1267,6 +1272,9 @@
                             <thead
                                 class="bg-amber-100 text-slate-800 sticky top-0 border-b border-slate-400 font-bold uppercase text-[11px] whitespace-nowrap">
                                 <tr>
+                                    <th class="p-2 border border-slate-300 text-center w-10">
+                                        <input type="checkbox" id="checkAllDailyDeposits" onchange="toggleSelectAllDailyDeposits(this)" class="rounded text-amber-500 cursor-pointer" title="Pilih Semua">
+                                    </th>
                                     <th class="p-2 border border-slate-300">PERIODE</th>
                                     <th class="p-2 border border-slate-300">TGL</th>
                                     <th class="p-2 border border-slate-300">NAMA CUSTOMER</th>
@@ -2946,6 +2954,14 @@
 
                 return `
                     <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 text-center">
+                            <input type="checkbox" class="daily-deposit-checkbox rounded text-amber-500 cursor-pointer" 
+                                value="${item.invoice_id}" 
+                                data-amount="${depositAmt}" 
+                                data-customer="${escapeHtml(item.customer_name)}"
+                                data-total="${totalNota}"
+                                onchange="updateSelectedDepositsCounter()">
+                        </td>
                         <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
                         <td class="p-2 border border-slate-300 text-slate-700 whitespace-nowrap">${tglStr}</td>
                         <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.customer_name}</td>
@@ -3051,7 +3067,7 @@
                 foot.classList.remove('hidden');
                 foot.innerHTML = `
                 <tr>
-                    <td colspan="3" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
+                    <td colspan="4" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
                     <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalQty.toLocaleString('id-ID')}</td>
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
@@ -3667,6 +3683,14 @@
 
                 return `
                     <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
+                        <td class="p-2 border border-slate-300 text-center">
+                            <input type="checkbox" class="daily-deposit-checkbox rounded text-amber-500 cursor-pointer" 
+                                value="${item.invoice_id}" 
+                                data-amount="${depositAmt}" 
+                                data-customer="${escapeHtml(item.customer_name)}"
+                                data-total="${totalNota}"
+                                onchange="updateSelectedDepositsCounter()">
+                        </td>
                         <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
                         <td class="p-2 border border-slate-300 text-slate-700">${tglNotaStr}</td>
                         <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.customer_name}</td>
@@ -3679,12 +3703,12 @@
                         <td class="p-2 border border-slate-300 text-right font-bold text-slate-400">${sisa > 0 ? sisa.toLocaleString('id-ID') : '-'}</td>
                     </tr>
                 `;
-            }).join('') || '<tr><td colspan="10" class="p-4 text-center text-slate-400">Tidak ada setoran dengan status CEK: OK</td></tr>';
+            }).join('') || '<tr><td colspan="11" class="p-4 text-center text-slate-400">Tidak ada setoran dengan status CEK: OK</td></tr>';
 
             const foot = document.getElementById('dailyDepositsFoot');
             foot.innerHTML = `
                 <tr>
-                    <td colspan="3" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
+                    <td colspan="4" class="p-2 border border-slate-400 text-center uppercase tracking-wider">TOTAL</td>
                     <td class="p-2 border border-slate-400 text-right text-slate-900 font-black">${totalQty.toLocaleString('id-ID')}</td>
                     <td class="p-2 border border-slate-400"></td>
                     <td class="p-2 border border-slate-400"></td>
@@ -3698,7 +3722,155 @@
             // Hubungkan filter kolom model Excel
             initExcelTableFilters('dailyDepositsTable');
             applyExcelFilters('dailyDepositsTable');
+            const master = document.getElementById('checkAllDailyDeposits');
+            if (master) { master.checked = false; master.indeterminate = false; }
+            updateSelectedDepositsCounter();
         }
+
+        function toggleSelectAllDailyDeposits(masterEl) {
+            const checkboxes = document.querySelectorAll('.daily-deposit-checkbox');
+            checkboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (row && row.style.display !== 'none') {
+                    cb.checked = masterEl.checked;
+                }
+            });
+            updateSelectedDepositsCounter();
+        }
+
+        function updateSelectedDepositsCounter() {
+            const checked = document.querySelectorAll('.daily-deposit-checkbox:checked');
+            const badge = document.getElementById('badgeSelectedDepositsCount');
+            const master = document.getElementById('checkAllDailyDeposits');
+            const allVisible = Array.from(document.querySelectorAll('.daily-deposit-checkbox')).filter(cb => {
+                const row = cb.closest('tr');
+                return row && row.style.display !== 'none';
+            });
+
+            if (badge) {
+                if (checked.length > 0) {
+                    badge.innerText = `${checked.length} dipilih`;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            if (master) {
+                if (allVisible.length > 0 && checked.length === allVisible.length) {
+                    master.checked = true;
+                    master.indeterminate = false;
+                } else if (checked.length > 0) {
+                    master.checked = false;
+                    master.indeterminate = true;
+                } else {
+                    master.checked = false;
+                    master.indeterminate = false;
+                }
+            }
+        }
+
+        function openBulkDepositModal() {
+            let checked = Array.from(document.querySelectorAll('.daily-deposit-checkbox:checked'));
+            
+            if (checked.length === 0) {
+                const allCheckboxes = Array.from(document.querySelectorAll('.daily-deposit-checkbox')).filter(cb => {
+                    const row = cb.closest('tr');
+                    return row && row.style.display !== 'none';
+                });
+                if (allCheckboxes.length === 0) {
+                    showAlert('Tidak ada data setoran yang dapat diproses.', true);
+                    return;
+                }
+                allCheckboxes.forEach(cb => cb.checked = true);
+                updateSelectedDepositsCounter();
+                checked = allCheckboxes;
+            }
+
+            let totalNominal = 0;
+            checked.forEach(cb => {
+                totalNominal += parseFloat(cb.dataset.amount || cb.dataset.total || 0);
+            });
+
+            document.getElementById('bulkDepositModalCount').innerText = `${checked.length} Nota Terpilih`;
+            document.getElementById('bulkDepositModalTotal').innerText = `Rp ${totalNominal.toLocaleString('id-ID')}`;
+
+            const dateInput = document.getElementById('bulkDepositTransferDate');
+            if (dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+            const cekSelect = document.getElementById('bulkDepositCekStatus');
+            if (cekSelect) {
+                cekSelect.value = 'Setor';
+            }
+
+            document.getElementById('bulkDepositModal').classList.remove('hidden');
+        }
+
+        function closeBulkDepositModal() {
+            document.getElementById('bulkDepositModal').classList.add('hidden');
+        }
+
+        async function executeBulkDeposit() {
+            const checked = Array.from(document.querySelectorAll('.daily-deposit-checkbox:checked'));
+            if (checked.length === 0) {
+                showAlert('Silakan pilih minimal 1 nota setoran!', true);
+                return;
+            }
+
+            const invoice_ids = checked.map(cb => parseInt(cb.value, 10)).filter(id => !isNaN(id));
+            const transfer_date = document.getElementById('bulkDepositTransferDate').value;
+            const payment_method = document.getElementById('bulkDepositCekStatus').value || 'Setor';
+
+            if (!transfer_date) {
+                showAlert('Silakan tentukan tanggal transfer / setoran!', true);
+                return;
+            }
+
+            const btn = document.getElementById('btnExecuteBulkDeposit');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ Memperbarui...</span>';
+
+            try {
+                const res = await fetch(`${API_BASE}/invoices/bulk-deposit`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        invoice_ids,
+                        transfer_date,
+                        payment_method
+                    })
+                });
+
+                const data = await safeJsonResponse(res);
+                if (!res.ok) throw new Error(data.error || data.message || 'Gagal memperbarui setoran masal');
+
+                closeBulkDepositModal();
+                showAlert(data.message || `Berhasil memperbarui ${invoice_ids.length} transaksi!`);
+
+                const master = document.getElementById('checkAllDailyDeposits');
+                if (master) {
+                    master.checked = false;
+                    master.indeterminate = false;
+                }
+
+                invalidateTabCache('daily-deposits');
+                invalidateTabCache('daily-sales');
+                invalidateTabCache('monthly-recap');
+                invalidateTabCache('debts');
+
+                await loadDailyDepositsReport();
+                if (typeof loadDailySalesReport === 'function') loadDailySalesReport();
+
+            } catch (err) {
+                showAlert(err.message, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
 
         async function loadMonthlyRecapReport() {
             const mEl = document.getElementById('filterMonthlyRecapMonth');
@@ -4947,6 +5119,13 @@
 
                 // 3. Bersihkan tombol aksi / tombol filter header dari clone agar hasil Excel bersih
                 clone.querySelectorAll('.excel-filter-btn, button').forEach(btn => btn.remove());
+                // Hapus kolom checkbox seleksi jika ada
+                const firstTh = clone.querySelector('thead tr th');
+                if (firstTh && firstTh.querySelector('input[type="checkbox"]')) {
+                    clone.querySelectorAll('tr').forEach(r => {
+                        if (r.children.length > 0) r.children[0].remove();
+                    });
+                }
 
                 // Hapus kolom AKSI jika ada di tabel (kolom tombol hapus/validasi)
                 const theadRow = clone.querySelector('thead tr');
@@ -6982,6 +7161,67 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL SETORAN MASAL (BULK DEPOSIT UPDATE) -->
+    <div id="bulkDepositModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 text-slate-900 space-y-4 animate-scaleUp">
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0 text-2xl font-bold">
+                    ⚡
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Konfirmasi Setoran Masal</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Tandai transaksi terpilih sebagai sudah disetor ke bank.</p>
+                </div>
+            </div>
+
+            <!-- Ringkasan Item Terpilih -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-600 font-semibold">
+                    <span>Nota Terpilih:</span>
+                    <span id="bulkDepositModalCount" class="font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded">0 Nota Terpilih</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-600 font-semibold">
+                    <span>Total Nominal Setoran:</span>
+                    <span id="bulkDepositModalTotal" class="font-black text-emerald-700 text-sm">Rp 0</span>
+                </div>
+            </div>
+
+            <!-- Form Input Tanggal & Status CEK -->
+            <div class="space-y-3 pt-1">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">📅 Tanggal Transfer / Setoran Bank:</label>
+                    <input type="date" id="bulkDepositTransferDate"
+                        class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-400">
+                    <span class="text-[11px] text-slate-400 mt-1 block">Akan otomatis mengisi kolom TRANSFER di Rincian Penjualan</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">🏷️ Ubah Kolom CEK Menjadi:</label>
+                    <select id="bulkDepositCekStatus"
+                        class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500">
+                        <option value="Setor" selected>Setor (Default)</option>
+                        <option value="Transfer">Transfer</option>
+                        <option value="OK">OK</option>
+                    </select>
+                    <span class="text-[11px] text-slate-400 mt-1 block">Setelah diubah ke "Setor", data akan hilang dari antrean setoran ini</span>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeBulkDepositModal()"
+                    class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">
+                    Batal
+                </button>
+                <button type="button" id="btnExecuteBulkDeposit" onclick="executeBulkDeposit()"
+                    class="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <span>💾 Simpan & Perbarui Penjualan</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

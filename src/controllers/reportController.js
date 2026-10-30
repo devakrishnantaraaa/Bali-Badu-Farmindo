@@ -83,6 +83,7 @@ async function getDailyDeposits(req, res) {
                 p.id AS payment_id,
                 p.payment_number,
                 c.name AS customer_name,
+                i.id AS invoice_id,
                 i.invoice_number,
                 p.amount AS setoran_amount,
                 p.payment_method,

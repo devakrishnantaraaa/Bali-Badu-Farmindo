@@ -49,6 +49,7 @@ router.get('/payments/pending', authorizeRoles('SUPER_ADMIN'), paymentController
 router.post('/payments/:payment_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validatePayment);
 router.post('/invoices/:invoice_id/validate', authorizeRoles('SUPER_ADMIN'), paymentController.validateInvoiceDirectly);
 router.put('/invoices/:invoice_id/fields', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.updateInvoiceFields);
+router.post('/invoices/bulk-deposit', authorizeRoles('SUPER_ADMIN', 'MARKETING'), paymentController.bulkUpdateDeposits);
 
 // Reports & Financial Debts
 router.get('/reports/daily-sales', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), reportController.getDailySales);
@@ -91,4 +92,3 @@ router.post('/system/reset-transactions', authorizeRoles('SUPER_ADMIN'), async (
 });
 
 module.exports = router;
-
