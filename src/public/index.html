@@ -5912,17 +5912,17 @@
                     `;
                 }
             } else if (tableId === 'stockLedgerTable') {
-                let totalIn = 0, totalOut = 0, totalDamaged = 0, totalPhysical = 0, totalAdj = 0, lastSisa = 0;
+                let totalIn = 0, totalOut = 0, totalDamaged = 0, totalAdj = 0, totalPhysical = 0, lastSisa = 0;
                 rows.forEach((r, idx) => {
                     const c = r.querySelectorAll('td');
-                    if (c.length >= 9) {
+                    if (c.length >= 8) {
                         totalIn += Number(c[1].innerText.replace(/\./g, '')) || 0;
                         totalOut += Number(c[3].innerText.replace(/\./g, '')) || 0;
                         totalDamaged += Number(c[4].innerText.replace(/\./g, '')) || 0;
-                        totalPhysical += Number(c[5].innerText.replace(/\./g, '')) || 0;
-                        const adjVal = c[6].innerText.replace('+', '').replace(/\./g, '');
+                        const adjVal = c[5].innerText.replace('+', '').replace(/\./g, '');
                         totalAdj += Number(adjVal) || 0;
-                        lastSisa = Number(c[7].innerText.replace(/\./g, '')) || 0;
+                        lastSisa = Number(c[6].innerText.replace(/\./g, '')) || 0;
+                        totalPhysical += Number(c[7].innerText.replace(/\./g, '')) || 0;
                     }
                 });
 
@@ -5935,9 +5935,9 @@
                             <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400 text-right text-amber-950 font-black">${totalOut > 0 ? totalOut.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-rose-950 font-black">${totalDamaged > 0 ? totalDamaged.toLocaleString('id-ID') : '-'}</td>
+                            <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${totalAdj !== 0 ? (totalAdj > 0 ? `+${totalAdj.toLocaleString('id-ID')}` : totalAdj.toLocaleString('id-ID')) : '-'}</td>
+                            <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-blue-200/80 text-xs">${lastSisa.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-400 text-right text-blue-950 font-black">${totalPhysical > 0 ? totalPhysical.toLocaleString('id-ID') : '-'}</td>
-                            <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${totalAdj !== 0 ? totalAdj.toLocaleString('id-ID') : '-'}</td>
-                            <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-blue-200/80">${lastSisa.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-400"></td>
                             <td class="p-2 border border-slate-400"></td>
                         </tr>
