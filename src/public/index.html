@@ -1499,9 +1499,9 @@
                                     <th class="p-2 border border-slate-300 text-right">HARGA</th>
                                     <th class="p-2 border border-slate-300 text-right text-amber-900">OUT / KRAT</th>
                                     <th class="p-2 border border-slate-300 text-right text-rose-700">RUSAK</th>
-                                    <th class="p-2 border border-slate-300 text-right text-blue-700">STOK FISIK</th>
                                     <th class="p-2 border border-slate-300 text-right text-purple-700">PENYESUAIAN</th>
                                     <th class="p-2 border border-slate-300 font-black bg-blue-100 text-right">SISA</th>
+                                    <th class="p-2 border border-slate-300 text-right text-blue-700">STOK FISIK</th>
                                     <th class="p-2 border border-slate-300">KETERANGAN</th>
                                     <th class="p-2 border border-slate-300 text-center">AKSI</th>
                                 </tr>
@@ -4118,11 +4118,7 @@
                     productBalances[pId] = 0;
                 }
 
-                if (phys !== null && item.movement_type === 'PENYESUAIAN') {
-                    productBalances[pId] = phys;
-                } else {
-                    productBalances[pId] += (inQty - outQty - damaged + adj);
-                }
+                productBalances[pId] += (inQty - outQty - damaged + adj);
 
                 const totalRunningSisa = Object.values(productBalances).reduce((acc, val) => acc + val, 0);
 
@@ -4316,9 +4312,9 @@
                             <td class="p-2 border border-slate-300 text-right text-slate-700">${group.harga > 0 ? group.harga.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-black text-amber-900 bg-amber-50/30">${group.outQty > 0 ? group.outQty.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-bold text-rose-700">${group.damaged > 0 ? group.damaged.toLocaleString('id-ID') : '-'}</td>
-                            <td class="p-2 border border-slate-300 text-right font-bold text-blue-700">${group.physical !== null ? group.physical.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-bold text-purple-700">${group.adj !== 0 ? (group.adj > 0 ? `+${group.adj}` : group.adj) : '-'}</td>
                             <td class="p-2 border border-slate-300 text-right font-black bg-blue-50 text-slate-900 text-xs">${group.sisa.toLocaleString('id-ID')}</td>
+                            <td class="p-2 border border-slate-300 text-right font-bold text-blue-700">${group.physical !== null ? group.physical.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-1 border border-slate-300">
                                 ${noteCellHtml}
                             </td>
@@ -4350,9 +4346,9 @@
                         <td class="p-2 border border-slate-400"></td>
                         <td class="p-2 border border-slate-400 text-right text-amber-950 font-black">${totalOut > 0 ? totalOut.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-400 text-right text-rose-950 font-black">${totalDamaged > 0 ? totalDamaged.toLocaleString('id-ID') : '-'}</td>
-                        <td class="p-2 border border-slate-400 text-right text-blue-950 font-black">${totalPhysical > 0 ? totalPhysical.toLocaleString('id-ID') : '-'}</td>
-                        <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${totalAdj !== 0 ? totalAdj.toLocaleString('id-ID') : '-'}</td>
+                        <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${totalAdj !== 0 ? (totalAdj > 0 ? `+${totalAdj.toLocaleString('id-ID')}` : totalAdj.toLocaleString('id-ID')) : '-'}</td>
                         <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-blue-200/80 text-xs">${latestSisa.toLocaleString('id-ID')}</td>
+                        <td class="p-2 border border-slate-400 text-right text-blue-950 font-black">${totalPhysical > 0 ? totalPhysical.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-400"></td>
                         <td class="p-2 border border-slate-400"></td>
                     </tr>
@@ -4731,7 +4727,13 @@
 
         function goToProductStockLedger(productId) {
             switchTab('ledger');
-            const sel = document.getElementById('filterStockLedgerProduct');
+            const sel = document.getElementById('filterLedgerProduct');
+            const wrapper = document.querySelector('.custom-select-wrapper[data-for="filterLedgerProduct"]');
+            if (wrapper && sel) {
+                const opt = sel.querySelector('option[value="' + productId + '"]');
+                const span = wrapper.querySelector('.custom-select-trigger span');
+                if (span && opt) span.textContent = opt.textContent;
+            }
             if (sel) {
                 sel.value = String(productId);
                 loadStockLedger();

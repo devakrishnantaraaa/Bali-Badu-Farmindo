@@ -22,17 +22,13 @@ async function recalibrateProductStock(clientOrDb, productId) {
             const dmg = parseFloat(m.damaged_qty) || 0;
             const adj = parseFloat(m.adjustment_qty) || 0;
 
-            if (m.physical_stock !== null && m.physical_stock !== undefined && m.movement_type === 'PENYESUAIAN') {
-                running = parseFloat(m.physical_stock);
-            } else {
-                if (m.movement_type === 'BARANG_MASUK') {
-                    running += q;
-                } else if (m.movement_type === 'PENJUALAN') {
-                    running -= q;
-                }
-                if (dmg > 0) running -= dmg;
-                if (adj !== 0) running += adj;
+            if (m.movement_type === 'BARANG_MASUK') {
+                running += q;
+            } else if (m.movement_type === 'PENJUALAN') {
+                running -= q;
             }
+            if (dmg > 0) running -= dmg;
+            if (adj !== 0) running += adj;
 
             if (parseFloat(m.balance_after) !== running) {
                 await clientOrDb.query('UPDATE stock_movements SET balance_after = $1 WHERE id = $2', [running, m.id]);
