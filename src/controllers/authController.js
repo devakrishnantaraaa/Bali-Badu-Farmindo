@@ -102,15 +102,8 @@ async function loginUser(req, res) {
         const user = userRes.rows[0];
         let isValid = await bcrypt.compare(cleanPassword, user.password_hash);
         
-        // Fallback pemulihan jika password 123456
-        if (!isValid && cleanPassword === '123456') {
-            const newHash = await bcrypt.hash('123456', 10);
-            await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
-            isValid = true;
-        }
-
         if (!isValid) {
-            return res.status(401).json({ error: 'Password salah. Gunakan password default: 123456' });
+            return res.status(401).json({ error: 'Password salah. Silakan periksa kembali password Anda.' });
         }
 
         // Generate JWT Token containing User ID & Role
@@ -136,7 +129,66 @@ async function loginUser(req, res) {
     }
 }
 
+
+// Change Password Controller (Setiap user dapat mengganti password akunnya sendiri)
+async function changePassword(req, res) {
+    try {
+        const userId = req.user && req.user.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Sesi login tidak valid. Silakan login kembali.' });
+        }
+
+        const { old_password, new_password, confirm_password } = req.body;
+
+        if (!old_password || !new_password) {
+            return res.status(400).json({ error: 'Password lama dan password baru wajib diisi.' });
+        }
+
+        const cleanOld = String(old_password).trim();
+        const cleanNew = String(new_password).trim();
+
+        if (cleanNew.length < 6) {
+            return res.status(400).json({ error: 'Password baru minimal harus 6 karakter.' });
+        }
+
+        if (confirm_password && cleanNew !== String(confirm_password).trim()) {
+            return res.status(400).json({ error: 'Konfirmasi password baru tidak cocok.' });
+        }
+
+        if (cleanOld === cleanNew) {
+            return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password lama.' });
+        }
+
+        // Cari user di database
+        const userRes = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Data akun tidak ditemukan.' });
+        }
+
+        const user = userRes.rows[0];
+
+        // Verifikasi password lama
+        const isMatch = await bcrypt.compare(cleanOld, user.password_hash);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Password lama yang Anda masukkan salah.' });
+        }
+
+        // Hash password baru & simpan
+        const newHash = await bcrypt.hash(cleanNew, 10);
+        await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, userId]);
+
+        return res.json({
+            success: true,
+            message: 'Password akun Anda berhasil diperbarui! Silakan gunakan password baru untuk login berikutnya.'
+        });
+    } catch (error) {
+        console.error('Error changePassword:', error);
+        return res.status(500).json({ error: 'Gagal memperbarui password: ' + error.message });
+    }
+}
+
 module.exports = {
     registerUser,
-    loginUser
+    loginUser,
+    changePassword
 };

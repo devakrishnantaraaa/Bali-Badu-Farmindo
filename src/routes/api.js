@@ -17,6 +17,9 @@ router.post('/auth/login', authController.loginUser);
 // All protected routes below require valid JWT token
 router.use(authenticateToken);
 
+// User Profile & Password (Tersedia untuk semua role akun)
+router.put('/auth/change-password', authController.changePassword);
+
 // Customers (Access: SUPER_ADMIN, ADMIN, & MARKETING)
 router.get('/customers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.getCustomers);
 router.post('/customers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.createCustomer);
