@@ -115,7 +115,7 @@ export default function Sidebar({
           <Egg className="w-5 h-5 fill-amber-500/20" />
         </div>
         <div className="overflow-hidden">
-          <h2 className="text-sm font-black text-white truncate">Bali Badu Farmindo</h2>
+          <h2 className="text-sm font-black text-white truncate">Dewata Jaya Supplier</h2>
           <p className="text-[10px] text-slate-400 truncate">Sistem Distribusi Telur</p>
         </div>
       </div>

@@ -84,7 +84,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-white">
           <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-semibold tracking-wide">Memuat Sistem Bali Badu Farmindo...</span>
+          <span className="text-sm font-semibold tracking-wide">Memuat Sistem Dewata Jaya Supplier...</span>
         </div>
       </div>
     );

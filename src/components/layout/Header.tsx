@@ -12,7 +12,7 @@ export default function Header({ title }: HeaderProps) {
       <div>
         <h1 className="text-base font-extrabold text-slate-900 leading-tight">{title}</h1>
         <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-          Sistem Distribusi & Operasional &bull; Bali Badu Farmindo
+          Sistem Distribusi & Operasional &bull; Dewata Jaya Supplier
         </span>
       </div>
       <div className="flex items-center gap-2">

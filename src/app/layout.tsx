@@ -3,7 +3,7 @@ import './globals.css';
 import Providers from './providers';
 
 export const metadata: Metadata = {
-  title: 'Bali Badu Farmindo - Distribusi & Inventori Telur',
+  title: 'Dewata Jaya Supplier - Distribusi & Inventori Telur',
   description: 'Sistem Operasional Distribusi, Penjualan, dan Kartu Stok Telur Modern',
 };
 

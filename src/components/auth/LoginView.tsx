@@ -54,7 +54,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
           <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
             <Egg className="w-8 h-8 fill-amber-500/20" />
           </div>
-          <h1 className="text-xl font-black text-white tracking-wide">Bali Badu Farmindo</h1>
+          <h1 className="text-xl font-black text-white tracking-wide">Dewata Jaya Supplier</h1>
           <p className="text-xs text-slate-400 mt-1">Sistem Distribusi, Penjualan & Kartu Stok Modern</p>
         </div>
 
