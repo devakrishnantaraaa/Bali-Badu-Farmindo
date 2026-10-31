@@ -6434,51 +6434,96 @@
             if (!currentReceiptData) return null;
             const r = currentReceiptData;
             const colWidth = 32;
-            const line = '-'.repeat(colWidth) + '\n';
+            const doubleLine = '='.repeat(colWidth) + '\n';
+            const singleLine = '-'.repeat(colWidth) + '\n';
             const ESC = 0x1b, GS = 0x1d;
             const encoder = new TextEncoder();
             const parts = [];
 
             function pad2Col(left, right) {
-                const l = left.substring(0, colWidth - right.length - 1);
+                const l = left.substring(0, Math.max(0, colWidth - right.length - 1));
                 const sp = Math.max(1, colWidth - l.length - right.length);
                 return l + ' '.repeat(sp) + right + '\n';
             }
 
-            parts.push([ESC, 0x40]); // init
+            // Init printer: ESC @
+            parts.push([ESC, 0x40]);
+
+            // Header Title: Double Height & Center
             parts.push([ESC, 0x61, 0x01]); // center
             parts.push([ESC, 0x21, 0x10]); // double height
             parts.push(encoder.encode('DEWATA JAYA SUPPLIER\n'));
-            parts.push([ESC, 0x21, 0x00]); // normal
-            parts.push(encoder.encode('Sistem Distribusi Telur\n'));
-            parts.push(encoder.encode(line));
 
+            // Normal font
+            parts.push([ESC, 0x21, 0x00]);
+            parts.push(encoder.encode('Distribusi Telur Segar Berkualitas\n'));
+            parts.push(encoder.encode('Telp / WA: +62 823-3903-3923\n'));
+            parts.push(encoder.encode(doubleLine));
+
+            // Meta Info Transaksi
             parts.push([ESC, 0x61, 0x00]); // left
-            parts.push(encoder.encode(pad2Col('No. Nota :', r.invoice_number || 'INV-001')));
-            parts.push(encoder.encode(pad2Col('Tanggal  :', r.order_date || r.date || '')));
-            parts.push(encoder.encode(pad2Col('Customer :', r.customer_name || 'Pelanggan')));
-            parts.push(encoder.encode(pad2Col('Sales    :', r.sales_name || 'Sales DJS')));
-            parts.push(encoder.encode(line));
+            const invNo = r.invoice_number || 'INV-001';
+            let tgl = r.order_date || r.date || '';
+            if (tgl && tgl.includes('T')) tgl = tgl.split('T')[0];
+            if (!tgl) tgl = new Date().toLocaleDateString('id-ID');
 
+            const cust = r.customer_name || 'Pelanggan';
+            const sales = r.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS');
+            const rawStatus = (r.payment_type || r.status || 'LUNAS').toUpperCase();
+            const isLunas = rawStatus.includes('LUNAS');
+            const statusLabel = isLunas ? 'LUNAS (CASH/TF)' : 'PENDING (TEMPO)';
+
+            parts.push(encoder.encode(pad2Col('No. Nota :', invNo)));
+            parts.push(encoder.encode(pad2Col('Tanggal  :', tgl)));
+            parts.push(encoder.encode(pad2Col('Sales    :', sales)));
+            parts.push(encoder.encode(pad2Col('Customer :', cust)));
+            parts.push(encoder.encode(pad2Col('Tipe TOP :', statusLabel)));
+
+            if (!isLunas && r.due_date) {
+                const dueStr = String(r.due_date).split('T')[0];
+                parts.push(encoder.encode(pad2Col('Tempo s/d:', dueStr)));
+            }
+
+            parts.push(encoder.encode(singleLine));
+
+            // Rincian Produk
             const pName = r.product_name || 'Telur Ayam Ras';
             const qty = Number(r.quantity || 0);
             const unit = r.unit || 'krat';
             const price = Number(r.unit_price || r.price || 0);
-            const total = Number(r.total_amount || r.total || 0);
-            const status = (r.payment_type || r.status || 'LUNAS').toUpperCase();
+            const total = Number(r.total_amount || r.total || (qty * price));
 
             parts.push(encoder.encode(pName + '\n'));
-            parts.push(encoder.encode(pad2Col(qty + ' ' + unit + ' x Rp ' + price.toLocaleString('id-ID'), 'Rp ' + total.toLocaleString('id-ID'))));
-            parts.push(encoder.encode(line));
+            parts.push(encoder.encode(pad2Col('  ' + qty + ' ' + unit + ' x Rp ' + price.toLocaleString('id-ID'), 'Rp ' + total.toLocaleString('id-ID'))));
+            parts.push(encoder.encode(singleLine));
 
+            // Total Section (Bold)
             parts.push([ESC, 0x45, 0x01]); // bold
-            parts.push(encoder.encode(pad2Col('TOTAL :', 'Rp ' + total.toLocaleString('id-ID'))));
-            parts.push(encoder.encode(pad2Col('STATUS:', status)));
+            parts.push(encoder.encode(pad2Col('TOTAL NOTA   :', 'Rp ' + total.toLocaleString('id-ID'))));
+            parts.push(encoder.encode(pad2Col('STATUS BAYAR :', isLunas ? 'LUNAS' : 'BELUM LUNAS')));
             parts.push([ESC, 0x45, 0x00]); // unbold
-            parts.push(encoder.encode(line));
 
+            parts.push(encoder.encode(doubleLine));
+
+            // Info Transfer Bank BCA
             parts.push([ESC, 0x61, 0x01]); // center
-            parts.push(encoder.encode('Terima kasih atas kerja samanya\n\n\n'));
+            parts.push(encoder.encode('Pembayaran Transfer Bank BCA:\n'));
+            parts.push([ESC, 0x45, 0x01]); // bold
+            parts.push(encoder.encode('1468924624 (Dewata Jaya Supplier)\n'));
+            parts.push([ESC, 0x45, 0x00]); // unbold
+
+            parts.push(encoder.encode(singleLine));
+            parts.push(encoder.encode('Simpan nota sbg bukti transaksi sah.\n'));
+            parts.push(encoder.encode('Terima Kasih Atas Kepercayaannya! 🙏\n'));
+            parts.push(encoder.encode(singleLine));
+
+            // Tanda Tangan Ringkas
+            parts.push([ESC, 0x61, 0x00]); // left
+            parts.push(encoder.encode('  Penerima,         Hormat Kami,\n\n\n'));
+            parts.push(encoder.encode('( ........... )   ( DJS Farmindo )\n'));
+            parts.push(encoder.encode('\n\n\n'));
+
+            // Potong Kertas
             parts.push([GS, 0x56, 0x41, 0x03]); // cut
 
             let len = 0;
