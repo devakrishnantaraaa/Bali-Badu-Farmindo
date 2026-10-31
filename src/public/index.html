@@ -6428,7 +6428,130 @@
         function closeBillingInvoicePrintModal() {
             document.getElementById('printBillingInvoiceModal').classList.add('hidden');
         }
-    </script>
+    
+        // --- PRINT THERMAL BLUETOOTH & RAWBT ---
+        function buildEscPosFromCurrentReceipt() {
+            if (!currentReceiptData) return null;
+            const r = currentReceiptData;
+            const colWidth = 32;
+            const line = '-'.repeat(colWidth) + '\n';
+            const ESC = 0x1b, GS = 0x1d;
+            const encoder = new TextEncoder();
+            const parts = [];
+
+            function pad2Col(left, right) {
+                const l = left.substring(0, colWidth - right.length - 1);
+                const sp = Math.max(1, colWidth - l.length - right.length);
+                return l + ' '.repeat(sp) + right + '\n';
+            }
+
+            parts.push([ESC, 0x40]); // init
+            parts.push([ESC, 0x61, 0x01]); // center
+            parts.push([ESC, 0x21, 0x10]); // double height
+            parts.push(encoder.encode('DEWATA JAYA SUPPLIER\n'));
+            parts.push([ESC, 0x21, 0x00]); // normal
+            parts.push(encoder.encode('Sistem Distribusi Telur\n'));
+            parts.push(encoder.encode(line));
+
+            parts.push([ESC, 0x61, 0x00]); // left
+            parts.push(encoder.encode(pad2Col('No. Nota :', r.invoice_number || 'INV-001')));
+            parts.push(encoder.encode(pad2Col('Tanggal  :', r.order_date || r.date || '')));
+            parts.push(encoder.encode(pad2Col('Customer :', r.customer_name || 'Pelanggan')));
+            parts.push(encoder.encode(pad2Col('Sales    :', r.sales_name || 'Sales DJS')));
+            parts.push(encoder.encode(line));
+
+            const pName = r.product_name || 'Telur Ayam Ras';
+            const qty = Number(r.quantity || 0);
+            const unit = r.unit || 'krat';
+            const price = Number(r.unit_price || r.price || 0);
+            const total = Number(r.total_amount || r.total || 0);
+            const status = (r.payment_type || r.status || 'LUNAS').toUpperCase();
+
+            parts.push(encoder.encode(pName + '\n'));
+            parts.push(encoder.encode(pad2Col(qty + ' ' + unit + ' x Rp ' + price.toLocaleString('id-ID'), 'Rp ' + total.toLocaleString('id-ID'))));
+            parts.push(encoder.encode(line));
+
+            parts.push([ESC, 0x45, 0x01]); // bold
+            parts.push(encoder.encode(pad2Col('TOTAL :', 'Rp ' + total.toLocaleString('id-ID'))));
+            parts.push(encoder.encode(pad2Col('STATUS:', status)));
+            parts.push([ESC, 0x45, 0x00]); // unbold
+            parts.push(encoder.encode(line));
+
+            parts.push([ESC, 0x61, 0x01]); // center
+            parts.push(encoder.encode('Terima kasih atas kerja samanya\n\n\n'));
+            parts.push([GS, 0x56, 0x41, 0x03]); // cut
+
+            let len = 0;
+            parts.forEach(p => len += p.length);
+            const buf = new Uint8Array(len);
+            let off = 0;
+            parts.forEach(p => { buf.set(p, off); off += p.length; });
+            return buf;
+        }
+
+        async function printReceiptViaBluetooth() {
+            if (!navigator.bluetooth) {
+                return showAlert('Browser ini belum mendukung Web Bluetooth. Buka dari Google Chrome di HP Android / PC.', true);
+            }
+            try {
+                showAlert('Mencari printer Bluetooth sekitar...');
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [
+                        '000018f0-0000-1000-8000-00805f9b34fb',
+                        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+                        '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                        0xffe0,
+                        0xfff0
+                    ]
+                });
+                const server = await device.gatt.connect();
+                const services = await server.getPrimaryServices();
+                let writeChar = null;
+                for (const svc of services) {
+                    try {
+                        const chars = await svc.getCharacteristics();
+                        for (const c of chars) {
+                            if (c.properties.write || c.properties.writeWithoutResponse) {
+                                writeChar = c;
+                                break;
+                            }
+                        }
+                        if (writeChar) break;
+                    } catch (e) {}
+                }
+                if (!writeChar) {
+                    server.disconnect();
+                    return showAlert('Karakteristik write printer tidak ditemukan.', true);
+                }
+                const bytes = buildEscPosFromCurrentReceipt();
+                for (let i = 0; i < bytes.length; i += 128) {
+                    const chunk = bytes.slice(i, i + 128);
+                    if (writeChar.writeValueWithResponse) {
+                        await writeChar.writeValueWithResponse(chunk);
+                    } else {
+                        await writeChar.writeValueWithoutResponse(chunk);
+                    }
+                }
+                setTimeout(() => { try { server.disconnect(); } catch (e) {} }, 1000);
+                showAlert('Berhasil mencetak ke printer Bluetooth!');
+            } catch (err) {
+                showAlert(err.message || 'Gagal koneksi Bluetooth', true);
+            }
+        }
+
+        function printReceiptViaRawBT() {
+            const bytes = buildEscPosFromCurrentReceipt();
+            if (!bytes) return showAlert('Tidak ada data nota untuk dicetak.', true);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const base64Data = btoa(binary);
+            window.location.href = 'rawbt:base64,' + base64Data;
+        }
+  
+</script>
 
     <!-- MODAL POPUP NOTA PENJUALAN / CETAK STRUK JPG (SALES MOBILE & DESKTOP) -->
     <div id="salesReceiptModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -6552,7 +6675,7 @@
                 </button>
 
                 <!-- Second Row: WhatsApp Share & Print -->
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-3 gap-1.5">
                     <button type="button" id="btnShareReceiptWA" onclick="shareReceiptAsJPG()"
                         class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow">
                         <span>📲</span> Bagikan WA

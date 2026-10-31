@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Product, Customer } from '@/types';
 import { formatRupiah, formatNumber, formatDateIndo } from '@/lib/utils';
-import { ShoppingCart, AlertTriangle, Printer, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShoppingCart, AlertTriangle, Printer, CheckCircle2, AlertCircle, Bluetooth, Zap } from 'lucide-react';
+import { printDirectWebBluetooth, printViaRawBT } from '@/lib/thermalPrinter';
 
 interface SalesFormTabProps {
   currentUser?: { full_name?: string; role?: string } | null;
@@ -389,22 +390,55 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setReceiptData(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                className="w-full sm:w-auto px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg order-last sm:order-first"
               >
                 Tutup
               </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="px-4 py-2 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-500 rounded-lg flex items-center gap-1.5"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Cetak Nota</span>
-              </button>
+
+              <div className="flex flex-wrap items-center justify-end gap-1.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await printDirectWebBluetooth(receiptData);
+                      showToast('Nota berhasil dicetak via Bluetooth!');
+                    } catch (err: any) {
+                      showToast(err.message || 'Gagal koneksi Bluetooth', true);
+                    }
+                  }}
+                  className="px-3 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-1 shadow-sm transition"
+                  title="Print langsung ke Printer Thermal Bluetooth (Chrome HP / PC)"
+                >
+                  <Bluetooth className="w-3.5 h-3.5" />
+                  <span>Bluetooth</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    printViaRawBT(receiptData);
+                  }}
+                  className="px-3 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center gap-1 shadow-sm transition"
+                  title="Print instan 1-klik lewat aplikasi RawBT di HP Android"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>RawBT</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-2 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-500 rounded-lg flex items-center gap-1 shadow-sm transition"
+                  title="Jendela Print browser standar"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
