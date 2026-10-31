@@ -637,8 +637,9 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-xl border border-slate-200 space-y-4">
             <div className="text-center border-b border-slate-200 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 uppercase">CV DJS TELUR</h3>
-              <p className="text-[10px] text-slate-500">Struk Bukti Transaksi Penjualan</p>
+              <h3 className="text-sm font-black text-slate-900 uppercase">DEWATA JAYA SUPPLIER</h3>
+              <p className="text-[10px] text-slate-500">Distribusi Telur Segar Berkualitas</p>
+              <p className="text-[10px] text-slate-600 font-semibold mt-0.5">Telp / WA: +62 823-3903-3923</p>
             </div>
 
             <div className="text-xs space-y-1.5 font-mono">

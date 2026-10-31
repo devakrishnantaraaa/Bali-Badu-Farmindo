@@ -54,6 +54,7 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   // Normal font: ESC ! 0x00
   parts.push([ESC, 0x21, 0x00]);
   parts.push(encoder.encode('Sistem Distribusi Telur\n'));
+  parts.push(encoder.encode('Telp/WA: +62 823-3903-3923\n'));
   parts.push(encoder.encode(line));
 
   // Left align: ESC a 0

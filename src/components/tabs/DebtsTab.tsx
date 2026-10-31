@@ -270,7 +270,8 @@ export default function DebtsTab() {
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="text-center border-b border-slate-200 pb-3">
-              <h2 className="text-base font-extrabold text-slate-900 uppercase">CV DJS TELUR</h2>
+              <h2 className="text-base font-extrabold text-slate-900 uppercase">DEWATA JAYA SUPPLIER</h2>
+              <p className="text-[10px] text-slate-600 font-semibold">Telp / WA: +62 823-3903-3923</p>
               <p className="text-xs text-slate-500">FAKTUR PENAGIHAN NOTA PENJUALAN</p>
             </div>
 
