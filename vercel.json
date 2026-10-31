@@ -1,13 +1,1 @@
-{
-  "version": 2,
-  "routes": [
-    {
-      "src": "/images/(.*)",
-      "dest": "/src/public/images/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/src/app.js"
-    }
-  ]
-}
+{}
