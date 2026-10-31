@@ -48,3 +48,44 @@ body {
   animation: scaleUp 0.15s ease-out forwards;
 }
 
+
+@page {
+  size: 58mm auto;
+  margin: 0mm;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #salesReceiptPaper,
+  #salesReceiptPaper * {
+    visibility: visible !important;
+  }
+
+  #salesReceiptPaper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 58mm !important;
+    max-width: 58mm !important;
+    min-width: 58mm !important;
+    padding: 2mm 3mm !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

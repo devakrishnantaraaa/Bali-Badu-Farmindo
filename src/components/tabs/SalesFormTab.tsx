@@ -342,56 +342,92 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
 
       {/* Sales Receipt Modal */}
       {receiptData && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-xl border border-slate-200 space-y-4">
-            <div className="text-center border-b border-slate-200 pb-3">
-              <h3 className="text-sm font-black text-slate-900 uppercase">DEWATA JAYA SUPPLIER</h3>
-              <p className="text-[10px] text-slate-500">Distribusi Telur Segar Berkualitas</p>
-              <p className="text-[10px] text-slate-600 font-semibold mt-0.5">Telp / WA: +62 823-3903-3923</p>
-            </div>
-
-            <div className="text-xs space-y-1.5 font-mono">
-              <div className="flex justify-between">
-                <span className="text-slate-500">No Nota:</span>
-                <span className="font-bold text-slate-900">{receiptData.invoice_number}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tanggal:</span>
-                <span>{formatDateIndo(receiptData.order_date)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Customer:</span>
-                <span className="font-bold text-slate-900">{receiptData.customer_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Sales:</span>
-                <span>{receiptData.sales_name}</span>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-sm w-full p-4 sm:p-5 shadow-2xl border border-slate-200 space-y-3 my-auto">
+            <div id="salesReceiptPaper" className="bg-white text-slate-900 p-2 font-sans">
+              <div className="text-center border-b-2 border-dashed border-slate-300 pb-2.5">
+                <h3 className="text-sm font-black text-slate-950 uppercase tracking-wider">DEWATA JAYA SUPPLIER</h3>
+                <p className="text-[10px] text-slate-500">Distribusi Telur Segar Berkualitas</p>
+                <p className="text-[10px] text-slate-700 font-bold mt-0.5">Telp / WA: +62 823-3903-3923</p>
               </div>
 
-              <div className="border-t border-dashed border-slate-300 my-2 pt-2">
-                <div className="flex justify-between font-bold">
+              <div className="text-xs space-y-1 py-2 border-b border-dashed border-slate-300">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">No. Nota:</span>
+                  <span className="font-mono font-black text-slate-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px]">
+                    {receiptData.invoice_number}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Tanggal:</span>
+                  <span className="font-semibold text-slate-800">{formatDateIndo(receiptData.order_date)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Customer:</span>
+                  <span className="font-black text-slate-950">{receiptData.customer_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Sales:</span>
+                  <span className="font-semibold text-slate-800">{receiptData.sales_name}</span>
+                </div>
+                <div className="flex justify-between items-center pt-0.5">
+                  <span className="text-slate-500">Tipe Pembayaran:</span>
+                  <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                    receiptData.payment_type === 'LUNAS'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}>
+                    {receiptData.payment_type === 'LUNAS' ? 'LUNAS (CASH/TF)' : 'PENDING (TEMPO)'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="py-2 border-b-2 border-dashed border-slate-300">
+                <div className="flex justify-between font-bold text-xs">
                   <span>{receiptData.product_name}</span>
                   <span>{receiptData.quantity} {receiptData.unit}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-[11px] text-slate-600">
                   <span>@ {formatRupiah(receiptData.unit_price)}</span>
-                  <span>{formatRupiah(receiptData.total_amount)}</span>
+                  <span className="font-semibold text-slate-900">{formatRupiah(receiptData.total_amount)}</span>
                 </div>
               </div>
 
-              <div className="border-t border-dashed border-slate-300 pt-2 flex justify-between font-black text-sm">
-                <span>TOTAL:</span>
-                <span className="text-amber-800">{formatRupiah(receiptData.total_amount)}</span>
+              <div className="py-2 border-b border-dashed border-slate-300 space-y-1">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold text-slate-800">TOTAL NOTA:</span>
+                  <span className="font-mono font-black text-sm text-slate-950">{formatRupiah(receiptData.total_amount)}</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-slate-500">Status Pembayaran:</span>
+                  <span className={`font-bold ${receiptData.payment_type === 'LUNAS' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    {receiptData.payment_type === 'LUNAS' ? 'LUNAS' : 'BELUM LUNAS'}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between text-xs pt-1">
-                <span className="text-slate-500">Status:</span>
-                <span className={`font-bold ${receiptData.payment_type === 'LUNAS' ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {receiptData.payment_type}
-                </span>
+
+              <div className="pt-2 text-center text-[9px] text-slate-500 space-y-1">
+                <p className="font-semibold text-slate-700">Pembayaran Transfer Bank BCA:</p>
+                <p className="font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 py-0.5 rounded">
+                  1468924624 (Dewata Jaya Supplier)
+                </p>
+                <p className="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
+                <p className="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
+              </div>
+
+              <div className="grid grid-cols-2 text-center text-[9px] text-slate-600 pt-3 mt-2 border-t border-dashed border-slate-200">
+                <div>
+                  <p className="text-[8px] text-slate-400 mb-6">Penerima / Toko</p>
+                  <p className="font-bold border-t border-slate-300 mx-3 pt-0.5">( ................... )</p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-slate-400 mb-6">Hormat Kami</p>
+                  <p className="font-bold border-t border-slate-300 mx-3 pt-0.5">( DJS Farmindo )</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-slate-100 no-print">
               <button
                 type="button"
                 onClick={() => setReceiptData(null)}
@@ -423,7 +459,7 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                   onClick={() => {
                     printViaRawBT(receiptData);
                   }}
-                  className="px-3 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center gap-1 shadow-sm transition"
+                  className="px-3 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-1 shadow-sm transition"
                   title="Print instan 1-klik lewat aplikasi RawBT di HP Android"
                 >
                   <Zap className="w-3.5 h-3.5" />
@@ -434,10 +470,10 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                   type="button"
                   onClick={() => window.print()}
                   className="px-3 py-2 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-500 rounded-lg flex items-center gap-1 shadow-sm transition"
-                  title="Jendela Print browser standar"
+                  title="Cetak struk ukuran 58mm ke printer RPP02N"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Cetak</span>
+                  <span>Cetak 58mm</span>
                 </button>
               </div>
             </div>
@@ -447,4 +483,3 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
     </div>
   );
 }
-
