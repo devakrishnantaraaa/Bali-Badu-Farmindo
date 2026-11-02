@@ -139,29 +139,21 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
 
   parts.push(encoder.encode(doubleLine));
 
-  // Info Transfer Rekening Bank BCA
+  // Info Transfer Rekening Bank BCA (rapi tanpa terpotong / ke-enter aneh)
   parts.push([ESC, 0x61, 0x01]); // Center
-  parts.push(encoder.encode('Pembayaran Transfer Bank BCA:\n'));
+  parts.push(encoder.encode('Transfer Bank BCA:\n'));
   parts.push([ESC, 0x45, 0x01]); // Bold ON
-  parts.push(encoder.encode('1468924624 (Dewata Jaya Supplier)\n'));
+  parts.push(encoder.encode('1468924624\n'));
+  parts.push(encoder.encode('(Dewata Jaya Supplier)\n'));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
 
   parts.push(encoder.encode(singleLine));
-  parts.push(encoder.encode('Simpan nota sbg bukti transaksi sah.\n'));
-  parts.push(encoder.encode('Terima Kasih Atas Kepercayaannya! 🙏\n'));
-  parts.push(encoder.encode(singleLine));
-
-  // Tanda Tangan 2 Kolom: Penerima vs Hormat Kami
-  parts.push([ESC, 0x61, 0x00]); // Left
-  if (colWidth >= 42) {
-    parts.push(encoder.encode('   Penerima / Toko             Hormat Kami     \n\n\n\n'));
-    parts.push(encoder.encode(' ( ................... )     ( DJS Farmindo )  \n'));
-  } else {
-    parts.push(encoder.encode('  Penerima,         Hormat Kami,\n\n\n'));
-    parts.push(encoder.encode('( ........... )   ( DJS Farmindo )\n'));
-  }
-
-  parts.push(encoder.encode('\n\n\n'));
+  parts.push(encoder.encode('Simpan nota sbg bukti sah.\n'));
+  parts.push([ESC, 0x45, 0x01]); // Bold ON
+  parts.push(encoder.encode('Terima Kasih!\n'));
+  parts.push(encoder.encode('Atas Kepercayaannya\n'));
+  parts.push([ESC, 0x45, 0x00]); // Bold OFF
+  parts.push(encoder.encode('\n\n'));
 
   // Paper cut command: GS V 0x41 0x03
   parts.push([GS, 0x56, 0x41, 0x03]);

@@ -415,16 +415,7 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                 <p className="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
               </div>
 
-              <div className="grid grid-cols-2 text-center text-[9px] text-slate-600 pt-3 mt-2 border-t border-dashed border-slate-200">
-                <div>
-                  <p className="text-[8px] text-slate-400 mb-6">Penerima / Toko</p>
-                  <p className="font-bold border-t border-slate-300 mx-3 pt-0.5">( ................... )</p>
-                </div>
-                <div>
-                  <p className="text-[8px] text-slate-400 mb-6">Hormat Kami</p>
-                  <p className="font-bold border-t border-slate-300 mx-3 pt-0.5">( DJS Farmindo )</p>
-                </div>
-              </div>
+
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-slate-100 no-print">

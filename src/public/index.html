@@ -6937,23 +6937,21 @@ Akun ini tidak akan bisa login lagi.`)) {
 
             parts.push(encoder.encode(doubleLine));
 
-            // Info Transfer Bank BCA
+            // Info Transfer Bank BCA (rapi tanpa terpotong / ke-enter aneh)
             parts.push([ESC, 0x61, 0x01]); // center
-            parts.push(encoder.encode('Pembayaran Transfer Bank BCA:\n'));
+            parts.push(encoder.encode('Transfer Bank BCA:\n'));
             parts.push([ESC, 0x45, 0x01]); // bold
-            parts.push(encoder.encode('1468924624 (Dewata Jaya Supplier)\n'));
+            parts.push(encoder.encode('1468924624\n'));
+            parts.push(encoder.encode('(Dewata Jaya Supplier)\n'));
             parts.push([ESC, 0x45, 0x00]); // unbold
 
             parts.push(encoder.encode(singleLine));
-            parts.push(encoder.encode('Simpan nota sbg bukti transaksi sah.\n'));
-            parts.push(encoder.encode('Terima Kasih Atas Kepercayaannya! 🙏\n'));
-            parts.push(encoder.encode(singleLine));
-
-            // Tanda Tangan Ringkas
-            parts.push([ESC, 0x61, 0x00]); // left
-            parts.push(encoder.encode('  Penerima,         Hormat Kami,\n\n\n'));
-            parts.push(encoder.encode('( ........... )   ( DJS Farmindo )\n'));
-            parts.push(encoder.encode('\n\n\n'));
+            parts.push(encoder.encode('Simpan nota sbg bukti sah.\n'));
+            parts.push([ESC, 0x45, 0x01]); // bold
+            parts.push(encoder.encode('Terima Kasih!\n'));
+            parts.push(encoder.encode('Atas Kepercayaannya\n'));
+            parts.push([ESC, 0x45, 0x00]); // unbold
+            parts.push(encoder.encode('\n\n'));
 
             // Potong Kertas
             parts.push([GS, 0x56, 0x41, 0x03]); // cut
@@ -7052,15 +7050,12 @@ Akun ini tidak akan bisa login lagi.`)) {
                 <div id="salesReceiptPaper" style="width: 100%; max-width: 340px; background-color: #ffffff; color: #0f172a;" class="p-4 rounded-xl shadow-lg font-sans text-xs border border-slate-200">
                     <!-- Brand Header -->
                     <div class="text-center pb-2.5 border-b-2 border-dashed border-slate-300">
-                        <div class="flex justify-center items-center gap-2 mb-1">
-                            <img src="/images/DJS.png" alt="DJS Logo" class="h-10 w-10 object-contain rounded-md" crossorigin="anonymous">
-                            <div class="text-left">
-                                <h2 class="text-xs font-black text-slate-950 uppercase tracking-wider leading-none">DEWATA JAYA SUPPLIER</h2>
-                                <p class="text-[9px] font-bold text-amber-700 leading-tight">DEWATA JAYA SUPPLIER</p>
-                            </div>
+                        <div class="flex justify-center items-center gap-2.5 mb-1.5">
+                            <img src="/images/DJS.png" alt="DJS Logo" class="h-9 w-9 object-contain rounded-md shrink-0" crossorigin="anonymous">
+                            <h2 class="text-xs sm:text-sm font-black text-slate-950 uppercase tracking-wide">DEWATA JAYA SUPPLIER</h2>
                         </div>
                         <p class="text-[9px] text-slate-500">Distribusi Telur Segar Berkualitas</p>
-                        <p class="text-[9px] text-slate-500">Telp / WA: <span class="font-bold text-slate-700">+62 823-3903-3923</span></p>
+                        <p class="text-[9px] text-slate-600 font-semibold">Telp / WA: <span class="text-slate-900 font-bold">+62 823-3903-3923</span></p>
                     </div>
 
                     <!-- Meta Transaksi -->
@@ -7121,23 +7116,13 @@ Akun ini tidak akan bisa login lagi.`)) {
                     </div>
 
                     <!-- Payment Info & Notes -->
-                    <div class="pt-2 text-center text-[9px] text-slate-500 space-y-1">
-                        <p class="font-semibold text-slate-700">Pembayaran Transfer Bank BCA:</p>
-                        <p class="font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 py-0.5 rounded">1468924624 (Dewata Jaya Supplier)</p>
-                        <p class="italic text-[8.5px] pt-0.5 text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
-                        <p class="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
-                    </div>
-
-                    <!-- Tanda Tangan Ringkas -->
-                    <div class="grid grid-cols-2 text-center text-[9px] text-slate-600 pt-3 mt-2 border-t border-dashed border-slate-200">
-                        <div>
-                            <p class="text-[8px] text-slate-400 mb-6">Penerima / Toko</p>
-                            <p class="font-bold border-t border-slate-300 mx-3 pt-0.5">( ................... )</p>
-                        </div>
-                        <div>
-                            <p class="text-[8px] text-slate-400 mb-6">Hormat Kami</p>
-                            <p class="font-bold border-t border-slate-300 mx-3 pt-0.5">( DJS Farmindo )</p>
-                        </div>
+                    <div class="pt-2.5 text-center text-[9.5px] text-slate-500 space-y-1">
+                        <p class="font-bold text-slate-700">Pembayaran Transfer Bank BCA:</p>
+                        <p class="font-mono font-black text-slate-950 bg-slate-50 border border-slate-200 py-1 px-2 rounded text-[11px]">
+                            1468924624 <span class="font-sans font-medium text-[10px] text-slate-600">(Dewata Jaya Supplier)</span>
+                        </p>
+                        <p class="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
+                        <p class="font-bold text-slate-900 text-[9.5px] pt-0.5">Terima Kasih Atas Kepercayaannya! 🙏</p>
                     </div>
                 </div>
             </div>
