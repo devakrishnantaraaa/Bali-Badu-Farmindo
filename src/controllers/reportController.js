@@ -31,6 +31,7 @@ async function getDailySales(req, res) {
             SELECT 
                 o.id AS order_id, 
                 o.order_number, 
+                COALESCE(o.created_by, 'Tim Marketing Field') AS sales_name,
                 i.id AS invoice_id,
                 i.invoice_number,
                 c.id AS customer_id,

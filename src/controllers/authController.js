@@ -187,8 +187,99 @@ async function changePassword(req, res) {
     }
 }
 
+
+// Get all users (Super Admin Only)
+async function getUsers(req, res) {
+    try {
+        const result = await db.query(
+            `SELECT id, username, full_name, role, created_at 
+             FROM users 
+             ORDER BY id ASC`
+        );
+        return res.json(result.rows);
+    } catch (error) {
+        console.error('Error getUsers:', error);
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+// Update user (Super Admin Only)
+async function updateUser(req, res) {
+    try {
+        const { id } = req.params;
+        const { full_name, role, password } = req.body;
+
+        const userCheck = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+
+        const validRoles = ['SUPER_ADMIN', 'ADMIN', 'MARKETING'];
+        const cleanRole = role ? role.toUpperCase() : userCheck.rows[0].role;
+        if (!validRoles.includes(cleanRole)) {
+            return res.status(400).json({ error: 'Role tidak valid. Harus SUPER_ADMIN, ADMIN, atau MARKETING' });
+        }
+
+        const cleanFullName = full_name ? String(full_name).trim() : userCheck.rows[0].full_name;
+
+        if (password && String(password).trim().length > 0) {
+            const cleanPassword = String(password).trim();
+            if (cleanPassword.length < 6) {
+                return res.status(400).json({ error: 'Password baru minimal harus 6 karakter.' });
+            }
+            const newHash = await bcrypt.hash(cleanPassword, 10);
+            await db.query(
+                `UPDATE users 
+                 SET full_name = $1, role = $2, password_hash = $3 
+                 WHERE id = $4`,
+                [cleanFullName, cleanRole, newHash, id]
+            );
+        } else {
+            await db.query(
+                `UPDATE users 
+                 SET full_name = $1, role = $2 
+                 WHERE id = $3`,
+                [cleanFullName, cleanRole, id]
+            );
+        }
+
+        const updatedRes = await db.query(
+            'SELECT id, username, full_name, role, created_at FROM users WHERE id = $1',
+            [id]
+        );
+        return res.json({ message: 'User berhasil diperbarui', user: updatedRes.rows[0] });
+    } catch (error) {
+        console.error('Error updateUser:', error);
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+// Delete user (Super Admin Only)
+async function deleteUser(req, res) {
+    try {
+        const { id } = req.params;
+        if (parseInt(id) === parseInt(req.user.id)) {
+            return res.status(400).json({ error: 'Tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan.' });
+        }
+
+        const userCheck = await db.query('SELECT username FROM users WHERE id = $1', [id]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'User tidak ditemukan' });
+        }
+
+        await db.query('DELETE FROM users WHERE id = $1', [id]);
+        return res.json({ message: `User '${userCheck.rows[0].username}' berhasil dihapus.` });
+    } catch (error) {
+        console.error('Error deleteUser:', error);
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     registerUser,
     loginUser,
-    changePassword
+    changePassword,
+    getUsers,
+    updateUser,
+    deleteUser
 };

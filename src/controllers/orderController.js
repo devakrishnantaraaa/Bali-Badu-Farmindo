@@ -110,18 +110,19 @@ async function createOrder(req, res) {
         // 3. Create Sales Order
         const orderNum = `ORD-${Date.now()}`;
         const orderDateTimestamp = (req.body.order_date) ? `${req.body.order_date} 12:00:00` : null;
+        const salesName = (req.user && req.user.full_name) || (req.user && req.user.username) || req.body.sales_name || 'Tim Marketing Field';
 
         const orderRes = await client.query(
             orderDateTimestamp 
-                ? `INSERT INTO orders (order_number, customer_id, total_amount, status, created_at)
-                   VALUES ($1, $2, $3, 'CONFIRMED', $4)
+                ? `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, created_at)
+                   VALUES ($1, $2, $3, 'CONFIRMED', $4, $5)
                    RETURNING *`
-                : `INSERT INTO orders (order_number, customer_id, total_amount, status)
-                   VALUES ($1, $2, $3, 'CONFIRMED')
+                : `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by)
+                   VALUES ($1, $2, $3, 'CONFIRMED', $4)
                    RETURNING *`,
             orderDateTimestamp 
-                ? [orderNum, customer_id, totalAmount, orderDateTimestamp]
-                : [orderNum, customer_id, totalAmount]
+                ? [orderNum, customer_id, totalAmount, salesName, orderDateTimestamp]
+                : [orderNum, customer_id, totalAmount, salesName]
         );
         const order = orderRes.rows[0];
 

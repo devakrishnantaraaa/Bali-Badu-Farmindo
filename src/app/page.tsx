@@ -19,6 +19,7 @@ import DailyDepositsTab from '@/components/tabs/DailyDepositsTab';
 import DebtsTab from '@/components/tabs/DebtsTab';
 import MonthlyRecapTab from '@/components/tabs/MonthlyRecapTab';
 import InventoryTab from '@/components/tabs/InventoryTab';
+import UsersTab from '@/components/tabs/UsersTab';
 
 const TAB_TITLES: Record<string, string> = {
   dashboard: 'Ringkasan Dashboard Operasional',
@@ -162,6 +163,10 @@ export default function HomePage() {
 
             {activeTab === 'product' && (
               <ProductTab onNavigateToLedger={handleNavigateToLedger} />
+            )}
+
+            {activeTab === 'users' && currentUser.role === 'SUPER_ADMIN' && (
+              <UsersTab currentUser={currentUser} />
             )}
           </div>
         </main>

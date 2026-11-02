@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Users,
   Boxes,
+  UserCog,
   KeyRound,
   LogOut,
   Egg,
@@ -104,6 +105,12 @@ export default function Sidebar({
       label: 'Master Produk',
       icon: Boxes,
       visible: isSuperAdmin || isAdmin,
+    },
+    {
+      id: 'users',
+      label: 'Kelola Tim',
+      icon: UserCog,
+      visible: isSuperAdmin,
     },
   ];
 

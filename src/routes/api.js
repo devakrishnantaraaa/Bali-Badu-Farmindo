@@ -20,6 +20,12 @@ router.use(authenticateToken);
 // User Profile & Password (Tersedia untuk semua role akun)
 router.put('/auth/change-password', authController.changePassword);
 
+// Kelola Tim / User Management (SUPER_ADMIN ONLY)
+router.get('/users', authorizeRoles('SUPER_ADMIN'), authController.getUsers);
+router.post('/users', authorizeRoles('SUPER_ADMIN'), authController.registerUser);
+router.put('/users/:id', authorizeRoles('SUPER_ADMIN'), authController.updateUser);
+router.delete('/users/:id', authorizeRoles('SUPER_ADMIN'), authController.deleteUser);
+
 // Customers (Access: SUPER_ADMIN, ADMIN, & MARKETING)
 router.get('/customers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.getCustomers);
 router.post('/customers', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), customerController.createCustomer);
