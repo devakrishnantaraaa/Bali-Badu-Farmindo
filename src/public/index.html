@@ -7151,27 +7151,17 @@ Akun ini tidak akan bisa login lagi.`)) {
                     <span>Cetak / Simpan Struk (JPG)</span>
                 </button>
 
-                <!-- Second Row: 4 Dedicated Thermal & Share Buttons (58mm RPP02N Ready) -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                <!-- Second Row: WhatsApp Share & Cetak Direct via RawBT -->
+                <div class="grid grid-cols-2 gap-2">
                     <button type="button" id="btnShareReceiptWA" onclick="shareReceiptAsJPG()"
-                        class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2 px-2 rounded-lg text-xs transition flex items-center justify-center gap-1 shadow"
-                        title="Bagikan struk JPG via WhatsApp">
+                        class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shadow"
+                        title="Bagikan struk format JPG ke WhatsApp">
                         <span>📲</span> <span>Kirim WA</span>
                     </button>
                     <button type="button" onclick="printReceiptViaRawBT()"
-                        class="bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold py-2 px-2 rounded-lg text-xs transition flex items-center justify-center gap-1 shadow"
-                        title="Print instan via aplikasi RawBT (Printer Bluetooth RPP02N 58mm)">
-                        <span>⚡</span> <span>RawBT</span>
-                    </button>
-                    <button type="button" onclick="printReceiptViaBluetooth()"
-                        class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 px-2 rounded-lg text-xs transition flex items-center justify-center gap-1 shadow"
-                        title="Print langsung via Web Bluetooth Chrome">
-                        <span>📶</span> <span>Bluetooth</span>
-                    </button>
-                    <button type="button" onclick="printReceiptPaperDirect()"
-                        class="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 px-2 rounded-lg text-xs transition flex items-center justify-center gap-1 border border-slate-700 shadow"
-                        title="Print dialog ukuran 58mm ke printer RPP02N">
-                        <span>🖨️</span> <span>Cetak 58mm</span>
+                        class="bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shadow"
+                        title="Cetak struk ke printer thermal Bluetooth (RawBT)">
+                        <span>🖨️</span> <span>Cetak</span>
                     </button>
                 </div>
 

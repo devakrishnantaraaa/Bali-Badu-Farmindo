@@ -436,44 +436,17 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                 Tutup
               </button>
 
-              <div className="flex flex-wrap items-center justify-end gap-1.5 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await printDirectWebBluetooth(receiptData);
-                      showToast('Nota berhasil dicetak via Bluetooth!');
-                    } catch (err: any) {
-                      showToast(err.message || 'Gagal koneksi Bluetooth', true);
-                    }
-                  }}
-                  className="px-3 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-1 shadow-sm transition"
-                  title="Print langsung ke Printer Thermal Bluetooth (Chrome HP / PC)"
-                >
-                  <Bluetooth className="w-3.5 h-3.5" />
-                  <span>Bluetooth</span>
-                </button>
-
+              <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => {
                     printViaRawBT(receiptData);
                   }}
-                  className="px-3 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-1 shadow-sm transition"
-                  title="Print instan 1-klik lewat aplikasi RawBT di HP Android"
+                  className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:bg-teal-800 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition"
+                  title="Cetak struk ke printer thermal Bluetooth (RawBT)"
                 >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>RawBT</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-2 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-500 rounded-lg flex items-center gap-1 shadow-sm transition"
-                  title="Cetak struk ukuran 58mm ke printer RPP02N"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Cetak 58mm</span>
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak</span>
                 </button>
               </div>
             </div>
