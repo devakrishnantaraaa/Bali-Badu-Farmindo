@@ -7159,6 +7159,17 @@ Akun ini tidak akan bisa login lagi.`)) {
         }
 
         function printReceiptViaRawBT() {
+            // Cek jika pengguna membuka dari Laptop / Desktop (Windows / Mac)
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (!isMobile) {
+                // DI LAPTOP / KOMPUTER:
+                // Gunakan pencetakan thermal 58mm bawaan browser dialog (mendukung printer Iware / POS-58 via USB atau Bluetooth)
+                printReceiptPaperDirect();
+                return;
+            }
+
+            // DI HP ANDROID:
+            // Kirim perintah ESC/POS langsung ke aplikasi RawBT
             const bytes = buildEscPosFromCurrentReceipt();
             if (!bytes) return showAlert('Tidak ada data nota untuk dicetak.', true);
             let binary = '';
