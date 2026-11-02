@@ -207,7 +207,7 @@ async function getUsers(req, res) {
 async function updateUser(req, res) {
     try {
         const { id } = req.params;
-        const { full_name, role, password } = req.body;
+        const { full_name, username, role, password } = req.body;
 
         const userCheck = await db.query('SELECT * FROM users WHERE id = $1', [id]);
         if (userCheck.rows.length === 0) {
@@ -221,6 +221,22 @@ async function updateUser(req, res) {
         }
 
         const cleanFullName = full_name ? String(full_name).trim() : userCheck.rows[0].full_name;
+        const cleanUsername = username ? String(username).trim().toLowerCase() : userCheck.rows[0].username;
+
+        if (!cleanUsername) {
+            return res.status(400).json({ error: 'Username tidak boleh kosong' });
+        }
+
+        // Cek jika username diubah dan apakah sudah digunakan oleh akun lain
+        if (cleanUsername !== userCheck.rows[0].username) {
+            const checkExisting = await db.query(
+                'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
+                [cleanUsername, id]
+            );
+            if (checkExisting.rows.length > 0) {
+                return res.status(400).json({ error: `Username '${cleanUsername}' sudah digunakan oleh akun lain.` });
+            }
+        }
 
         if (password && String(password).trim().length > 0) {
             const cleanPassword = String(password).trim();
@@ -230,16 +246,16 @@ async function updateUser(req, res) {
             const newHash = await bcrypt.hash(cleanPassword, 10);
             await db.query(
                 `UPDATE users 
-                 SET full_name = $1, role = $2, password_hash = $3 
-                 WHERE id = $4`,
-                [cleanFullName, cleanRole, newHash, id]
+                 SET username = $1, full_name = $2, role = $3, password_hash = $4 
+                 WHERE id = $5`,
+                [cleanUsername, cleanFullName, cleanRole, newHash, id]
             );
         } else {
             await db.query(
                 `UPDATE users 
-                 SET full_name = $1, role = $2 
-                 WHERE id = $3`,
-                [cleanFullName, cleanRole, id]
+                 SET username = $1, full_name = $2, role = $3 
+                 WHERE id = $4`,
+                [cleanUsername, cleanFullName, cleanRole, id]
             );
         }
 

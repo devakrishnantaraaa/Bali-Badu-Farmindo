@@ -14,7 +14,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json();
-    const { full_name, role, password } = body;
+    const { full_name, username, role, password } = body;
 
     const userCheck = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (userCheck.rows.length === 0) {
@@ -28,6 +28,22 @@ export async function PUT(
     }
 
     const cleanFullName = full_name ? String(full_name).trim() : userCheck.rows[0].full_name;
+    const cleanUsername = username ? String(username).trim().toLowerCase() : userCheck.rows[0].username;
+
+    if (!cleanUsername) {
+      return NextResponse.json({ error: 'Username tidak boleh kosong.' }, { status: 400 });
+    }
+
+    // Cek jika username diubah dan apakah sudah digunakan oleh akun lain
+    if (cleanUsername !== userCheck.rows[0].username) {
+      const checkExisting = await pool.query(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2',
+        [cleanUsername, id]
+      );
+      if (checkExisting.rows.length > 0) {
+        return NextResponse.json({ error: `Username '${cleanUsername}' sudah digunakan oleh akun lain.` }, { status: 400 });
+      }
+    }
 
     if (password && String(password).trim().length > 0) {
       const cleanPassword = String(password).trim();
@@ -37,16 +53,16 @@ export async function PUT(
       const newHash = await hashPassword(cleanPassword);
       await pool.query(
         `UPDATE users 
-         SET full_name = $1, role = $2, password_hash = $3 
-         WHERE id = $4`,
-        [cleanFullName, cleanRole, newHash, id]
+         SET username = $1, full_name = $2, role = $3, password_hash = $4 
+         WHERE id = $5`,
+        [cleanUsername, cleanFullName, cleanRole, newHash, id]
       );
     } else {
       await pool.query(
         `UPDATE users 
-         SET full_name = $1, role = $2 
-         WHERE id = $3`,
-        [cleanFullName, cleanRole, id]
+         SET username = $1, full_name = $2, role = $3 
+         WHERE id = $4`,
+        [cleanUsername, cleanFullName, cleanRole, id]
       );
     }
 

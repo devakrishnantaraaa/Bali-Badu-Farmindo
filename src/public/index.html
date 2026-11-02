@@ -6026,7 +6026,7 @@
             document.getElementById('inputUserId').value = id;
             document.getElementById('inputUserFullName').value = fullName;
             document.getElementById('inputUserUsername').value = username;
-            document.getElementById('inputUserUsername').readOnly = true;
+            document.getElementById('inputUserUsername').readOnly = false;
             document.getElementById('inputUserPassword').value = '';
             document.getElementById('inputUserPassword').required = false;
             document.getElementById('pwdRequiredStar').classList.add('hidden');
@@ -6060,7 +6060,7 @@
                 let res;
                 if (id) {
                     // Update
-                    const payload = { full_name, role };
+                    const payload = { full_name, username, role };
                     if (password) payload.password = password;
                     res = await fetch(`${API_BASE}/users/${id}`, {
                         method: 'PUT',
