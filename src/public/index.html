@@ -7158,12 +7158,39 @@ Akun ini tidak akan bisa login lagi.`)) {
             }
         }
 
-        function printReceiptViaRawBT() {
+        async function printReceiptViaRawBT() {
             // Cek jika pengguna membuka dari Laptop / Desktop (Windows / Mac)
             const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
             if (!isMobile) {
                 // DI LAPTOP / KOMPUTER:
-                // Gunakan pencetakan thermal 58mm bawaan browser dialog (mendukung printer Iware / POS-58 via USB atau Bluetooth)
+                // Coba gunakan Web Serial API (bisa tembak printer Iware via Bluetooth COM / USB langsung tanpa driver, seperti RawBT di HP)
+                if (navigator.serial) {
+                    try {
+                        const bytes = buildEscPosFromCurrentReceipt();
+                        if (!bytes) return showAlert('Tidak ada data nota untuk dicetak.', true);
+                        
+                        showAlert('Pilih perangkat printer Iware / Bluetooth COM port...');
+                        const port = await navigator.serial.requestPort();
+                        await port.open({ baudRate: 9600 });
+                        const writer = port.writable.getWriter();
+                        await writer.write(bytes);
+                        writer.releaseLock();
+                        await port.close();
+                        showAlert('Berhasil mencetak struk langsung ke printer Iware!');
+                        return;
+                    } catch (err) {
+                        if (err.name === 'NotFoundError') {
+                            // User klik Cancel pada pop-up port, fallback buka dialog print biasa
+                            printReceiptPaperDirect();
+                            return;
+                        }
+                        console.warn('Web Serial error, fallback ke dialog print:', err);
+                        printReceiptPaperDirect();
+                        return;
+                    }
+                }
+
+                // Fallback jika browser tidak support Web Serial:
                 printReceiptPaperDirect();
                 return;
             }
