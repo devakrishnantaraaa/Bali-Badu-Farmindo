@@ -5877,81 +5877,93 @@
         }
 
         function printReceiptPaperDirect() {
-            document.body.classList.add('is-printing-receipt');
+            const paper = document.getElementById('salesReceiptPaper');
+            if (!paper) return;
 
-            // Hapus style dinamis lama jika ada
-            const oldStyle = document.getElementById('thermal58DynamicStyle');
-            if (oldStyle) oldStyle.remove();
+            // Cetak via iframe terisolasi agar ukuran 58mm pas, tidak terpengaruh CSS modal/layar, dan tidak terpotong
+            let printFrame = document.getElementById('printReceiptIframe');
+            if (!printFrame) {
+                printFrame = document.createElement('iframe');
+                printFrame.id = 'printReceiptIframe';
+                printFrame.style.position = 'fixed';
+                printFrame.style.right = '0';
+                printFrame.style.bottom = '0';
+                printFrame.style.width = '0';
+                printFrame.style.height = '0';
+                printFrame.style.border = '0';
+                document.body.appendChild(printFrame);
+            }
 
-            // Pasang konfigurasi cetak kertas 58mm untuk Android Print Spooler / Browser
-            const style = document.createElement('style');
-            style.id = 'thermal58DynamicStyle';
-            style.innerHTML = `
-                @page {
-                    size: 58mm auto !important;
-                    margin: 0mm !important;
-                }
-                @media print {
-                    html, body {
-                        width: 58mm !important;
-                        max-width: 58mm !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #ffffff !important;
-                    }
-                    body * {
-                        visibility: hidden !important;
-                    }
-                    #printBillingInvoiceModal,
-                    #printModal,
-                    nav, header, main {
-                        display: none !important;
-                    }
-                    #salesReceiptModal,
-                    #salesReceiptModal * {
-                        visibility: visible !important;
-                    }
-                    #salesReceiptModal {
-                        position: static !important;
-                        display: block !important;
-                        background: transparent !important;
-                        width: 58mm !important;
-                        max-width: 58mm !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }
-                    #salesReceiptPaper {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        width: 58mm !important;
-                        max-width: 58mm !important;
-                        min-width: 58mm !important;
-                        margin: 0 !important;
-                        padding: 2mm 3mm !important;
-                        background: #ffffff !important;
-                        color: #000000 !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        box-sizing: border-box !important;
-                    }
-                    #salesReceiptPaper * {
-                        color: #000000 !important;
-                    }
-                    .no-print {
-                        display: none !important;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
+            const paperClone = paper.cloneNode(true);
+            const noPrintEls = paperClone.querySelectorAll('.no-print');
+            noPrintEls.forEach(el => el.remove());
 
-            window.print();
+            const frameDoc = printFrame.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Struk Penjualan - Dewata Jaya Supplier</title>
+                    <style>
+                        @page {
+                            size: 58mm auto;
+                            margin: 0mm;
+                        }
+                        * {
+                            box-sizing: border-box;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        body {
+                            width: 58mm;
+                            margin: 0;
+                            padding: 2mm 3mm;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+                            font-size: 11px;
+                            line-height: 1.25;
+                            color: #000000;
+                            background: #ffffff;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                        }
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .font-bold { font-weight: 700; }
+                        .font-black { font-weight: 900; }
+                        .font-semibold { font-weight: 600; }
+                        .font-mono { font-family: monospace; }
+                        .border-dashed { border-style: dashed; }
+                        .border-b-2 { border-bottom: 2px dashed #000000; }
+                        .border-b { border-bottom: 1px dashed #000000; }
+                        .border-t { border-top: 1px dashed #000000; }
+                        .flex { display: flex; }
+                        .justify-between { justify-content: space-between; }
+                        .items-center { align-items: center; }
+                        .space-y-1 > * + * { margin-top: 3px; }
+                        img { display: block; margin: 0 auto 4px auto; max-height: 44px; }
+                        .hidden { display: none !important; }
+                    </style>
+                </head>
+                <body>
+                    ${paperClone.outerHTML}
+                </body>
+                </html>
+            `);
+            frameDoc.close();
 
             setTimeout(() => {
-                document.body.classList.remove('is-printing-receipt');
-                const s = document.getElementById('thermal58DynamicStyle');
-                if (s) s.remove();
-            }, 2000);
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+                setTimeout(() => {
+                    document.title = originalDocTitle;
+                }, 1500);
+            }, 300);
         }
 
         function printBillingInvoiceDirect() {
@@ -5976,6 +5988,10 @@
             const noPrintEls = sheetClone.querySelectorAll('.no-print');
             noPrintEls.forEach(el => el.remove());
 
+            const exportTitle = window.currentInvoiceExportFileName || 'INV-Customer-Bulan';
+            const originalDocTitle = document.title;
+            document.title = exportTitle;
+
             const frameDoc = printFrame.contentWindow.document;
             frameDoc.open();
             frameDoc.write(`
@@ -5983,7 +5999,7 @@
                 <html>
                 <head>
                     <meta charset="utf-8">
-                    <title>Invoice Penagihan - Dewata Jaya Supplier</title>
+                    <title>${exportTitle}</title>
                     <style>
                         @page {
                             size: A4 portrait;
@@ -6106,6 +6122,9 @@
             setTimeout(() => {
                 printFrame.contentWindow.focus();
                 printFrame.contentWindow.print();
+                setTimeout(() => {
+                    document.title = originalDocTitle;
+                }, 1500);
             }, 300);
         }
 
@@ -7165,6 +7184,30 @@ Akun ini tidak akan bisa login lagi.`)) {
             document.getElementById('billPrintGrandTotal').innerText = `Rp ${totalAmount.toLocaleString('id-ID')}`;
             document.getElementById('billPrintGrandTotalBox').innerText = `Rp ${totalAmount.toLocaleString('id-ID')}`;
 
+            // Format nama file otomatis saat simpan/cetak PDF: INV-[nama customer]-[periode bulan]
+            let periodMonth = '';
+            if (startDate && endDate) {
+                const sDate = new Date(startDate);
+                const eDate = new Date(endDate);
+                if (sDate.getMonth() === eDate.getMonth() && sDate.getFullYear() === eDate.getFullYear()) {
+                    periodMonth = sDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+                } else {
+                    periodMonth = `${sDate.toLocaleString('id-ID', { month: 'short' })}-${eDate.toLocaleString('id-ID', { month: 'short', year: 'numeric' })}`;
+                }
+            } else if (startDate) {
+                const sDate = new Date(startDate);
+                periodMonth = sDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+            } else if (selected[0] && selected[0].created_at) {
+                const sDate = new Date(selected[0].created_at);
+                periodMonth = sDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+            } else {
+                const sDate = new Date();
+                periodMonth = sDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+            }
+
+            const cleanCustName = custName.replace(/[/\\?%*:|"<>]/g, '').trim();
+            window.currentInvoiceExportFileName = `INV-${cleanCustName}-${periodMonth}`;
+
             document.getElementById('printBillingInvoiceModal').classList.remove('hidden');
         }
 
@@ -7192,30 +7235,15 @@ Akun ini tidak akan bisa login lagi.`)) {
             // Init printer: ESC @
             parts.push([ESC, 0x40]);
 
-            // Cetak Logo DJS di Paling Atas Struk (Monochrome ESC/POS Raster)
-            try {
-                const djsLogoB64 = "HXYwADAAmgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//wAAAewAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH////////4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/////////gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///gAD///+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAH///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAA///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//gAAAH//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAD//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAA//+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAf//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAH//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//g0AAAD//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//g/4AAB//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gP+AAB//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gD8AAA//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gB8AAAf/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gA4AAAf/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAgAAAP/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAQAAAH/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAQAAAH/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAQAAAH//AAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAQAAAD//AAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAD//AAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAD//AAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAB//gAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAB//gAF8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAB//gAF8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAB//gAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAAAAB//gAD4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAAPwAB//gADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAA/wAA//gADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//gAD/wAA//gGDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/8AAH/wAA//gODCaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAH/wAA//AODH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP4AP8H/wAA//EfyP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgD/gH/wAB//EfwP4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAH+AH/wAB//GPw/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAf4AP/wAB/+OPw/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAdgAf/wAB/+OPx8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAf/wAB/+PHxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAf/wAB/8fHzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/wAD/8fHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/wAD/4fHgkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/wAD/w/nB8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/wAH/x/iH/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAP/wAH/h/iP/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAP/wAH/D/kf/BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgAAAAP/wAP+H/kf/BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfwAgAAP/wAP+H/A/+DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wDgAAP/wAf8P/A/8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/4HgAAP/wAf4f/B/wPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/wfgAAP/wA/w/+D+A+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/g/gAAP/wA/h/+DgD+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/B/gAAP/wB/D/8GAP+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/D/gAAP/wD+D/8YA/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+H/gAAP/wD4H/4gH/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8P/gAAP/wHwf/wA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf8f/gAAP/wPg//AP//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf4f/gAAP/wOB/+A///4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf4//gAAP/wcD/4H///4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfx//gAAf/w4H/wf///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfx//gAAf/xgP/B////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfj//gAAf/zAf8D////gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfj//gAAf/gA/4P////gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfn//gAA//gB/g/////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPn//gAA//AD/B///v/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPH//gAB//AB8H//+f+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPH//gAB/+ABYP//8/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH//gAD/+AAg///z/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEH//gAH/8ABB///H/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH//gAP/4AAH//4f/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACn//wAf/wAAP//h//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABH//wA//gYA//8H//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAj//4A//A8B//gf//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT//4D/+D6D/4B//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//8A/4H8P+AP//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//+B/A/wfgH///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///AAD/h4D////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//wA/8AAf///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//8B/gAAA///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///gAAAAAA/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/D/uOHHH/DgAODjhxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/j/uPOHn/HgAODjjxwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD3zgOPOPg8HwAOHxzj4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADhzgHfOPw4PwAOHx/D4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADh7/HfMdw4PwAOO4/H8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg7/Hb8dw4M4AOO4+HcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADh7/H78f44f4AOf4ePcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADhzgD78/44f8AOf8cP+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/z/j54/84/8H+f8cP+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/j/jx54c44cH84eccPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+D/hx5wc44OD84OccHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAgAAAAAAAEAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAgAAAAAAAEAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAARBAAgAAAAAAAEAAAgAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADGAhBAAgD4AAfAAEAAAg/4AkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALoBBBAAgCAAAAggEAAAgAABBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL0ABBAAgCCAAAAgEAAAAAABBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD6ABBAAgCAAAgAgEAAAAAABABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH+IBBAAgAAEAgAgUABgvAQFABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/7BBAOg+D0Hwej0ADg//wP98AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//BQAPg/v4P//D8AHw//wf/6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/xcAfh//4f/+D8AHw//w//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/hdA/h//wf/8D8APw/AA//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAf4fA/D//Af/wD8APw/AA//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwP4/h/D+AAfgAD8APw/AA/P4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH8fw///D+AAfgAD//Pw//4/H8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//wf/+D+AAfgAD//P4//4/D+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//gf/+D+AAfgAD//P4//4/D+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//gP/4D+AAfgAD//P4//4/B/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+AD/wD+AAfgAD//P4//4/B/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-                const logoBinary = atob(djsLogoB64);
-                const logoBytes = new Uint8Array(logoBinary.length);
-                for (let i = 0; i < logoBinary.length; i++) {
-                    logoBytes[i] = logoBinary.charCodeAt(i);
-                }
-                parts.push([ESC, 0x61, 0x01]); // center
-                parts.push(logoBytes);
-                parts.push(encoder.encode('\n'));
-            } catch (e) {
-                console.warn('Gagal render logo ESC/POS:', e);
-            }
-
-            // Header Title: Double Height & Center
+            // Header Brand Text: Center, Double Height & Bold (Cepat, tajam, dan tidak menyebabkan buffer overflow pada printer thermal)
             parts.push([ESC, 0x61, 0x01]); // center
+            parts.push([ESC, 0x21, 0x30]); // double height + double width
+            parts.push(encoder.encode('DEWATA JAYA\n'));
             parts.push([ESC, 0x21, 0x10]); // double height
-            parts.push(encoder.encode('DEWATA JAYA SUPPLIER\n'));
-
-            // Normal font
-            parts.push([ESC, 0x21, 0x00]);
-            parts.push(encoder.encode('Distribusi Telur Segar Berkualitas\n'));
-            parts.push(encoder.encode('Telp / WA: +62 823-3903-3923\n'));
+            parts.push(encoder.encode('SUPPLIER TELUR\n'));
+            parts.push([ESC, 0x21, 0x00]); // normal
+            parts.push(encoder.encode('Distribusi Telur Berkualitas\n'));
+            parts.push(encoder.encode('Telp/WA: +62 823-3903-3923\n'));
             parts.push(encoder.encode(doubleLine));
 
             // Meta Info Transaksi
@@ -7668,18 +7696,6 @@ Akun ini tidak akan bisa login lagi.`)) {
                 <div class="text-right">
                     <span class="text-[10px] text-slate-500 uppercase font-bold block">Total Yang Harus Dibayar:</span>
                     <span id="billPrintGrandTotalBox" class="text-lg font-black text-slate-950">Rp 0</span>
-                </div>
-            </div>
-
-            <!-- Info Rekening Resmi Bank BCA -->
-            <div class="p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[10.5px] text-slate-700 flex justify-between items-center">
-                <div>
-                    <span class="font-bold text-slate-900 block">Informasi Pembayaran Transfer Resmi Bank BCA:</span>
-                    <span class="font-mono font-black text-slate-950 text-xs">1468924624</span>
-                    <span class="text-slate-600 font-semibold"> (a/n Dewata Jaya Supplier)</span>
-                </div>
-                <div class="text-[9.5px] text-slate-500 italic text-right">
-                    Mohon konfirmasi bukti transfer jika sudah melakukan pembayaran.
                 </div>
             </div>
 
