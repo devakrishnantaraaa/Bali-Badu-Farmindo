@@ -50,7 +50,7 @@ export default function Sidebar({
       id: 'sales',
       label: 'Input Penjualan',
       icon: ShoppingCart,
-      visible: !isAdmin, // Marketing & SuperAdmin
+      visible: true, // SuperAdmin, Admin, Marketing
     },
     {
       id: 'daily-sales',

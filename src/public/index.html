@@ -2113,7 +2113,7 @@
 
             // Validasi hak akses tab berdasarkan Role
             if (currentUser && currentUser.role === 'ADMIN') {
-                const adminAllowed = ['customer', 'product', 'daily-sales', 'invoice', 'stock', 'ledger', 'debts'];
+                const adminAllowed = ['sales', 'customer', 'product', 'daily-sales', 'invoice', 'stock', 'ledger', 'debts'];
                 if (!adminAllowed.includes(tabName)) {
                     showAlert('Akses ditolak: Menu ini tidak dapat diakses oleh Role Admin.', true);
                     return;
@@ -2520,7 +2520,7 @@
                 allowed = ['sales', 'customer', 'daily-sales', 'debts', 'invoice'];
             } else if (role === 'ADMIN') {
                 // ADMIN: Penjualan (Rincian), Customer, Produk, Masuk (Pembelian), Nota Pending (+ Menu Drawer)
-                allowed = ['daily-sales', 'customer', 'product', 'stock', 'debts'];
+                allowed = ['sales', 'daily-sales', 'customer', 'product', 'stock', 'debts'];
             } else {
                 // SUPER_ADMIN: Dashboard, Penjualan, Produk, Masuk, Nota Pending (+ Menu Drawer)
                 allowed = ['dashboard', 'daily-sales', 'product', 'stock', 'debts'];
@@ -2533,7 +2533,7 @@
 
             const mDailySalesLabel = document.querySelector('#mobile-nav-daily-sales span');
             if (mDailySalesLabel) {
-                mDailySalesLabel.innerText = (role === 'MARKETING') ? 'Rincian' : 'Penjualan';
+                mDailySalesLabel.innerText = (role === 'MARKETING' || role === 'ADMIN') ? 'Rincian' : 'Penjualan';
             }
 
             const mobileNavbar = document.getElementById('mobileNavbar');
@@ -2574,8 +2574,8 @@
                 switchTab('sales');
             } else if (currentUser.role === 'ADMIN') {
                 // ADMIN ROLE:
-                // Akses: Customer, Produk, Rincian Penjualan, Cetak Invoice, Pembelian, Kartu Stok (view-only), Nota Pending
-                const adminAllowed = ['customer', 'product', 'daily-sales', 'invoice', 'stock', 'ledger', 'debts'];
+                // Akses: Input Penjualan, Customer, Produk, Rincian Penjualan, Cetak Invoice, Pembelian, Kartu Stok (view-only), Nota Pending
+                const adminAllowed = ['sales', 'customer', 'product', 'daily-sales', 'invoice', 'stock', 'ledger', 'debts'];
                 allNavIds.forEach(id => {
                     const nav = document.getElementById(`nav-${id}`);
                     if (nav) {
