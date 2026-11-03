@@ -1801,12 +1801,12 @@
                             </div>
                             <span class="text-[10px] text-amber-700 font-medium">Penjualan ke pelanggan</span>
                         </div>
-                        <div class="bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-200 rounded-xl p-3 shadow-2xs">
-                            <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 block mb-0.5">💰 Estimasi Valuasi Aset</span>
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 shadow-2xs">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 block mb-0.5">⚖️ Total Selisih Stok</span>
                             <div class="flex items-baseline gap-1">
-                                <span id="inventoryMetricTotalValuation" class="text-xl font-black text-purple-950 font-mono">Rp 0</span>
+                                <span id="inventoryMetricTotalDiff" class="text-xl font-black text-slate-900 font-mono">0 krat</span>
                             </div>
-                            <span class="text-[10px] text-purple-600 font-medium">Total nilai modal/pasar persediaan</span>
+                            <span class="text-[10px] text-amber-700 font-medium">Stok fisik dikurangi sisa stok</span>
                         </div>
                     </div>
 
@@ -1818,20 +1818,19 @@
                                     <th class="p-2 border border-slate-300 text-center w-10">NO</th>
                                     <th class="p-2 border border-slate-300">PRODUK</th>
                                     <th class="p-2 border border-slate-300 text-center w-16">SATUAN</th>
-                                    <th class="p-2 border border-slate-300 text-right">HARGA (RP)</th>
                                     <th class="p-2 border border-slate-300 text-right text-slate-600">STOK AWAL</th>
                                     <th class="p-2 border border-slate-300 text-right text-emerald-800">IN / MASUK</th>
                                     <th class="p-2 border border-slate-300 text-right text-amber-900">OUT / TERJUAL</th>
                                     <th class="p-2 border border-slate-300 text-right text-rose-700">RUSAK</th>
                                     <th class="p-2 border border-slate-300 text-right text-purple-700">PENYESUAIAN</th>
                                     <th class="p-2 border border-slate-300 text-right font-black bg-blue-100 text-slate-900">SISA STOK</th>
-                                    <th class="p-2 border border-slate-300 text-right font-bold text-purple-900">VALUASI ASET</th>
-                                    <th class="p-2 border border-slate-300 text-center">STATUS</th>
+                                    <th class="p-2 border border-slate-300 text-right font-black bg-cyan-100 text-blue-950">STOK FISIK</th>
+                                    <th class="p-2 border border-slate-300 text-right font-black bg-amber-100 text-amber-950">SELISIH</th>
                                     <th class="p-2 border border-slate-300 text-center">AKSI</th>
                                 </tr>
                             </thead>
                             <tbody id="inventoryGlobalBody" class="divide-y divide-slate-200 font-medium">
-                                <tr><td colspan="13" class="p-6 text-center text-slate-400">Memuat laporan global inventory...</td></tr>
+                                <tr><td colspan="12" class="p-6 text-center text-slate-400">Memuat laporan global inventory...</td></tr>
                             </tbody>
                             <tfoot id="inventoryGlobalFoot" class="bg-blue-100 font-extrabold text-slate-900 border-t-2 border-slate-400 text-xs">
                                 <!-- Totals -->
@@ -5029,7 +5028,7 @@
         async function loadGlobalInventoryReport() {
             const body = document.getElementById('inventoryGlobalBody');
             if (body) {
-                body.innerHTML = `<tr><td colspan="13" class="p-8 text-center text-slate-400 font-medium animate-pulse">Memuat data inventaris global...</td></tr>`;
+                body.innerHTML = `<tr><td colspan="12" class="p-8 text-center text-slate-400 font-medium animate-pulse">Memuat data inventaris global...</td></tr>`;
             }
 
             const month = document.getElementById('filterInventoryMonth')?.value || 'ALL';
@@ -5060,7 +5059,7 @@
             if (!body) return;
 
             if (!items || items.length === 0) {
-                body.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-400">Tidak ada data produk ditemukan.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="12" class="p-6 text-center text-slate-400">Tidak ada data produk ditemukan.</td></tr>`;
                 if (foot) foot.innerHTML = '';
                 return;
             }
@@ -5071,7 +5070,8 @@
             let totalDamaged = 0;
             let totalAdj = 0;
             let totalFinal = 0;
-            let totalValuation = 0;
+            let totalPhys = 0;
+            let totalDiff = 0;
 
             const rowsHtml = items.map((p, idx) => {
                 const prodId = p.id || p.product_id;
@@ -5082,8 +5082,8 @@
                 const damagedQty = Number(p.damaged_qty || 0);
                 const adjQty = Number(p.adjustment_qty || 0);
                 const finalStock = Number(p.final_stock !== undefined ? p.final_stock : (p.current_stock || 0));
-                const unitPrice = Number(p.price_per_unit || p.unit_price || 0);
-                const assetVal = Number(p.asset_value !== undefined ? p.asset_value : (finalStock * unitPrice));
+                const physStock = Number(p.physical_stock !== undefined ? p.physical_stock : finalStock);
+                const diff = physStock - finalStock;
 
                 totalInitial += initStock;
                 totalIn += inQty;
@@ -5091,13 +5091,17 @@
                 totalDamaged += damagedQty;
                 totalAdj += adjQty;
                 totalFinal += finalStock;
-                totalValuation += assetVal;
+                totalPhys += physStock;
+                totalDiff += diff;
 
-                let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">AMAN</span>';
-                if (finalStock <= 0) {
-                    statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 animate-pulse">HABIS</span>';
-                } else if (finalStock < 50) {
-                    statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">MENIPIS</span>';
+                let diffClass = 'text-slate-500 font-bold';
+                let diffText = '0';
+                if (diff > 0) {
+                    diffClass = 'text-emerald-700 font-black bg-emerald-50/50';
+                    diffText = `+${diff.toLocaleString('id-ID')}`;
+                } else if (diff < 0) {
+                    diffClass = 'text-rose-600 font-black bg-rose-50/50';
+                    diffText = `${diff.toLocaleString('id-ID')}`;
                 }
 
                 return `
@@ -5107,15 +5111,23 @@
                             <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5 align-middle"></span>${escapeHtml(prodName)}
                         </td>
                         <td class="p-2 border border-slate-300 text-center uppercase text-slate-600 font-bold">${escapeHtml(p.unit || 'krat')}</td>
-                        <td class="p-2 border border-slate-300 text-right font-mono text-slate-700">Rp ${unitPrice.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono text-slate-600">${initStock.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-bold text-emerald-800">${inQty > 0 ? '+' : ''}${inQty.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-bold text-amber-900">${outQty.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono text-rose-700">${damagedQty > 0 ? damagedQty.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono text-purple-700">${adjQty !== 0 ? (adjQty > 0 ? '+' : '') + adjQty.toLocaleString('id-ID') : '-'}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black text-slate-900 bg-blue-50/50">${finalStock.toLocaleString('id-ID')}</td>
-                        <td class="p-2 border border-slate-300 text-right font-mono font-extrabold text-purple-900">Rp ${assetVal.toLocaleString('id-ID')}</td>
-                        <td class="p-2 border border-slate-300 text-center whitespace-nowrap">${statusBadge}</td>
+                        <td class="p-2 border border-slate-300 text-right bg-cyan-50/30">
+                            <input type="number" id="physStock_${prodId}" step="any" min="0"
+                                value="${physStock}"
+                                data-final-stock="${finalStock}"
+                                class="w-20 text-right font-mono font-bold text-blue-950 bg-white border border-cyan-300 focus:border-cyan-600 rounded px-1.5 py-0.5 text-xs focus:outline-none shadow-2xs"
+                                oninput="calculateGlobalInvDiff(this, ${finalStock}, 'diffCell_${prodId}')"
+                                placeholder="0">
+                        </td>
+                        <td id="diffCell_${prodId}" class="p-2 border border-slate-300 text-right font-mono ${diffClass}">
+                            ${diffText}
+                        </td>
                         <td class="p-2 border border-slate-300 text-center">
                             <button onclick="goToProductStockLedger(${prodId})" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold border border-slate-300 whitespace-nowrap transition cursor-pointer" title="Buka Kartu Stok ${escapeHtml(prodName)}">
                                 📜 Kartu Stok
@@ -5131,32 +5143,83 @@
             const mStock = document.getElementById('inventoryMetricTotalStock');
             const mIn = document.getElementById('inventoryMetricTotalIn');
             const mOut = document.getElementById('inventoryMetricTotalOut');
-            const mVal = document.getElementById('inventoryMetricTotalValuation');
+            const mDiff = document.getElementById('inventoryMetricTotalDiff');
 
             if (mStock) mStock.innerText = totalFinal.toLocaleString('id-ID');
             if (mIn) mIn.innerText = totalIn.toLocaleString('id-ID');
             if (mOut) mOut.innerText = totalOut.toLocaleString('id-ID');
-            if (mVal) mVal.innerText = `Rp ${totalValuation.toLocaleString('id-ID')}`;
+            if (mDiff) {
+                mDiff.innerText = (totalDiff > 0 ? '+' : '') + totalDiff.toLocaleString('id-ID') + ' krat';
+                mDiff.className = `text-xl font-black font-mono ${totalDiff < 0 ? 'text-rose-700' : (totalDiff > 0 ? 'text-emerald-700' : 'text-slate-900')}`;
+            }
 
             // Render Foot Totals
             if (foot) {
                 foot.innerHTML = `
                     <tr>
-                        <td colspan="4" class="p-2 border border-slate-300 text-center font-black">TOTAL KESELURUHAN</td>
+                        <td colspan="3" class="p-2 border border-slate-300 text-center font-black">TOTAL KESELURUHAN</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black text-slate-800">${totalInitial.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black text-emerald-900">${totalIn.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black text-amber-950">${totalOut.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black text-rose-800">${totalDamaged.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black text-purple-900">${totalAdj.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-300 text-right font-mono font-black bg-blue-200 text-slate-950">${totalFinal.toLocaleString('id-ID')}</td>
-                        <td class="p-2 border border-slate-300 text-right font-mono font-black text-purple-950">Rp ${totalValuation.toLocaleString('id-ID')}</td>
-                        <td colspan="2" class="p-2 border border-slate-300"></td>
+                        <td id="invFootTotalPhys" class="p-2 border border-slate-300 text-right font-mono font-black bg-cyan-200 text-blue-950">${totalPhys.toLocaleString('id-ID')}</td>
+                        <td id="invFootTotalDiff" class="p-2 border border-slate-300 text-right font-mono font-black bg-amber-200 ${totalDiff < 0 ? 'text-rose-800' : (totalDiff > 0 ? 'text-emerald-800' : 'text-slate-900')}">
+                            ${totalDiff > 0 ? '+' : ''}${totalDiff.toLocaleString('id-ID')}
+                        </td>
+                        <td class="p-2 border border-slate-300"></td>
                     </tr>
                 `;
             }
 
             // Sync with Excel Filter Popup
             initExcelTableFilters('inventoryGlobalTable');
+        }
+
+        function calculateGlobalInvDiff(inputEl, finalStock, cellId) {
+            const physVal = parseFloat(inputEl.value) || 0;
+            const diff = physVal - finalStock;
+            const cell = document.getElementById(cellId);
+            if (cell) {
+                if (diff === 0) {
+                    cell.className = 'p-2 border border-slate-300 text-right font-mono font-bold text-slate-500';
+                    cell.innerHTML = '0';
+                } else if (diff > 0) {
+                    cell.className = 'p-2 border border-slate-300 text-right font-mono font-black text-emerald-700 bg-emerald-50/50';
+                    cell.innerHTML = `+${diff.toLocaleString('id-ID')}`;
+                } else {
+                    cell.className = 'p-2 border border-slate-300 text-right font-mono font-black text-rose-600 bg-rose-50/50';
+                    cell.innerHTML = `${diff.toLocaleString('id-ID')}`;
+                }
+            }
+            recalculateInventoryTotalsLive();
+        }
+
+        function recalculateInventoryTotalsLive() {
+            let sumPhys = 0;
+            let sumDiff = 0;
+            const inputs = document.querySelectorAll('#inventoryGlobalBody input[id^="physStock_"]');
+            inputs.forEach(inp => {
+                const pVal = parseFloat(inp.value) || 0;
+                const fStock = parseFloat(inp.dataset.finalStock) || 0;
+                sumPhys += pVal;
+                sumDiff += (pVal - fStock);
+            });
+
+            const footPhys = document.getElementById('invFootTotalPhys');
+            const footDiff = document.getElementById('invFootTotalDiff');
+            if (footPhys) footPhys.innerText = sumPhys.toLocaleString('id-ID');
+            if (footDiff) {
+                footDiff.innerText = (sumDiff > 0 ? '+' : '') + sumDiff.toLocaleString('id-ID');
+                footDiff.className = `p-2 border border-slate-300 text-right font-mono font-black bg-amber-200 ${sumDiff < 0 ? 'text-rose-800' : (sumDiff > 0 ? 'text-emerald-800' : 'text-slate-900')}`;
+            }
+
+            const cardDiff = document.getElementById('inventoryMetricTotalDiff');
+            if (cardDiff) {
+                cardDiff.innerText = (sumDiff > 0 ? '+' : '') + sumDiff.toLocaleString('id-ID') + ' krat';
+                cardDiff.className = `text-xl font-black font-mono ${sumDiff < 0 ? 'text-rose-700' : (sumDiff > 0 ? 'text-emerald-700' : 'text-slate-900')}`;
+            }
         }
 
         function goToProductStockLedger(productId) {
@@ -6849,19 +6912,24 @@ Akun ini tidak akan bisa login lagi.`)) {
                     `;
                 }
             } else if (tableId === 'inventoryGlobalTable') {
-                let sumInitial = 0, sumIn = 0, sumOut = 0, sumDamaged = 0, sumAdj = 0, sumFinal = 0, sumValuation = 0;
+                let sumInitial = 0, sumIn = 0, sumOut = 0, sumDamaged = 0, sumAdj = 0, sumFinal = 0, sumPhys = 0, sumDiff = 0;
                 rows.forEach(r => {
                     const c = r.querySelectorAll('td');
-                    if (c.length >= 12) {
-                        sumInitial += Number(c[4].innerText.replace(/\./g, '')) || 0;
-                        sumIn += Number(c[5].innerText.replace(/\./g, '')) || 0;
-                        sumOut += Number(c[6].innerText.replace(/\./g, '')) || 0;
-                        sumDamaged += Number(c[7].innerText.replace(/\./g, '')) || 0;
-                        const adjVal = c[8].innerText.replace('+', '').replace(/\./g, '');
+                    if (c.length >= 11) {
+                        sumInitial += Number(c[3].innerText.replace(/\./g, '')) || 0;
+                        sumIn += Number(c[4].innerText.replace(/\./g, '')) || 0;
+                        sumOut += Number(c[5].innerText.replace(/\./g, '')) || 0;
+                        sumDamaged += Number(c[6].innerText.replace(/\./g, '')) || 0;
+                        const adjVal = c[7].innerText.replace('+', '').replace(/\./g, '');
                         sumAdj += Number(adjVal) || 0;
-                        sumFinal += Number(c[9].innerText.replace(/\./g, '')) || 0;
-                        const valText = c[10].innerText.replace('Rp', '').replace(/\./g, '').trim();
-                        sumValuation += Number(valText) || 0;
+                        sumFinal += Number(c[8].innerText.replace(/\./g, '')) || 0;
+
+                        const physInp = c[9].querySelector('input');
+                        const pVal = physInp ? (parseFloat(physInp.value) || 0) : (Number(c[9].innerText.replace(/\./g, '')) || 0);
+                        sumPhys += pVal;
+
+                        const diffVal = Number(c[10].innerText.replace('+', '').replace(/\./g, '')) || 0;
+                        sumDiff += diffVal;
                     }
                 });
 
@@ -6869,15 +6937,17 @@ Akun ini tidak akan bisa login lagi.`)) {
                 if (foot) {
                     foot.innerHTML = `
                         <tr>
-                            <td colspan="4" class="p-2 border border-slate-400 font-extrabold uppercase text-center">TOTAL (TERFILTER)</td>
+                            <td colspan="3" class="p-2 border border-slate-400 font-extrabold uppercase text-center">TOTAL (TERFILTER)</td>
                             <td class="p-2 border border-slate-400 text-right text-slate-800 font-bold">${sumInitial > 0 ? sumInitial.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-emerald-950 font-black">${sumIn > 0 ? sumIn.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-amber-950 font-black">${sumOut > 0 ? sumOut.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-rose-950 font-black">${sumDamaged > 0 ? sumDamaged.toLocaleString('id-ID') : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-purple-950 font-black">${sumAdj !== 0 ? (sumAdj > 0 ? `+${sumAdj}` : sumAdj) : '-'}</td>
                             <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-blue-200/80 text-xs">${sumFinal.toLocaleString('id-ID')}</td>
-                            <td class="p-2 border border-slate-400 text-right text-purple-950 font-black font-mono">Rp ${sumValuation.toLocaleString('id-ID')}</td>
-                            <td class="p-2 border border-slate-400"></td>
+                            <td class="p-2 border border-slate-400 text-right text-blue-950 font-black bg-cyan-200/80 text-xs">${sumPhys.toLocaleString('id-ID')}</td>
+                            <td class="p-2 border border-slate-400 text-right font-black bg-amber-200/80 text-xs ${sumDiff < 0 ? 'text-rose-800' : (sumDiff > 0 ? 'text-emerald-800' : 'text-slate-900')}">
+                                ${sumDiff > 0 ? '+' : ''}${sumDiff.toLocaleString('id-ID')}
+                            </td>
                             <td class="p-2 border border-slate-400"></td>
                         </tr>
                     `;

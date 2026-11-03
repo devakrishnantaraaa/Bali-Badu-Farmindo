@@ -318,6 +318,7 @@ async function getGlobalInventoryReport(req, res) {
             let damagedQty = 0;
             let adjQty = 0;
             let finalStock = parseFloat(p.current_stock || 0);
+            let physicalStock = null;
 
             if (hasFilter) {
                 let lastSeenBalance = 0;
@@ -347,6 +348,9 @@ async function getGlobalInventoryReport(req, res) {
                         if (m.movement_type === 'PENJUALAN') outQty += q;
                         damagedQty += parseFloat(m.damaged_qty || 0);
                         adjQty += parseFloat(m.adjustment_qty || 0);
+                        if (m.physical_stock !== null && m.physical_stock !== undefined && m.physical_stock !== '') {
+                            physicalStock = parseFloat(m.physical_stock);
+                        }
                         lastSeenBalance = parseFloat(m.balance_after || 0);
                     }
                 });
@@ -359,6 +363,9 @@ async function getGlobalInventoryReport(req, res) {
                     if (m.movement_type === 'PENJUALAN') outQty += q;
                     damagedQty += parseFloat(m.damaged_qty || 0);
                     adjQty += parseFloat(m.adjustment_qty || 0);
+                    if (m.physical_stock !== null && m.physical_stock !== undefined && m.physical_stock !== '') {
+                        physicalStock = parseFloat(m.physical_stock);
+                    }
                 });
                 finalStock = parseFloat(p.current_stock || 0);
                 initialStock = 0;
@@ -381,6 +388,9 @@ async function getGlobalInventoryReport(req, res) {
                 damaged_qty: damagedQty,
                 adjustment_qty: adjQty,
                 final_stock: finalStock,
+                physical_stock: physicalStock !== null ? physicalStock : finalStock,
+                has_physical_stock: physicalStock !== null,
+                difference: (physicalStock !== null ? physicalStock : finalStock) - finalStock,
                 asset_value: assetValue,
                 status: finalStock <= 10 ? 'KRITIS' : (finalStock <= 50 ? 'MENIPIS' : 'AMAN')
             };

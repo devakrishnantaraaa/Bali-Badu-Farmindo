@@ -17,6 +17,8 @@ interface InventoryItem {
   damaged_qty: number;
   adjustment_qty: number;
   final_stock: number;
+  physical_stock?: number;
+  difference?: number;
   valuation: number;
   status: string;
 }
@@ -51,10 +53,16 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
     let totalOut = 0;
     let totalDamaged = 0;
     let totalAdjustment = 0;
+    let totalPhysical = 0;
+    let totalDifference = 0;
     let totalValuation = 0;
 
     for (const item of inventory) {
-      totalStock += Number(item.final_stock || 0);
+      const fStock = Number(item.final_stock || 0);
+      const pStock = Number(item.physical_stock !== undefined ? item.physical_stock : fStock);
+      totalStock += fStock;
+      totalPhysical += pStock;
+      totalDifference += (pStock - fStock);
       totalIn += Number(item.in_qty || 0);
       totalOut += Number(item.out_qty || 0);
       totalDamaged += Number(item.damaged_qty || 0);
@@ -62,24 +70,27 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
       totalValuation += Number(item.valuation || 0);
     }
 
-    return { totalStock, totalIn, totalOut, totalDamaged, totalAdjustment, totalValuation };
+    return { totalStock, totalPhysical, totalDifference, totalIn, totalOut, totalDamaged, totalAdjustment, totalValuation };
   }, [inventory]);
 
   const handleExportExcel = () => {
-    const exportData = inventory.map((r, i) => ({
-      NO: i + 1,
-      PRODUK: r.product_name,
-      SATUAN: r.unit,
-      HARGA: Number(r.price || 0),
-      'STOK AWAL': Number(r.initial_stock || 0),
-      'IN / MASUK': Number(r.in_qty || 0),
-      'OUT / TERJUAL': Number(r.out_qty || 0),
-      RUSAK: Number(r.damaged_qty || 0),
-      PENYESUAIAN: Number(r.adjustment_qty || 0),
-      'SISA STOK': Number(r.final_stock || 0),
-      'VALUASI ASET': Number(r.valuation || 0),
-      STATUS: r.status,
-    }));
+    const exportData = inventory.map((r, i) => {
+      const fStock = Number(r.final_stock || 0);
+      const pStock = Number(r.physical_stock !== undefined ? r.physical_stock : fStock);
+      return {
+        NO: i + 1,
+        PRODUK: r.product_name,
+        SATUAN: r.unit,
+        'STOK AWAL': Number(r.initial_stock || 0),
+        'IN / MASUK': Number(r.in_qty || 0),
+        'OUT / TERJUAL': Number(r.out_qty || 0),
+        RUSAK: Number(r.damaged_qty || 0),
+        PENYESUAIAN: Number(r.adjustment_qty || 0),
+        'SISA STOK': fStock,
+        'STOK FISIK': pStock,
+        SELISIH: pStock - fStock,
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -219,7 +230,6 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
                 <th className="p-2 border border-slate-300 text-center w-10">NO</th>
                 <th className="p-2 border border-slate-300">PRODUK</th>
                 <th className="p-2 border border-slate-300 text-center w-16">SATUAN</th>
-                <th className="p-2 border border-slate-300 text-right">HARGA (RP)</th>
                 <th className="p-2 border border-slate-300 text-right text-slate-600">STOK AWAL</th>
                 <th className="p-2 border border-slate-300 text-right text-emerald-800">IN / MASUK</th>
                 <th className="p-2 border border-slate-300 text-right text-amber-900">OUT / TERJUAL</th>
@@ -228,23 +238,25 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
                 <th className="p-2 border border-slate-300 text-right font-black bg-blue-100 text-slate-900">
                   SISA STOK
                 </th>
-                <th className="p-2 border border-slate-300 text-right font-bold text-purple-900">
-                  VALUASI ASET
+                <th className="p-2 border border-slate-300 text-right font-black bg-cyan-100 text-blue-950">
+                  STOK FISIK
                 </th>
-                <th className="p-2 border border-slate-300 text-center">STATUS</th>
+                <th className="p-2 border border-slate-300 text-right font-black bg-amber-100 text-amber-950">
+                  SELISIH
+                </th>
                 <th className="p-2 border border-slate-300 text-center">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-[11px]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={13} className="p-8 text-center text-slate-400">
+                  <td colSpan={12} className="p-8 text-center text-slate-400">
                     Memuat laporan global inventory...
                   </td>
                 </tr>
               ) : inventory.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="p-8 text-center text-slate-400">
+                  <td colSpan={12} className="p-8 text-center text-slate-400">
                     Belum ada produk yang terdata.
                   </td>
                 </tr>
@@ -259,9 +271,6 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
                     </td>
                     <td className="p-2 border border-slate-200 text-center uppercase font-mono text-slate-600">
                       {r.unit}
-                    </td>
-                    <td className="p-2 border border-slate-200 text-right font-mono">
-                      {formatRupiah(Number(r.price))}
                     </td>
                     <td className="p-2 border border-slate-200 text-right font-mono text-slate-600">
                       {formatNumber(Number(r.initial_stock))}
@@ -281,25 +290,18 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
                     <td className="p-2 border border-slate-200 text-right font-mono font-black text-slate-900 bg-blue-50/50">
                       {formatNumber(Number(r.final_stock))}
                     </td>
-                    <td className="p-2 border border-slate-200 text-right font-mono font-bold text-purple-900">
-                      {formatRupiah(Number(r.valuation))}
+                    <td className="p-2 border border-slate-200 text-right font-mono font-bold text-blue-950 bg-cyan-50/30">
+                      {formatNumber(Number(r.physical_stock !== undefined ? r.physical_stock : r.final_stock))}
                     </td>
-                    <td className="p-2 border border-slate-200 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          Number(r.final_stock) <= 0
-                            ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                            : Number(r.final_stock) < 20
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        }`}
-                      >
-                        {Number(r.final_stock) <= 0
-                          ? 'HABIS'
-                          : Number(r.final_stock) < 20
-                          ? 'MENIPIS'
-                          : 'AMAN'}
-                      </span>
+                    <td className="p-2 border border-slate-200 text-right font-mono font-bold">
+                      {(() => {
+                        const fStock = Number(r.final_stock || 0);
+                        const pStock = Number(r.physical_stock !== undefined ? r.physical_stock : fStock);
+                        const diff = pStock - fStock;
+                        if (diff === 0) return <span className="text-slate-500 font-bold">0</span>;
+                        if (diff > 0) return <span className="text-emerald-700 font-black">+{formatNumber(diff)}</span>;
+                        return <span className="text-rose-600 font-black">{formatNumber(diff)}</span>;
+                      })()}
                     </td>
                     <td className="p-2 border border-slate-200 text-center">
                       {onNavigateToLedger && (
@@ -320,7 +322,7 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
             {/* Table Footer */}
             <tfoot className="bg-blue-100 font-extrabold text-slate-900 sticky bottom-0 border-t-2 border-slate-300 text-xs">
               <tr>
-                <td colSpan={4} className="p-2.5 border border-slate-300 text-center">
+                <td colSpan={3} className="p-2.5 border border-slate-300 text-center">
                   TOTAL REKAPITULASI
                 </td>
                 <td className="p-2.5 border border-slate-300 text-right">-</td>
@@ -339,10 +341,15 @@ export default function InventoryTab({ onNavigateToLedger }: InventoryTabProps) 
                 <td className="p-2.5 border border-slate-300 text-right font-black text-slate-900">
                   {formatNumber(summary.totalStock)}
                 </td>
-                <td className="p-2.5 border border-slate-300 text-right font-black text-purple-950">
-                  {formatRupiah(summary.totalValuation)}
+                <td className="p-2.5 border border-slate-300 text-right font-black text-blue-950 bg-cyan-200">
+                  {formatNumber(summary.totalPhysical)}
                 </td>
-                <td colSpan={2} className="p-2.5 border border-slate-300 text-center">-</td>
+                <td className={`p-2.5 border border-slate-300 text-right font-black bg-amber-200 ${
+                  summary.totalDifference < 0 ? 'text-rose-800' : summary.totalDifference > 0 ? 'text-emerald-800' : 'text-slate-900'
+                }`}>
+                  {summary.totalDifference > 0 ? `+${formatNumber(summary.totalDifference)}` : formatNumber(summary.totalDifference)}
+                </td>
+                <td className="p-2.5 border border-slate-300 text-center">-</td>
               </tr>
             </tfoot>
           </table>
