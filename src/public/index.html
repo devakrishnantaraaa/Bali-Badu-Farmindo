@@ -4543,7 +4543,7 @@
                 const inQty = item.movement_type === 'BARANG_MASUK' ? qty : 0;
                 const outQty = item.movement_type === 'PENJUALAN' ? qty : 0;
                 const damaged = Number(item.damaged_qty || 0);
-                const adj = Number(item.adjustment_qty || 0);
+                const adj = item.movement_type === 'PENYESUAIAN' ? Number(item.quantity || 0) : Number(item.adjustment_qty || 0);
                 const phys = (item.physical_stock !== null && item.physical_stock !== undefined && item.physical_stock !== '') ? Number(item.physical_stock) : null;
 
                 const pId = item.product_id || 'default';
