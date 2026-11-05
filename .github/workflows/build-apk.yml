@@ -33,15 +33,31 @@ jobs:
           cp -rf src/public/* android/app/src/main/assets/public/
           echo "Web assets successfully synchronized to Android project!"
 
-      - name: 6. Build APK with Gradle
+      - name: 6. Pre-accept Android SDK Licenses
+        run: |
+          mkdir -p $ANDROID_HOME/licenses || true
+          printf "24333f8a63b6825ea9c5514f83c2829b004d1fee\nd56f5187479451eabf01fb78af6dfcb131a6481e\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-license
+          printf "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+
+      - name: 7. Build APK with Gradle
+        id: gradle_step
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee ../gradle-build.log
+        continue-on-error: true
 
-      - name: 7. Upload APK Artifact
+      - name: 8. Report Gradle Result & Show Error if Failed
+        run: |
+          if [ "${{ steps.gradle_step.outcome }}" != "success" ]; then
+            echo "::error title=Gradle Build Failed::Tampilkan 60 baris log error terakhir di bawah ini:"
+            tail -n 60 gradle-build.log
+            exit 1
+          fi
+
+      - name: 9. Upload APK Artifact
         uses: actions/upload-artifact@v4
-        if: success()
+        if: steps.gradle_step.outcome == 'success'
         with:
           name: DewataJaya-App-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
