@@ -27,8 +27,11 @@ jobs:
       - name: 4. Install Dependencies
         run: npm install --no-audit --no-fund --legacy-peer-deps
 
-      - name: 5. Sync Capacitor Android
-        run: npx cap sync android
+      - name: 5. Sync Web Assets to Android
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp -rf src/public/* android/app/src/main/assets/public/
+          echo "Web assets successfully synchronized to Android project!"
 
       - name: 6. Build APK with Gradle
         run: |
