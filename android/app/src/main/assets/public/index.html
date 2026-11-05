@@ -2095,7 +2095,10 @@
 
     <!-- JS Logic Sidebar & Tabs -->
     <script>
-        const API_BASE = '/api';
+        const IS_NATIVE_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform());
+        const DEFAULT_SERVER_URL = 'https://dewata-jaya-supplier.vercel.app';
+        const SAVED_SERVER_URL = (localStorage.getItem('app_backend_server_url') || DEFAULT_SERVER_URL).replace(/\/+$/, '');
+        const API_BASE = IS_NATIVE_APP ? `${SAVED_SERVER_URL}/api` : '/api';
         let authToken = localStorage.getItem('token');
         let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 

@@ -205,12 +205,17 @@
     // ================================================================
     function openPrinterSettings() {
         const cfg = getPrinterConfig();
+        const currentServer = localStorage.getItem('app_backend_server_url') || 'https://dewata-jaya-supplier.vercel.app';
+        const serverUrl = prompt('URL Server Backend Dewata Jaya:', currentServer);
+        if (serverUrl !== null && serverUrl.trim()) {
+            localStorage.setItem('app_backend_server_url', serverUrl.trim().replace(/\/+$/, ''));
+        }
         const ip = prompt('IP Address Printer (contoh: 192.168.1.100):', cfg.ip);
         if (ip === null) return;
         const port = prompt('Port Printer (default: 9100):', cfg.port);
         if (port === null) return;
         savePrinterConfig(ip, port);
-        alert('Konfigurasi printer disimpan!\nIP: ' + ip + '\nPort: ' + port);
+        alert('Pengaturan disimpan!\nServer: ' + (localStorage.getItem('app_backend_server_url') || currentServer) + '\nPrinter: ' + ip + ':' + port);
     }
 
     // Expose ke global scope agar bisa dipanggil dari index.html
