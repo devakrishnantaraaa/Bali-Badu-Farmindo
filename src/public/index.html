@@ -3,6 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
+    <!-- Capacitor Native Bridge (aktif saat jalan sebagai APK Android) -->
+    <script src="capacitor.js" onerror="console.log('Browser mode - Capacitor not loaded')"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dewata Jaya Supplier - Sistem Distribusi Telur</title>
     <link rel="icon" type="image/png" href="/images/DJS.png">
@@ -2099,6 +2101,24 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuthSession();
+
+            // Tampilkan badge dan setting printer dot matrix kalau jalan di APK
+            if (window.TcpPrinterBridge && window.TcpPrinterBridge.isNative) {
+                const badge = document.createElement('div');
+                badge.id = 'nativeAppBadge';
+                badge.innerHTML = `
+                    <div class="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+                        <div class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg">
+                            📱 Mode APK
+                        </div>
+                        <button onclick="window.TcpPrinterBridge.openPrinterSettings()"
+                            class="bg-white border border-slate-300 text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg hover:bg-slate-50 transition">
+                            🖨️ Setting Printer
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(badge);
+            }
             // Default date filters to today
             const today = new Date().toISOString().split('T')[0];
             const filterDaily = document.getElementById('filterDailySalesDate');
@@ -8689,6 +8709,8 @@ Akun ini tidak akan bisa login lagi.`)) {
         </div>
     </div>
 
+    <!-- TCP Printer Bridge untuk Epson TM-U220 (hanya aktif di APK) -->
+    <script src="tcp-printer-bridge.js"></script>
 </body>
 
 </html>

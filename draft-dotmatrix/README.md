@@ -88,3 +88,4 @@ Lalu tambahkan `<script src="escp-formatter.js">` di `index.html`.
 | Rangkap | 1 lembar | 2-3 lembar otomatis |
 | Koneksi | Bluetooth | LAN (WiFi-able) |
 | Print dari banyak HP | ❌ | ✅ |
+

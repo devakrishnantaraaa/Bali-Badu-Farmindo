@@ -5,3 +5,12 @@ node_modules/
 .next/
 *.tsbuildinfo
 scratch/
+
+# Android build & cache
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/local.properties
+*.apk
+*.aab

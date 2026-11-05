@@ -172,3 +172,4 @@ async function printNotaToEpsonTMU220(notaData) {
 // Export untuk dipakai di index.html (saat diaktifkan nanti)
 // window.printNotaToEpsonTMU220 = printNotaToEpsonTMU220;
 // window.generateEscP = generateEscP;
+

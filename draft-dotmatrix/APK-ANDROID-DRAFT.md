@@ -189,3 +189,4 @@ function handleCetak(notaData) {
 
 - [`escp-formatter.js`](./escp-formatter.js) — Format ESC/P untuk nota 75mm
 - [`print-server.js`](./print-server.js) — Alternatif jika pakai Raspberry Pi
+

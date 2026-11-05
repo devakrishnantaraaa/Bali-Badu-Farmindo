@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dewata Jaya</string>
+    <string name="title_activity_main">Dewata Jaya</string>
+    <string name="package_name">com.dewatajaya.inventory</string>
+    <string name="custom_url_scheme">com.dewatajaya.inventory</string>
+</resources>
