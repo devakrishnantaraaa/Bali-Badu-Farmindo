@@ -40,25 +40,15 @@ jobs:
           printf "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
 
       - name: 7. Build APK with Gradle
-        id: gradle_step
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee ../gradle-build.log
-        continue-on-error: true
+          ./gradlew assembleDebug --stacktrace --no-daemon
+          find app/build/outputs/apk/ -type f -name "*.apk"
 
-      - name: 8. Report Gradle Result & Show Error if Failed
-        run: |
-          if [ "${{ steps.gradle_step.outcome }}" != "success" ]; then
-            echo "::error title=Gradle Build Failed::Tampilkan 60 baris log error terakhir di bawah ini:"
-            tail -n 60 gradle-build.log
-            exit 1
-          fi
-
-      - name: 9. Upload APK Artifact
+      - name: 8. Upload APK Artifact
         uses: actions/upload-artifact@v4
-        if: steps.gradle_step.outcome == 'success'
         with:
           name: DewataJaya-App-Debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/**/*.apk
           retention-days: 7
