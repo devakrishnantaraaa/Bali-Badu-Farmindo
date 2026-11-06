@@ -50,7 +50,11 @@
             return { success: false, message: 'Fitur cetak dot matrix hanya tersedia di aplikasi Android (APK)' };
         }
         const { ip, port } = getPrinterConfig();
-        return await window.Capacitor.Plugins.TcpPrinter.print({ ip, port, data: escData });
+        try {
+            return await window.Capacitor.Plugins.TcpPrinter.print({ ip, port, data: escData });
+        } catch (e) {
+            return { success: false, message: e.message || String(e) };
+        }
     }
 
     // ================================================================
@@ -271,27 +275,19 @@
     /**
      * Fungsi utama cetak nota ke dot matrix
      */
-    async function cetakNotaDotMatrix(notaData) {
+    async function cetakNotaDotMatrix(notaData, options) {
         try {
-            // 1. Cek koneksi printer
-            const pingResult = await pingPrinter();
-            if (!pingResult.reachable) {
-                if (typeof showAlert === 'function') {
-                    showAlert('⚠️ Printer tidak terjangkau!\n' + pingResult.message, true);
-                } else {
-                    alert('Printer tidak terjangkau: ' + pingResult.message);
-                }
-                return false;
-            }
+            // 1. Generate ESC/POS rapi 32 kolom
+            const escData = generateEscP(notaData, options);
 
-            // 2. Generate ESC/POS rapi 32 kolom + Logo
-            const escData = generateEscP(notaData);
-
-            // 3. Kirim ke printer via TCP socket
+            // 2. Kirim langsung ke printer via TCP socket
             const result = await sendToPrinter(escData);
-            if (!result.success) {
+            if (!result || !result.success) {
+                const msg = (result && result.message) ? result.message : 'Gagal mengirim data ke printer.';
                 if (typeof showAlert === 'function') {
-                    showAlert('❌ Gagal cetak: ' + result.message, true);
+                    showAlert('❌ ' + msg, true);
+                } else {
+                    alert(msg);
                 }
                 return false;
             }
@@ -302,8 +298,11 @@
             return true;
 
         } catch (err) {
+            const msg = '❌ Error cetak: ' + (err.message || err);
             if (typeof showAlert === 'function') {
-                showAlert('❌ Error cetak: ' + err.message, true);
+                showAlert(msg, true);
+            } else {
+                alert(msg);
             }
             return false;
         }
