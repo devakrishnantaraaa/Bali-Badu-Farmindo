@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { recalibrateProductStock } from '@/lib/stock';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +12,20 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const product_id = searchParams.get('product_id');
+
+    // Pastikan sisa stok dan penyesuaian tersinkronisasi kronologis
+    try {
+      if (product_id && product_id !== 'ALL' && product_id !== 'undefined' && product_id !== 'null') {
+        await recalibrateProductStock(pool, product_id);
+      } else {
+        const allProds = await pool.query('SELECT id FROM products');
+        for (const p of allProds.rows) {
+          await recalibrateProductStock(pool, p.id);
+        }
+      }
+    } catch (syncErr: any) {
+      console.warn('Notice (stock movements sync):', syncErr.message);
+    }
 
     let queryText = `
       SELECT sm.id, sm.created_at, sm.product_id, p.name AS product_name, p.unit, p.price_per_unit, sm.movement_type, 

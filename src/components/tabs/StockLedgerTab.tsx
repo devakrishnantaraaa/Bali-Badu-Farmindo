@@ -117,7 +117,7 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
     const inQty = item.movement_type === 'BARANG_MASUK' ? qty : 0;
     const outQty = item.movement_type === 'PENJUALAN' ? qty : 0;
     const damaged = Number(item.damaged_qty || 0);
-    const adj = Number(item.adjustment_qty || 0);
+    let adj = Number(item.adjustment_qty || 0);
     const phys = item.physical_stock !== null && item.physical_stock !== undefined ? Number(item.physical_stock) : null;
 
     const pId = String(item.product_id || 'default');
@@ -125,7 +125,18 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
       productBalances[pId] = 0;
     }
 
-    productBalances[pId] += inQty - outQty - damaged + adj;
+    if (inQty > 0) productBalances[pId] += inQty;
+    if (outQty > 0) productBalances[pId] -= outQty;
+    if (damaged > 0) productBalances[pId] -= damaged;
+
+    if (adj !== 0) {
+      productBalances[pId] += adj;
+    } else if (phys !== null && item.movement_type === 'PENYESUAIAN') {
+      // Otomatis hitung selisih penyesuaian jika ada stok fisik opname
+      adj = phys - productBalances[pId];
+      productBalances[pId] = phys;
+    }
+
     const totalRunningSisa = Object.values(productBalances).reduce((acc, val) => acc + val, 0);
 
     return {
@@ -174,7 +185,7 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
     dateGroups[dateKey].outQty += item.outQty;
     dateGroups[dateKey].damaged += item.damaged;
     if (item.phys !== null) {
-      dateGroups[dateKey].physical = (dateGroups[dateKey].physical ?? 0) + item.phys;
+      dateGroups[dateKey].physical = item.phys;
     }
     dateGroups[dateKey].adj += item.adj;
     dateGroups[dateKey].sisa = item.sisa;
@@ -308,7 +319,12 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowAuditModal(true)}
+            onClick={() => {
+              if (selectedProductId !== 'ALL') {
+                setAdjProductId(selectedProductId);
+              }
+              setShowAuditModal(true);
+            }}
             className="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 transition"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -509,7 +525,17 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
                   <input
                     type="number"
                     value={adjDamaged}
-                    onChange={(e) => setAdjDamaged(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdjDamaged(val);
+                      if (adjPhysical) {
+                        const physNum = parseFloat(adjPhysical);
+                        const dmgNum = parseFloat(val || '0') || 0;
+                        const p = products.find((prod) => String(prod.id) === String(adjProductId || selectedProductId));
+                        const cur = p ? Number(p.current_stock || 0) : 0;
+                        setAdjQty(String(Math.round((physNum - (cur - dmgNum)) * 100) / 100));
+                      }
+                    }}
                     placeholder="0"
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs"
                   />
@@ -519,7 +545,17 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
                   <input
                     type="number"
                     value={adjPhysical}
-                    onChange={(e) => setAdjPhysical(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdjPhysical(val);
+                      if (val !== '') {
+                        const physNum = parseFloat(val);
+                        const dmgNum = parseFloat(adjDamaged || '0') || 0;
+                        const p = products.find((prod) => String(prod.id) === String(adjProductId || selectedProductId));
+                        const cur = p ? Number(p.current_stock || 0) : 0;
+                        setAdjQty(String(Math.round((physNum - (cur - dmgNum)) * 100) / 100));
+                      }
+                    }}
                     placeholder="Opname"
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs"
                   />
@@ -557,12 +593,22 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
               <button
                 type="button"
                 onClick={() => {
-                  if (!adjProductId) return alert('Silakan pilih produk');
+                  const targetProdId = adjProductId || (selectedProductId !== 'ALL' ? selectedProductId : '');
+                  if (!targetProdId) return alert('Silakan pilih produk');
+
+                  let finalAdj = adjQty ? parseFloat(adjQty) : 0;
+                  if (finalAdj === 0 && adjPhysical !== '') {
+                    const p = products.find((prod) => String(prod.id) === String(targetProdId));
+                    const cur = p ? Number(p.current_stock || 0) : 0;
+                    const dmg = parseFloat(adjDamaged || '0') || 0;
+                    finalAdj = Math.round((parseFloat(adjPhysical) - (cur - dmg)) * 100) / 100;
+                  }
+
                   auditMutation.mutate({
-                    product_id: adjProductId,
+                    product_id: targetProdId,
                     damaged_qty: adjDamaged,
                     physical_stock: adjPhysical,
-                    adjustment_qty: adjQty,
+                    adjustment_qty: finalAdj,
                     notes: adjNotes,
                     adjustment_date: adjDate,
                   });

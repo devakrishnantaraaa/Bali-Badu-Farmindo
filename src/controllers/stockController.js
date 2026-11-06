@@ -20,7 +20,8 @@ async function recalibrateProductStock(clientOrDb, productId) {
         for (const m of movs.rows) {
             const q = parseFloat(m.quantity) || 0;
             const dmg = parseFloat(m.damaged_qty) || 0;
-            const adj = parseFloat(m.adjustment_qty) || 0;
+            let adj = parseFloat(m.adjustment_qty) || 0;
+            const phys = (m.physical_stock !== null && m.physical_stock !== undefined && m.physical_stock !== '') ? parseFloat(m.physical_stock) : null;
 
             if (m.movement_type === 'BARANG_MASUK') {
                 running += q;
