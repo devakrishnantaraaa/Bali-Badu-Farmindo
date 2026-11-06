@@ -20,8 +20,7 @@ async function recalibrateProductStock(clientOrDb, productId) {
         for (const m of movs.rows) {
             const q = parseFloat(m.quantity) || 0;
             const dmg = parseFloat(m.damaged_qty) || 0;
-            let adj = parseFloat(m.adjustment_qty) || 0;
-            const phys = (m.physical_stock !== null && m.physical_stock !== undefined && m.physical_stock !== '') ? parseFloat(m.physical_stock) : null;
+            const adj = parseFloat(m.adjustment_qty) || 0;
 
             if (m.movement_type === 'BARANG_MASUK') {
                 running += q;
@@ -31,13 +30,6 @@ async function recalibrateProductStock(clientOrDb, productId) {
             if (dmg > 0) running -= dmg;
             if (adj !== 0) {
                 running += adj;
-            } else if (phys !== null && m.movement_type === 'PENYESUAIAN') {
-                // Otomatis hitung selisih jika ada stok fisik opname tapi adjustment_qty bernilai 0
-                adj = phys - running;
-                running = phys;
-                try {
-                    await clientOrDb.query('UPDATE stock_movements SET adjustment_qty = $1 WHERE id = $2', [adj, m.id]);
-                } catch (e) {}
             }
 
             if (parseFloat(m.balance_after) !== running) {

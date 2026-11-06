@@ -4696,14 +4696,7 @@
                 if (inQty > 0) productBalances[pId] += inQty;
                 if (outQty > 0) productBalances[pId] -= outQty;
                 if (damaged > 0) productBalances[pId] -= damaged;
-
-                if (adj !== 0) {
-                    productBalances[pId] += adj;
-                } else if (phys !== null && item.movement_type === 'PENYESUAIAN') {
-                    // Otomatis hitung selisih penyesuaian jika ada stok fisik opname
-                    adj = phys - productBalances[pId];
-                    productBalances[pId] = phys;
-                }
+                if (adj !== 0) productBalances[pId] += adj;
 
                 const totalRunningSisa = Object.values(productBalances).reduce((acc, val) => acc + val, 0);
 

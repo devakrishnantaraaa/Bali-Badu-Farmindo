@@ -13,7 +13,17 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const product_id = searchParams.get('product_id');
 
-    // Pastikan sisa stok dan penyesuaian tersinkronisasi kronologis
+    // Pastikan pembersihan data jika ada penyesuaian yang sempat terisi angka negatif otomatis
+    try {
+      await pool.query(`
+        UPDATE stock_movements 
+        SET adjustment_qty = 0 
+        WHERE (notes LIKE '%GANTI STOK RUSA%' OR notes LIKE '%Penyesuaian Stok Audit%') 
+          AND adjustment_qty < 0
+      `);
+    } catch (eFix: any) {}
+
+    // Pastikan sisa stok tersinkronisasi kronologis
     try {
       if (product_id && product_id !== 'ALL' && product_id !== 'undefined' && product_id !== 'null') {
         await recalibrateProductStock(pool, product_id);
