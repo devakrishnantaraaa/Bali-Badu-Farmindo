@@ -2344,6 +2344,11 @@
                 loginScreen.classList.add('hidden');
                 appScreen.classList.remove('hidden');
                 setupUserRoleView();
+                // 1. Tampilkan data dari cache lokal secara INSTAN (0 detik)
+                if (typeof renderInitialDataFromCache === 'function') {
+                    renderInitialDataFromCache();
+                }
+                // 2. Muat pembaruan data terbaru dari server di background
                 loadInitialData();
             }
         }
@@ -2981,6 +2986,186 @@
             }, 3500);
         }
 
+        function renderCustomersUI(customers) {
+            if (!Array.isArray(customers)) return;
+            const statCust = document.getElementById('statCustomers');
+            if (statCust) statCust.innerText = customers.length;
+            const countCustEl = document.getElementById('countCustomerTable');
+            if (countCustEl) countCustEl.innerText = customers.length;
+
+            const orderCust = document.getElementById('orderCustomer');
+            if (orderCust) {
+                const curVal = orderCust.value;
+                orderCust.innerHTML = '<option value="">Pilih Customer...</option>' +
+                    customers.map(c => `<option value="${c.id}">${c.name} (${c.phone || '-'})</option>`).join('');
+                if (curVal) orderCust.value = curVal;
+            }
+
+            window.globalCustomersList = customers;
+            loadInvoiceCustomersDropdown();
+
+            // Render Tabel Daftar Customer Terdaftar
+            const custBody = document.getElementById('customerTableBody');
+            if (custBody) {
+                const termsLabels = {
+                    'REGULER': 'Reguler',
+                    'TGL_15_30': 'Tgl 15 & 30',
+                    'REKAP_BULANAN': 'Rekap 1 Bln',
+                    'GANTUNG_1_NOTA': 'Gantung 1 Nota'
+                };
+                custBody.innerHTML = customers.map(c => `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-2 border border-slate-200 font-bold text-slate-900">${c.name}</td>
+                        <td class="p-2 border border-slate-200 font-mono text-slate-700">${c.phone || '-'}</td>
+                        <td class="p-2 border border-slate-200">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-200">
+                                ${termsLabels[c.payment_terms] || c.payment_terms || 'Reguler'}
+                            </span>
+                        </td>
+                        <td class="p-2 border border-slate-200 text-slate-600 truncate max-w-[200px]" title="${c.address || ''}">${c.address || '-'}</td>
+                        <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="openEditCustomerModal(${c.id})" title="Edit Data Customer" 
+                                    class="px-2 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded shadow-sm flex items-center gap-1">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deleteCustomerById(${c.id}, '${c.name.replace(/'/g, "\\'")}')" title="Hapus Customer" 
+                                    class="px-2 py-1 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded shadow-sm flex items-center gap-1">
+                                    🗑️ Hapus
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="p-3 text-center text-slate-400">Belum ada customer terdaftar</td></tr>';
+            }
+        }
+
+        function renderProductsUI(products) {
+            if (!Array.isArray(products)) return;
+            if (products.length > 0) {
+                const statStock = document.getElementById('statStock');
+                if (statStock) statStock.innerText = `${products[0].current_stock} ${products[0].unit}`;
+            }
+            const countProdEl = document.getElementById('countProductTable');
+            if (countProdEl) countProdEl.innerText = products.length;
+
+            window.globalProductsList = products;
+
+            // Render Tabel Daftar Produk & Stok Terdaftar
+            const prodBody = document.getElementById('productTableBody');
+            if (prodBody) {
+                prodBody.innerHTML = products.map(p => `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-2 border border-slate-200 font-mono text-slate-500 font-semibold">${p.id}</td>
+                        <td class="p-2 border border-slate-200 font-bold text-slate-900">${p.name}</td>
+                        <td class="p-2 border border-slate-200 text-right font-extrabold ${Number(p.current_stock) > 0 ? 'text-emerald-700' : 'text-rose-600'}">
+                            ${Number(p.current_stock).toLocaleString('id-ID')} ${p.unit}
+                        </td>
+                        <td class="p-2 border border-slate-200 text-right font-semibold text-slate-800">
+                            Rp ${Number(p.price_per_unit || 0).toLocaleString('id-ID')}
+                        </td>
+                        <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="openEditProductModal(${p.id})" title="Edit Harga Pasar & Nama" 
+                                    class="px-2 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded shadow-sm flex items-center gap-1">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deleteProductById(${p.id}, '${p.name.replace(/'/g, "\\'")}')" title="Hapus Produk" 
+                                    class="px-2 py-1 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded shadow-sm flex items-center gap-1">
+                                    🗑️ Hapus
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="5" class="p-3 text-center text-slate-400">Belum ada produk terdaftar</td></tr>';
+            }
+
+            const pSelects = [document.getElementById('orderProduct'), document.getElementById('incomingProduct'), document.getElementById('adjProduct')];
+            pSelects.forEach(select => {
+                if (select) {
+                    const curVal = select.value;
+                    select.innerHTML = '<option value="">Pilih Produk...</option>' +
+                        products.map(p => `<option value="${p.id}" data-price="${p.price_per_unit || 0}">${p.name} - Stok: ${p.current_stock} ${p.unit}</option>`).join('');
+                    if (curVal) select.value = curVal;
+                }
+            });
+
+            // Auto-fill harga acuan saat produk penjualan dipilih (bila field harga kosong)
+            const orderProdSelect = document.getElementById('orderProduct');
+            if (orderProdSelect && !orderProdSelect.dataset.hasPriceListener) {
+                orderProdSelect.dataset.hasPriceListener = 'true';
+                orderProdSelect.addEventListener('change', function() {
+                    const opt = this.options[this.selectedIndex];
+                    const priceInput = document.getElementById('orderPrice');
+                    if (opt && opt.dataset.price && priceInput && !priceInput.value) {
+                        priceInput.value = opt.dataset.price;
+                    }
+                    calculateOrderTotalLive();
+                });
+            }
+
+            // Populate Filter Kartu Stok Gudang
+            const filterLedger = document.getElementById('filterLedgerProduct');
+            if (filterLedger) {
+                const currentVal = filterLedger.value || 'ALL';
+                filterLedger.innerHTML = '<option value="ALL">SEMUA PRODUK (Semua Telur)</option>' +
+                    products.map(p => `<option value="${p.id}">${p.name} (Stok: ${p.current_stock} ${p.unit})</option>`).join('');
+                if (Array.from(filterLedger.options).some(o => o.value === currentVal)) {
+                    filterLedger.value = currentVal;
+                } else {
+                    filterLedger.value = 'ALL';
+                }
+            }
+
+            // Default tanggal barang masuk ke hari ini jika belum diisi
+            const incomingDateEl = document.getElementById('incomingDate');
+            if (incomingDateEl && !incomingDateEl.value) {
+                incomingDateEl.value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        function renderDebtsUI(debtsData) {
+            if (!Array.isArray(debtsData)) return;
+            let totalPiutangGrand = 0;
+            debtsData.forEach(cust => {
+                const custTotal = Number(cust.total_remaining_debt || cust.total_customer_debt || 0);
+                totalPiutangGrand += custTotal;
+            });
+            const statDebtsEl = document.getElementById('statDebts');
+            if (statDebtsEl) statDebtsEl.innerText = `Rp ${totalPiutangGrand.toLocaleString('id-ID')}`;
+            tabDataCache['debts'] = Date.now();
+            checkScheduledTermsReminders(debtsData);
+        }
+
+        function renderInitialDataFromCache() {
+            try {
+                const cJson = localStorage.getItem('cache_customers_data');
+                if (cJson) {
+                    const custs = JSON.parse(cJson);
+                    if (Array.isArray(custs) && custs.length > 0) renderCustomersUI(custs);
+                }
+                const pJson = localStorage.getItem('cache_products_data');
+                if (pJson) {
+                    const prods = JSON.parse(pJson);
+                    if (Array.isArray(prods) && prods.length > 0) renderProductsUI(prods);
+                }
+                const dJson = localStorage.getItem('cache_debts_data');
+                if (dJson) {
+                    const debts = JSON.parse(dJson);
+                    if (Array.isArray(debts) && debts.length > 0) renderDebtsUI(debts);
+                }
+                const sJson = localStorage.getItem('cache_daily_sales_data');
+                if (sJson) {
+                    const salesData = JSON.parse(sJson);
+                    if (Array.isArray(salesData) && salesData.length > 0 && typeof renderDailySalesUI === 'function') {
+                        renderDailySalesUI(salesData, 'Semua Penjualan');
+                    }
+                }
+            } catch (err) {
+                console.warn('Gagal render cache lokal:', err);
+            }
+        }
+
         async function loadInitialData() {
             try {
                 // Ambil data esensial secara paralel (Promise.all) agar dashboard terbuka instan tanpa jeda
@@ -2992,147 +3177,21 @@
 
                 if (cRes.ok) {
                     const customers = await cRes.json();
-                    document.getElementById('statCustomers').innerText = customers.length;
-                    const countCustEl = document.getElementById('countCustomerTable');
-                    if (countCustEl) countCustEl.innerText = customers.length;
-
-                    document.getElementById('orderCustomer').innerHTML = '<option value="">Pilih Customer...</option>' +
-                        customers.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
-
-                    window.globalCustomersList = customers;
-                    loadInvoiceCustomersDropdown();
-
-                    // Render Tabel Daftar Customer Terdaftar
-                    const custBody = document.getElementById('customerTableBody');
-                    if (custBody) {
-                        const termsLabels = {
-                            'REGULER': 'Reguler',
-                            'TGL_15_30': 'Tgl 15 & 30',
-                            'REKAP_BULANAN': 'Rekap 1 Bln',
-                            'GANTUNG_1_NOTA': 'Gantung 1 Nota'
-                        };
-                        custBody.innerHTML = customers.map(c => `
-                            <tr class="hover:bg-slate-50 border-b border-slate-100">
-                                <td class="p-2 border border-slate-200 font-bold text-slate-900">${c.name}</td>
-                                <td class="p-2 border border-slate-200 font-mono text-slate-700">${c.phone || '-'}</td>
-                                <td class="p-2 border border-slate-200">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-900 border border-amber-200">
-                                        ${termsLabels[c.payment_terms] || c.payment_terms || 'Reguler'}
-                                    </span>
-                                </td>
-                                <td class="p-2 border border-slate-200 text-slate-600 truncate max-w-[200px]" title="${c.address || ''}">${c.address || '-'}</td>
-                                <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button onclick="openEditCustomerModal(${c.id})" title="Edit Data Customer" 
-                                            class="px-2 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded shadow-sm flex items-center gap-1">
-                                            ✏️ Edit
-                                        </button>
-                                        <button onclick="deleteCustomerById(${c.id}, '${c.name.replace(/'/g, "\\'")}')" title="Hapus Customer" 
-                                            class="px-2 py-1 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded shadow-sm flex items-center gap-1">
-                                            🗑️ Hapus
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('') || '<tr><td colspan="5" class="p-3 text-center text-slate-400">Belum ada customer terdaftar</td></tr>';
-                    }
+                    try { localStorage.setItem('cache_customers_data', JSON.stringify(customers)); } catch (e) {}
+                    renderCustomersUI(customers);
                 }
 
                 if (pRes.ok) {
                     const products = await pRes.json();
-                    if (products.length > 0) {
-                        document.getElementById('statStock').innerText = `${products[0].current_stock} ${products[0].unit}`;
-                    }
-                    const countProdEl = document.getElementById('countProductTable');
-                    if (countProdEl) countProdEl.innerText = products.length;
-
-                    window.globalProductsList = products;
-
-                    // Render Tabel Daftar Produk & Stok Terdaftar
-                    const prodBody = document.getElementById('productTableBody');
-                    if (prodBody) {
-                        prodBody.innerHTML = products.map(p => `
-                            <tr class="hover:bg-slate-50 border-b border-slate-100">
-                                <td class="p-2 border border-slate-200 font-mono text-slate-500 font-semibold">${p.id}</td>
-                                <td class="p-2 border border-slate-200 font-bold text-slate-900">${p.name}</td>
-                                <td class="p-2 border border-slate-200 text-right font-extrabold ${Number(p.current_stock) > 0 ? 'text-emerald-700' : 'text-rose-600'}">
-                                    ${Number(p.current_stock).toLocaleString('id-ID')} ${p.unit}
-                                </td>
-                                <td class="p-2 border border-slate-200 text-right font-semibold text-slate-800">
-                                    Rp ${Number(p.price_per_unit || 0).toLocaleString('id-ID')}
-                                </td>
-                                <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button onclick="openEditProductModal(${p.id})" title="Edit Harga Pasar & Nama" 
-                                            class="px-2 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded shadow-sm flex items-center gap-1">
-                                            ✏️ Edit
-                                        </button>
-                                        <button onclick="deleteProductById(${p.id}, '${p.name.replace(/'/g, "\\'")}')" title="Hapus Produk" 
-                                            class="px-2 py-1 text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded shadow-sm flex items-center gap-1">
-                                            🗑️ Hapus
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('') || '<tr><td colspan="5" class="p-3 text-center text-slate-400">Belum ada produk terdaftar</td></tr>';
-                    }
-
-                    const pSelects = [document.getElementById('orderProduct'), document.getElementById('incomingProduct'), document.getElementById('adjProduct')];
-                    pSelects.forEach(select => {
-                        if (select) {
-                            select.innerHTML = '<option value="">Pilih Produk...</option>' +
-                                products.map(p => `<option value="${p.id}" data-price="${p.price_per_unit || 0}">${p.name} - Stok: ${p.current_stock} ${p.unit}</option>`).join('');
-                        }
-                    });
-
-                    // Auto-fill harga acuan saat produk penjualan dipilih (bila field harga kosong)
-                    const orderProdSelect = document.getElementById('orderProduct');
-                    if (orderProdSelect && !orderProdSelect.dataset.hasPriceListener) {
-                        orderProdSelect.dataset.hasPriceListener = 'true';
-                        orderProdSelect.addEventListener('change', function() {
-                            const opt = this.options[this.selectedIndex];
-                            const priceInput = document.getElementById('orderPrice');
-                            if (opt && opt.dataset.price && priceInput && !priceInput.value) {
-                                priceInput.value = opt.dataset.price;
-                            }
-                            calculateOrderTotalLive();
-                        });
-                    }
-
-                    // Populate Filter Kartu Stok Gudang
-                    const filterLedger = document.getElementById('filterLedgerProduct');
-                    if (filterLedger) {
-                        const currentVal = filterLedger.value || 'ALL';
-                        filterLedger.innerHTML = '<option value="ALL">SEMUA PRODUK (Semua Telur)</option>' +
-                            products.map(p => `<option value="${p.id}">${p.name} (Stok: ${p.current_stock} ${p.unit})</option>`).join('');
-                        if (Array.from(filterLedger.options).some(o => o.value === currentVal)) {
-                            filterLedger.value = currentVal;
-                        } else {
-                            filterLedger.value = 'ALL';
-                        }
-                    }
-
-                    // Default tanggal barang masuk ke hari ini jika belum diisi
-                    const incomingDateEl = document.getElementById('incomingDate');
-                    if (incomingDateEl && !incomingDateEl.value) {
-                        incomingDateEl.value = new Date().toISOString().split('T')[0];
-                    }
+                    try { localStorage.setItem('cache_products_data', JSON.stringify(products)); } catch (e) {}
+                    renderProductsUI(products);
                 }
 
                 // Render statistik hutang langsung dari hasil paralel tanpa fetch ulang
                 if (dRes && dRes.ok) {
                     const debtsData = await dRes.json();
-                    let totalPiutangGrand = 0;
-                    debtsData.forEach(cust => {
-                        const custTotal = Number(cust.total_remaining_debt || cust.total_customer_debt || 0);
-                        totalPiutangGrand += custTotal;
-                    });
-                    const statDebtsEl = document.getElementById('statDebts');
-                    if (statDebtsEl) statDebtsEl.innerText = `Rp ${totalPiutangGrand.toLocaleString('id-ID')}`;
-                    tabDataCache['debts'] = Date.now();
-
-                    // Cek pengingat jadwal tagihan termin memakai data yang sudah diambil
-                    checkScheduledTermsReminders(debtsData);
+                    try { localStorage.setItem('cache_debts_data', JSON.stringify(debtsData)); } catch (e) {}
+                    renderDebtsUI(debtsData);
                 }
 
                 // Inisialisasi custom select dropdowns
@@ -3342,6 +3401,20 @@
             const startDate = document.getElementById('filterDailySalesStart')?.value || '';
             const endDate = document.getElementById('filterDailySalesEnd')?.value || '';
 
+            // Tampilkan dari cache lokal terlebih dahulu jika ada agar data keluar instan tanpa jeda
+            if (!startDate && !endDate && !window._hasRenderedSalesCache) {
+                try {
+                    const cachedSales = localStorage.getItem('cache_daily_sales_data');
+                    if (cachedSales) {
+                        const parsed = JSON.parse(cachedSales);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            window._hasRenderedSalesCache = true;
+                            renderDailySalesData(parsed, 'Semua Penjualan');
+                        }
+                    }
+                } catch (e) {}
+            }
+
             let query = '';
             if (startDate && endDate) {
                 query = `start_date=${startDate}&end_date=${endDate}`;
@@ -3354,20 +3427,17 @@
             const res = await fetch(`${API_BASE}/reports/daily-sales?${query}`, { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
+            if (!startDate && !endDate) {
+                try { localStorage.setItem('cache_daily_sales_data', JSON.stringify(data)); } catch (e) {}
+            }
+            renderDailySalesData(data, (startDate && endDate) ? `${startDate} s/d ${endDate}` : (startDate ? `Mulai ${startDate}` : (endDate ? `Sampai ${endDate}` : 'Semua Penjualan')));
+        }
 
+        function renderDailySalesData(data, dateLabel) {
             document.getElementById('dailySalesCount').innerText = `${data.length} Nota`;
             const totalRev = data.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
             document.getElementById('dailySalesRevenue').innerText = `Rp ${totalRev.toLocaleString('id-ID')}`;
-
-            let dateLabel = 'Semua Penjualan';
-            if (startDate && endDate) {
-                dateLabel = `${startDate} s/d ${endDate}`;
-            } else if (startDate) {
-                dateLabel = `Mulai ${startDate}`;
-            } else if (endDate) {
-                dateLabel = `Sampai ${endDate}`;
-            }
-            document.getElementById('dailySalesDateLabel').innerText = dateLabel;
+            document.getElementById('dailySalesDateLabel').innerText = dateLabel || 'Semua Penjualan';
 
             const monthsIndo = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 
@@ -5793,6 +5863,8 @@
                     invoiceNumber: inv.invoice_number || 'INV-001',
                     date: inv.date || new Date().toLocaleDateString('id-ID'),
                     salesName: inv.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS'),
+                    paymentType: inv.status || 'CONFIRMED',
+                    dueDate: inv.due_date,
                     items: itemsList,
                     total: total,
                     paid: isLunas ? total : 0,
@@ -7627,6 +7699,8 @@ Akun ini tidak akan bisa login lagi.`)) {
                 invoiceNumber: r.invoice_number || 'INV-001',
                 date: r.order_date || r.date || new Date().toLocaleDateString('id-ID'),
                 salesName: r.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS'),
+                paymentType: r.payment_type || r.status || 'LUNAS',
+                dueDate: r.due_date,
                 items: [
                     {
                         name: pName,
