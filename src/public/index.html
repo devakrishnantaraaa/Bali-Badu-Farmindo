@@ -596,6 +596,15 @@
                     class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-lg shadow-sm transition text-sm">
                     Masuk ke Sistem
                 </button>
+                <div id="loginApkSettingBox" class="hidden pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span class="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px]">
+                        📱 Mode APK
+                    </span>
+                    <button type="button" onclick="window.TcpPrinterBridge && window.TcpPrinterBridge.openPrinterSettings()" 
+                        class="text-slate-600 hover:text-blue-700 font-bold flex items-center gap-1 hover:underline cursor-pointer text-[11px] bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 transition">
+                        🖨️ Setting Printer
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -925,7 +934,12 @@
                         <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">Sistem Distribusi & Operasional</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <button id="topbarPrinterBtn" onclick="window.TcpPrinterBridge && window.TcpPrinterBridge.openPrinterSettings()"
+                        class="hidden text-[11px] bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 border border-slate-200 px-2.5 py-1 rounded-full font-bold items-center gap-1 transition"
+                        title="Pengaturan Printer & Server">
+                        🖨️ <span class="hidden sm:inline">Setting Printer</span>
+                    </button>
                     <div
                         class="text-[11px] text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
@@ -2105,22 +2119,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             checkAuthSession();
 
-            // Tampilkan badge dan setting printer dot matrix kalau jalan di APK
+            // Tampilkan tombol setting printer dot matrix jika berjalan di mode APK Android
             if (window.TcpPrinterBridge && window.TcpPrinterBridge.isNative) {
-                const badge = document.createElement('div');
-                badge.id = 'nativeAppBadge';
-                badge.innerHTML = `
-                    <div class="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
-                        <div class="bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg">
-                            📱 Mode APK
-                        </div>
-                        <button onclick="window.TcpPrinterBridge.openPrinterSettings()"
-                            class="bg-white border border-slate-300 text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg hover:bg-slate-50 transition">
-                            🖨️ Setting Printer
-                        </button>
-                    </div>
-                `;
-                document.body.appendChild(badge);
+                const loginSettingBox = document.getElementById('loginApkSettingBox');
+                if (loginSettingBox) loginSettingBox.classList.remove('hidden');
+
+                const topbarPrinterBtn = document.getElementById('topbarPrinterBtn');
+                if (topbarPrinterBtn) {
+                    topbarPrinterBtn.classList.remove('hidden');
+                    topbarPrinterBtn.classList.add('flex');
+                }
             }
             // Default date filters to today
             const today = new Date().toISOString().split('T')[0];
