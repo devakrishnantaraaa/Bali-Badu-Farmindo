@@ -199,23 +199,58 @@
         }
     }
 
+    /**
+     * Test print sederhana untuk cek koneksi fisik ke printer
+     */
+    async function testPrintConnection() {
+        const ESC = '\x1B';
+        const LF  = '\x0A';
+        const GS  = '\x1D';
+
+        let testStr = ESC + '@'; // init
+        testStr += ESC + 'E\x01'; // bold
+        testStr += '==========================================\n';
+        testStr += '         DEWATA JAYA SUPPLIER\n';
+        testStr += '   TES KONEKSI PRINTER EPSON TM-U220\n';
+        testStr += '==========================================\n';
+        testStr += ESC + 'E\x00'; // normal
+        testStr += 'Status     : KONEKSI BERHASIL (LAN OK)\n';
+        testStr += 'Waktu      : ' + new Date().toLocaleString('id-ID') + '\n';
+        testStr += 'Printer    : Epson TM-U220 Dot Matrix\n';
+        testStr += '------------------------------------------\n';
+        testStr += 'Aplikasi Siap Digunakan untuk Transaksi!\n\n\n\n';
+        testStr += GS + 'V\x01'; // cut
+
+        return await sendToPrinter(testStr);
+    }
+
     // ================================================================
     // Settings UI helper: buka modal konfigurasi IP printer
     // (dipanggil dari Settings di index.html)
     // ================================================================
-    function openPrinterSettings() {
+    async function openPrinterSettings() {
         const cfg = getPrinterConfig();
         const currentServer = localStorage.getItem('app_backend_server_url') || 'https://dewata-jaya-supplier.vercel.app';
         const serverUrl = prompt('URL Server Backend Dewata Jaya:', currentServer);
         if (serverUrl !== null && serverUrl.trim()) {
             localStorage.setItem('app_backend_server_url', serverUrl.trim().replace(/\/+$/, ''));
         }
-        const ip = prompt('IP Address Printer (contoh: 192.168.1.100):', cfg.ip);
+        const ip = prompt('IP Address Printer (contoh: 192.168.110.200):', cfg.ip);
         if (ip === null) return;
         const port = prompt('Port Printer (default: 9100):', cfg.port);
         if (port === null) return;
         savePrinterConfig(ip, port);
-        alert('Pengaturan disimpan!\nServer: ' + (localStorage.getItem('app_backend_server_url') || currentServer) + '\nPrinter: ' + ip + ':' + port);
+
+        const doTest = confirm('Pengaturan disimpan!\nIP: ' + ip + ':' + port + '\n\nApakah Anda ingin langsung TES CETAK ke printer sekarang?');
+        if (doTest) {
+            if (typeof showAlert === 'function') showAlert('⏳ Mengirim sinyal tes cetak ke printer...');
+            const res = await testPrintConnection();
+            if (res && res.success) {
+                alert('✅ Berhasil! Kertas tes cetak telah keluar dari printer.');
+            } else {
+                alert('❌ Gagal tes cetak: ' + (res ? res.message : 'Error') + '\n\nPastikan HP terhubung ke WiFi toko (' + ip + ') dan printer menyala.');
+            }
+        }
     }
 
     // Expose ke global scope agar bisa dipanggil dari index.html
@@ -227,6 +262,7 @@
         sendToPrinter   : sendToPrinter,
         generateEscP    : generateEscP,
         cetakNotaDotMatrix: cetakNotaDotMatrix,
+        testPrintConnection: testPrintConnection,
         openPrinterSettings: openPrinterSettings,
     };
 

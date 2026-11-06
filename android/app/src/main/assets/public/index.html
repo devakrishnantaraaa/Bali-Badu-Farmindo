@@ -5726,7 +5726,10 @@
         }
 
         // --- CETAK NOTA / INVOICE PRINTING UTILITY ---
+        let currentInvoiceModalData = null;
+
         function showInvoicePrintModal(invData) {
+            currentInvoiceModalData = invData;
             document.getElementById('invNoPrint').innerText = invData.invoice_number || 'INV-001';
             document.getElementById('invDatePrint').innerText = invData.date || new Date().toLocaleDateString('id-ID');
             document.getElementById('invCustPrint').innerText = invData.customer_name || 'Pelanggan';
@@ -5763,7 +5766,47 @@
             document.getElementById('printModal').classList.add('hidden');
         }
 
-        function triggerPrintInvoice() {
+        async function triggerPrintInvoice() {
+            if (window.TcpPrinterBridge && window.TcpPrinterBridge.isNative && currentInvoiceModalData) {
+                const inv = currentInvoiceModalData;
+                const itemsList = (inv.items && inv.items.length > 0) ? inv.items.map(it => ({
+                    name: it.name || it.product_name || 'Telur Ayam Ras',
+                    qty: Number(it.quantity || 1),
+                    unit: it.unit || 'krat',
+                    harga: Number(it.price || it.unit_price || 0),
+                    subtotal: Number(it.subtotal || (it.quantity * (it.price || it.unit_price)) || 0)
+                })) : [
+                    {
+                        name: inv.product_name || 'Telur Ayam Ras',
+                        qty: Number(inv.quantity || 1),
+                        unit: inv.unit || 'krat',
+                        harga: Number(inv.price || inv.harga_satuan || 0),
+                        subtotal: Number(inv.total || inv.total_amount || 0)
+                    }
+                ];
+
+                const total = Number(inv.total || inv.total_amount || 0);
+                const isLunas = (inv.status || 'CONFIRMED').toUpperCase().includes('LUNAS');
+
+                const payload = {
+                    customerName: inv.customer_name || 'Pelanggan',
+                    invoiceNumber: inv.invoice_number || 'INV-001',
+                    date: inv.date || new Date().toLocaleDateString('id-ID'),
+                    salesName: inv.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS'),
+                    items: itemsList,
+                    total: total,
+                    paid: isLunas ? total : 0,
+                    sisa: isLunas ? 0 : total
+                };
+
+                showAlert('⏳ Mengirim faktur ke printer Epson TM-U220...');
+                const success = await window.TcpPrinterBridge.cetakNotaDotMatrix(payload);
+                if (success) {
+                    showAlert('✅ Faktur berhasil dicetak ke Epson TM-U220!');
+                }
+                return;
+            }
+
             document.body.classList.add('is-printing-invoice');
             window.print();
             setTimeout(() => {
@@ -7561,7 +7604,56 @@ Akun ini tidak akan bisa login lagi.`)) {
             }
         }
 
+        async function printCurrentReceiptToDotMatrix() {
+            if (!currentReceiptData) {
+                showAlert('Tidak ada data nota untuk dicetak.', true);
+                return;
+            }
+            if (!window.TcpPrinterBridge || !window.TcpPrinterBridge.isNative) {
+                showAlert('Pencetakan langsung ke Epson TM-U220 berjalan melalui aplikasi Android (APK).', true);
+                return;
+            }
+
+            const r = currentReceiptData;
+            const pName = r.product_name || 'Telur Ayam Ras';
+            const qty = Number(r.quantity || 1);
+            const unit = r.unit || 'krat';
+            const price = Number(r.unit_price || r.price || 0);
+            const total = Number(r.total_amount || r.total || (qty * price));
+            const isLunas = (r.payment_type || r.status || 'LUNAS').toUpperCase().includes('LUNAS');
+
+            const payload = {
+                customerName: r.customer_name || 'Pelanggan',
+                invoiceNumber: r.invoice_number || 'INV-001',
+                date: r.order_date || r.date || new Date().toLocaleDateString('id-ID'),
+                salesName: r.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS'),
+                items: [
+                    {
+                        name: pName,
+                        qty: qty,
+                        unit: unit,
+                        harga: price,
+                        subtotal: total
+                    }
+                ],
+                total: total,
+                paid: isLunas ? total : 0,
+                sisa: isLunas ? 0 : total
+            };
+
+            showAlert('⏳ Mengirim nota ke printer Epson TM-U220...');
+            const success = await window.TcpPrinterBridge.cetakNotaDotMatrix(payload);
+            if (success) {
+                showAlert('✅ Nota berhasil dicetak ke Epson TM-U220!');
+            }
+        }
+
         async function printReceiptViaRawBT() {
+            // DI MODE APK NATIVE: Langsung cetak ke printer Dot Matrix Epson TM-U220!
+            if (window.TcpPrinterBridge && window.TcpPrinterBridge.isNative) {
+                return await printCurrentReceiptToDotMatrix();
+            }
+
             // Cek jika pengguna membuka dari Laptop / Desktop (Windows / Mac)
             const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
             if (!isMobile) {
