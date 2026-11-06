@@ -1682,17 +1682,17 @@
                             </div>
                             <div>
                                 <label class="block text-[11px] font-semibold text-rose-600 mb-1">Rusak (Qty)</label>
-                                <input type="number" id="adjDamaged" oninput="calcAuditAdjLive()" placeholder="0" min="0" step="any"
+                                <input type="number" id="adjDamaged" placeholder="0" min="0" step="any"
                                     class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-rose-500">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-semibold text-blue-600 mb-1">Stok Fisik Gudang</label>
-                                <input type="number" id="adjPhysical" oninput="calcAuditAdjLive()" placeholder="Hasil Opname" min="0" step="any"
+                                <input type="number" id="adjPhysical" placeholder="Hasil Opname" min="0" step="any"
                                     class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-semibold text-purple-700 mb-1">Penyesuaian (+/-)</label>
-                                <input type="number" id="adjQty" placeholder="Otomatis / manual" step="any"
+                                <input type="number" id="adjQty" placeholder="0" step="any"
                                     class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-purple-500">
                             </div>
                         </div>
@@ -4512,26 +4512,6 @@
             if (formBox) formBox.classList.add('hidden');
         }
 
-        // Kalkulasi live otomatis selisih penyesuaian saat user mengisi stok fisik
-        function calcAuditAdjLive() {
-            const physEl = document.getElementById('adjPhysical');
-            const adjQtyEl = document.getElementById('adjQty');
-            const prodEl = document.getElementById('adjProduct');
-            const dmgEl = document.getElementById('adjDamaged');
-            if (!physEl || !adjQtyEl) return;
-
-            const physVal = parseFloat(physEl.value);
-            if (isNaN(physVal)) return;
-
-            const pId = prodEl ? prodEl.value : '';
-            const foundProd = (window.globalProductsList || []).find(p => String(p.id) === String(pId));
-            const currentStock = foundProd ? Number(foundProd.current_stock || 0) : 0;
-            const dmg = parseFloat(dmgEl?.value || 0) || 0;
-
-            const diff = physVal - (currentStock - dmg);
-            adjQtyEl.value = Math.round(diff * 100) / 100;
-        }
-
         let isSubmittingAdjustment = false;
         async function submitStockAdjustment(btnEl) {
             if (isSubmittingAdjustment) return;
@@ -4542,15 +4522,8 @@
             const product_id = document.getElementById('adjProduct')?.value;
             const damaged_qty = parseFloat(document.getElementById('adjDamaged')?.value || 0) || 0;
             const physical_stock = document.getElementById('adjPhysical')?.value || '';
-            let adjustment_qty = parseFloat(document.getElementById('adjQty')?.value || 0) || 0;
+            const adjustment_qty = parseFloat(document.getElementById('adjQty')?.value || 0) || 0;
             const notes = document.getElementById('adjNotes')?.value;
-
-            // Jika adjustment_qty masih 0 tetapi physical_stock diisi:
-            if (adjustment_qty === 0 && physical_stock !== '') {
-                const p = (window.globalProductsList || []).find(item => String(item.id) === String(product_id));
-                const cur = p ? Number(p.current_stock || 0) : 0;
-                adjustment_qty = parseFloat(physical_stock) - (cur - damaged_qty);
-            }
 
             if (!adjustment_date) {
                 showAlert('Silakan pilih Tanggal Audit terlebih dahulu!', true);

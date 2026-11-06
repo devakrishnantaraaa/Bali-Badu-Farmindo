@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     await client.query('BEGIN');
 
     const damaged = damaged_qty ? parseFloat(damaged_qty) : 0;
-    let adj = adjustment_qty ? parseFloat(adjustment_qty) : 0;
+    const adj = adjustment_qty ? parseFloat(adjustment_qty) : 0;
     const phys =
       physical_stock !== undefined && physical_stock !== null && physical_stock !== ''
         ? parseFloat(physical_stock)
@@ -29,18 +29,6 @@ export async function POST(req: NextRequest) {
     const dateVal = adjustment_date
       ? new Date(adjustment_date.includes('T') ? adjustment_date : `${adjustment_date}T12:00:00`)
       : new Date();
-
-    // Jika user mengisi Stok Fisik tapi membiarkan Penyesuaian kosong/0, hitung otomatis selisihnya
-    if (adj === 0 && phys !== null) {
-      const prevMov = await client.query(
-        `SELECT balance_after FROM stock_movements 
-         WHERE product_id = $1 AND created_at <= $2 
-         ORDER BY created_at DESC, id DESC LIMIT 1`,
-        [product_id, dateVal]
-      );
-      const prevBalance = prevMov.rows[0] ? parseFloat(prevMov.rows[0].balance_after || 0) : 0;
-      adj = phys - (prevBalance - damaged);
-    }
 
     const movementRes = await client.query(
       `INSERT INTO stock_movements (product_id, movement_type, quantity, damaged_qty, physical_stock, adjustment_qty, balance_after, notes, created_at)

@@ -518,17 +518,7 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
                   <input
                     type="number"
                     value={adjDamaged}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setAdjDamaged(val);
-                      if (adjPhysical) {
-                        const physNum = parseFloat(adjPhysical);
-                        const dmgNum = parseFloat(val || '0') || 0;
-                        const p = products.find((prod) => String(prod.id) === String(adjProductId || selectedProductId));
-                        const cur = p ? Number(p.current_stock || 0) : 0;
-                        setAdjQty(String(Math.round((physNum - (cur - dmgNum)) * 100) / 100));
-                      }
-                    }}
+                    onChange={(e) => setAdjDamaged(e.target.value)}
                     placeholder="0"
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs"
                   />
@@ -538,17 +528,7 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
                   <input
                     type="number"
                     value={adjPhysical}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setAdjPhysical(val);
-                      if (val !== '') {
-                        const physNum = parseFloat(val);
-                        const dmgNum = parseFloat(adjDamaged || '0') || 0;
-                        const p = products.find((prod) => String(prod.id) === String(adjProductId || selectedProductId));
-                        const cur = p ? Number(p.current_stock || 0) : 0;
-                        setAdjQty(String(Math.round((physNum - (cur - dmgNum)) * 100) / 100));
-                      }
-                    }}
+                    onChange={(e) => setAdjPhysical(e.target.value)}
                     placeholder="Opname"
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs"
                   />
@@ -589,19 +569,11 @@ export default function StockLedgerTab({ initialProductId = 'ALL' }: StockLedger
                   const targetProdId = adjProductId || (selectedProductId !== 'ALL' ? selectedProductId : '');
                   if (!targetProdId) return alert('Silakan pilih produk');
 
-                  let finalAdj = adjQty ? parseFloat(adjQty) : 0;
-                  if (finalAdj === 0 && adjPhysical !== '') {
-                    const p = products.find((prod) => String(prod.id) === String(targetProdId));
-                    const cur = p ? Number(p.current_stock || 0) : 0;
-                    const dmg = parseFloat(adjDamaged || '0') || 0;
-                    finalAdj = Math.round((parseFloat(adjPhysical) - (cur - dmg)) * 100) / 100;
-                  }
-
                   auditMutation.mutate({
                     product_id: targetProdId,
                     damaged_qty: adjDamaged,
                     physical_stock: adjPhysical,
-                    adjustment_qty: finalAdj,
+                    adjustment_qty: adjQty,
                     notes: adjNotes,
                     adjustment_date: adjDate,
                   });
