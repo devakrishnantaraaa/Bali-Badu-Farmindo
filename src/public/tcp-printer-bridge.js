@@ -249,7 +249,7 @@
         out += ESC + 'a\x01'; // Align Center
         out += 'Transfer Bank BCA:\n';
         out += ESC + 'E\x01'; // Bold ON
-        out += '1468924624\n';
+        out += '1462719382\n';
         out += '(Dewata Jaya Supplier)\n';
         out += ESC + 'E\x00'; // Bold OFF
         out += divider('-') + LF;

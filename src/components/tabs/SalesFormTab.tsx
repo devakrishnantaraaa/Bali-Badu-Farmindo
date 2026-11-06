@@ -409,7 +409,7 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
               <div className="pt-2 text-center text-[9px] text-slate-500 space-y-1">
                 <p className="font-semibold text-slate-700">Pembayaran Transfer Bank BCA:</p>
                 <p className="font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 py-0.5 rounded">
-                  1468924624 (Dewata Jaya Supplier)
+                  1462719382 (Dewata Jaya Supplier)
                 </p>
                 <p className="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
                 <p className="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>

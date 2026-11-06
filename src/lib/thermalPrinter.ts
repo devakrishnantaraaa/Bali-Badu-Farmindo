@@ -143,7 +143,7 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   parts.push([ESC, 0x61, 0x01]); // Center
   parts.push(encoder.encode('Transfer Bank BCA:\n'));
   parts.push([ESC, 0x45, 0x01]); // Bold ON
-  parts.push(encoder.encode('1468924624\n'));
+  parts.push(encoder.encode('1462719382\n'));
   parts.push(encoder.encode('(Dewata Jaya Supplier)\n'));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
 
