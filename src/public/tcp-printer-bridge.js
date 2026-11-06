@@ -223,8 +223,8 @@
         out += 'Atas Kepercayaannya\n';
         out += ESC + 'E\x00'; // Bold OFF
 
-        // 8. FEED & CUT
-        out += LF + LF + LF + LF;
+        // 8. FEED & CUT (TM-U220 butuh 8 baris feed agar teks ucapan melewati pisau pemotong ~27mm di atas printhead)
+        out += LF.repeat(8);
         out += GS + 'V\x01'; // Partial Cut
 
         return out;
@@ -296,7 +296,7 @@
         testStr += 'Aplikasi Siap Digunakan!\n';
         testStr += 'Format Struk Sesuai Thermal\n';
         testStr += divider('=') + LF;
-        testStr += LF + LF + LF + LF;
+        testStr += LF.repeat(8);
         testStr += GS + 'V\x01'; // cut
 
         return await sendToPrinter(testStr);
