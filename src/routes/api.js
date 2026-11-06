@@ -41,11 +41,11 @@ router.delete('/products/:id', authorizeRoles('SUPER_ADMIN'), stockController.de
 // Pembelian / Barang Masuk (Access: SUPER_ADMIN & ADMIN)
 router.post('/stock/incoming', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.recordIncomingGoods);
 
-// Kartu Stok (Audit adjustment: SUPER_ADMIN only, Read ledger: SUPER_ADMIN, ADMIN, MARKETING)
-router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN'), stockController.recordStockAdjustment);
+// Kartu Stok (Audit adjustment: SUPER_ADMIN & ADMIN, Read ledger: SUPER_ADMIN, ADMIN, MARKETING)
+router.post('/stock/adjustment', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.recordStockAdjustment);
 router.get('/stock/ledger', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), stockController.getStockLedger);
-router.put('/stock/ledger/:id/notes', authorizeRoles('SUPER_ADMIN'), stockController.updateStockLedgerNotes);
-router.delete('/stock/ledger/:id', authorizeRoles('SUPER_ADMIN'), stockController.deleteStockMovement);
+router.put('/stock/ledger/:id/notes', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.updateStockLedgerNotes);
+router.delete('/stock/ledger/:id', authorizeRoles('SUPER_ADMIN', 'ADMIN'), stockController.deleteStockMovement);
 
 // Sales Orders & Credit Check (Access: SUPER_ADMIN & MARKETING)
 router.post('/orders', authorizeRoles('SUPER_ADMIN', 'ADMIN', 'MARKETING'), orderController.createOrder);
