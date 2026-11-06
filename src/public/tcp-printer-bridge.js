@@ -7,17 +7,27 @@
 (function () {
     'use strict';
 
-    // Deteksi apakah jalan di APK Capacitor atau browser biasa
-    const IS_NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform());
+    // Deteksi dinamis apakah jalan di APK Capacitor native atau browser biasa
+    function isNativePlatform() {
+        if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function') {
+            try { if (window.Capacitor.isNativePlatform()) return true; } catch (e) {}
+        }
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TcpPrinter) {
+            return true;
+        }
+        return false;
+    }
 
     // Konfigurasi printer — disimpan di localStorage
     const PRINTER_CONFIG_KEY = 'dotmatrix_printer_config';
 
     function getPrinterConfig() {
-        const saved = localStorage.getItem(PRINTER_CONFIG_KEY);
-        if (saved) {
-            try { return JSON.parse(saved); } catch (e) {}
-        }
+        try {
+            const saved = window.localStorage ? window.localStorage.getItem(PRINTER_CONFIG_KEY) : null;
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {}
         return { ip: '192.168.110.200', port: 9100, printLogo: true }; // default
     }
 
@@ -27,7 +37,11 @@
             port: parseInt(port || 9100, 10),
             printLogo: printLogo !== false
         };
-        localStorage.setItem(PRINTER_CONFIG_KEY, JSON.stringify(cfg));
+        try {
+            if (window.localStorage) {
+                window.localStorage.setItem(PRINTER_CONFIG_KEY, JSON.stringify(cfg));
+            }
+        } catch (e) {}
         return cfg;
     }
 
@@ -35,7 +49,7 @@
      * Cek apakah printer bisa dijangkau
      */
     async function pingPrinter() {
-        if (!IS_NATIVE) {
+        if (!isNativePlatform()) {
             return { reachable: false, message: 'Fitur cetak langsung hanya tersedia di aplikasi Android (APK)' };
         }
         const { ip, port } = getPrinterConfig();
@@ -46,7 +60,7 @@
      * Kirim raw ESC/P data ke printer
      */
     async function sendToPrinter(escData) {
-        if (!IS_NATIVE) {
+        if (!isNativePlatform()) {
             return { success: false, message: 'Fitur cetak dot matrix hanya tersedia di aplikasi Android (APK)' };
         }
         const { ip, port } = getPrinterConfig();
@@ -293,11 +307,13 @@
      */
     async function openPrinterSettings() {
         const cfg = getPrinterConfig();
-        const currentServer = localStorage.getItem('app_backend_server_url') || 'https://dewata-jaya-supplier.vercel.app';
+        const currentServer = (window.localStorage ? window.localStorage.getItem('app_backend_server_url') : null) || 'https://dewata-jaya-supplier.vercel.app';
         
         const serverUrl = prompt('URL Server Backend Dewata Jaya:', currentServer);
         if (serverUrl !== null && serverUrl.trim()) {
-            localStorage.setItem('app_backend_server_url', serverUrl.trim().replace(/\/+$/, ''));
+            if (window.localStorage) {
+                window.localStorage.setItem('app_backend_server_url', serverUrl.trim().replace(/\/+$/, ''));
+            }
         }
 
         const ip = prompt('IP Address Printer TM-U220:', cfg.ip);
@@ -324,17 +340,17 @@
 
     // Expose ke window
     window.TcpPrinterBridge = {
-        isNative: IS_NATIVE,
+        get isNative() { return isNativePlatform(); },
+        isNativePlatform: isNativePlatform,
         getPrinterConfig: getPrinterConfig,
         savePrinterConfig: savePrinterConfig,
         pingPrinter: pingPrinter,
         sendToPrinter: sendToPrinter,
-        getLogoBinary: getLogoBinary,
         generateEscP: generateEscP,
         cetakNotaDotMatrix: cetakNotaDotMatrix,
         testPrintConnection: testPrintConnection,
         openPrinterSettings: openPrinterSettings,
     };
 
-    console.log('[TcpPrinterBridge] Initialized. IS_NATIVE =', IS_NATIVE);
+    console.log('[TcpPrinterBridge] Initialized successfully. isNative =', isNativePlatform());
 })();
