@@ -93,7 +93,6 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   parts.push(encoder.encode(formatTwoColumns('Tanggal  :', tgl, colWidth)));
   parts.push(encoder.encode(formatTwoColumns('Sales    :', sales, colWidth)));
   parts.push(encoder.encode(formatTwoColumns('Customer :', cust, colWidth)));
-  parts.push(encoder.encode(formatTwoColumns('Tipe TOP :', statusLabel, colWidth)));
 
   if (!isLunas && data.due_date) {
     const dueStr = String(data.due_date).split('T')[0];
@@ -131,10 +130,9 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
 
   parts.push(encoder.encode(singleLine));
 
-  // Total Section (Bold)
+  // Total Section (Bold) - Status Bayar Dihapus Sesuai Revisi
   parts.push([ESC, 0x45, 0x01]); // Bold ON
   parts.push(encoder.encode(formatTwoColumns('TOTAL NOTA   :', `Rp ${grandTotal.toLocaleString('id-ID')}`, colWidth)));
-  parts.push(encoder.encode(formatTwoColumns('STATUS BAYAR :', isLunas ? 'LUNAS' : 'BELUM LUNAS', colWidth)));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
 
   parts.push(encoder.encode(doubleLine));
@@ -153,7 +151,12 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   parts.push(encoder.encode('Terima Kasih!\n'));
   parts.push(encoder.encode('Atas Kepercayaannya\n'));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
-  parts.push(encoder.encode('\n\n'));
+  parts.push(encoder.encode(singleLine));
+
+  // Tanda Tangan Penerima & Pengirim
+  parts.push([ESC, 0x61, 0x00]); // Left
+  parts.push(encoder.encode('    Penerima        Pengirim    \n\n\n\n'));
+  parts.push(encoder.encode(' (____________)   (____________) \n\n'));
 
   // Paper cut command: GS V 0x41 0x03
   parts.push([GS, 0x56, 0x41, 0x03]);

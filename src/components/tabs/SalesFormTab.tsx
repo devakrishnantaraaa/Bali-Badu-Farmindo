@@ -398,12 +398,6 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                   <span className="font-extrabold text-slate-800">TOTAL NOTA:</span>
                   <span className="font-mono font-black text-sm text-slate-950">{formatRupiah(receiptData.total_amount)}</span>
                 </div>
-                <div className="flex justify-between text-[11px]">
-                  <span className="text-slate-500">Status Pembayaran:</span>
-                  <span className={`font-bold ${receiptData.payment_type === 'LUNAS' ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {receiptData.payment_type === 'LUNAS' ? 'LUNAS' : 'BELUM LUNAS'}
-                  </span>
-                </div>
               </div>
 
               <div className="pt-2 text-center text-[9px] text-slate-500 space-y-1">
@@ -413,6 +407,22 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                 </p>
                 <p className="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
                 <p className="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
+              </div>
+
+              {/* Tanda Tangan Penerima & Pengirim */}
+              <div className="pt-3 pb-1 border-t border-dashed border-slate-300">
+                <div className="grid grid-cols-2 text-center text-[11px]">
+                  <div>
+                    <p className="font-semibold text-slate-700">Penerima</p>
+                    <div className="h-9"></div>
+                    <p className="font-mono text-slate-500 text-[10px]">(____________)</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-700">Pengirim</p>
+                    <div className="h-9"></div>
+                    <p className="font-mono text-slate-500 text-[10px]">(____________)</p>
+                  </div>
+                </div>
               </div>
 
 

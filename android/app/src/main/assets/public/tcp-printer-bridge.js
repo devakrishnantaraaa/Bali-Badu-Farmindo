@@ -160,7 +160,6 @@
         out += pad2Col('Tanggal  :', date) + LF;
         out += pad2Col('Sales    :', salesName) + LF;
         out += pad2Col('Customer :', customerName) + LF;
-        out += pad2Col('Tipe TOP :', statusLabel) + LF;
 
         if (!isLunas && notaData.dueDate) {
             let dueStr = String(notaData.dueDate);
@@ -195,15 +194,9 @@
 
         out += divider('-') + LF;
 
-        // 5. TOTAL & STATUS BAYAR (Bold)
+        // 5. TOTAL (Bold) - STATUS BAYAR DIHAPUS SESUAI REVISI
         out += ESC + 'E\x01'; // Bold ON
         out += pad2Col('TOTAL NOTA   :', formatRp(total)) + LF;
-        out += pad2Col('STATUS BAYAR :', isLunas ? 'LUNAS' : 'BELUM LUNAS') + LF;
-        
-        if (!isLunas && paid > 0) {
-            out += pad2Col('Dibayar      :', formatRp(paid)) + LF;
-            out += pad2Col('Sisa Tagihan :', formatRp(sisa)) + LF;
-        }
         out += ESC + 'E\x00'; // Bold OFF
         out += divider('=') + LF;
 
@@ -222,8 +215,15 @@
         out += 'Terima Kasih!\n';
         out += 'Atas Kepercayaannya\n';
         out += ESC + 'E\x00'; // Bold OFF
+        out += divider('-') + LF;
 
-        // 8. FEED & CUT (TM-U220 butuh 8 baris feed agar teks ucapan melewati pisau pemotong ~27mm di atas printhead)
+        // 8. TANDA TANGAN PENERIMA & PENGIRIM (Align Left, 32 Kolom)
+        out += ESC + 'a\x00'; // Align Left
+        out += '    Penerima        Pengirim    \n';
+        out += LF + LF + LF;
+        out += ' (____________)   (____________) \n';
+
+        // 9. FEED & CUT (TM-U220 butuh 8 baris feed agar ttd melewati pisau pemotong ~27mm di atas printhead)
         out += LF.repeat(8);
         out += GS + 'V\x01'; // Partial Cut
 

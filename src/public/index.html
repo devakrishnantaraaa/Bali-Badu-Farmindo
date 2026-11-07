@@ -7580,7 +7580,6 @@ Akun ini tidak akan bisa login lagi.`)) {
             parts.push(encoder.encode(pad2Col('Tanggal  :', tgl)));
             parts.push(encoder.encode(pad2Col('Sales    :', sales)));
             parts.push(encoder.encode(pad2Col('Customer :', cust)));
-            parts.push(encoder.encode(pad2Col('Tipe TOP :', statusLabel)));
 
             if (!isLunas && r.due_date) {
                 const dueStr = String(r.due_date).split('T')[0];
@@ -7600,10 +7599,9 @@ Akun ini tidak akan bisa login lagi.`)) {
             parts.push(encoder.encode(pad2Col('  ' + qty + ' ' + unit + ' x Rp ' + price.toLocaleString('id-ID'), 'Rp ' + total.toLocaleString('id-ID'))));
             parts.push(encoder.encode(singleLine));
 
-            // Total Section (Bold)
+            // Total Section (Bold) - Status Bayar Dihapus Sesuai Revisi
             parts.push([ESC, 0x45, 0x01]); // bold
             parts.push(encoder.encode(pad2Col('TOTAL NOTA   :', 'Rp ' + total.toLocaleString('id-ID'))));
-            parts.push(encoder.encode(pad2Col('STATUS BAYAR :', isLunas ? 'LUNAS' : 'BELUM LUNAS')));
             parts.push([ESC, 0x45, 0x00]); // unbold
 
             parts.push(encoder.encode(doubleLine));
@@ -7622,7 +7620,12 @@ Akun ini tidak akan bisa login lagi.`)) {
             parts.push(encoder.encode('Terima Kasih!\n'));
             parts.push(encoder.encode('Atas Kepercayaannya\n'));
             parts.push([ESC, 0x45, 0x00]); // unbold
-            parts.push(encoder.encode('\n\n'));
+            parts.push(encoder.encode(singleLine));
+
+            // Tanda Tangan Penerima & Pengirim
+            parts.push([ESC, 0x61, 0x00]); // left
+            parts.push(encoder.encode('    Penerima        Pengirim    \n\n\n\n'));
+            parts.push(encoder.encode(' (____________)   (____________) \n\n'));
 
             // Potong Kertas
             parts.push([GS, 0x56, 0x41, 0x03]); // cut
@@ -7867,7 +7870,7 @@ Akun ini tidak akan bisa login lagi.`)) {
                             <span class="font-extrabold text-slate-800">TOTAL NOTA:</span>
                             <span id="receiptTotalAmount" class="font-mono font-black text-sm text-slate-950">Rp 0</span>
                         </div>
-                        <div class="flex justify-between items-center text-[10px]">
+                        <div class="hidden flex justify-between items-center text-[10px]">
                             <span class="text-slate-500">Status Pembayaran:</span>
                             <span id="receiptPaymentStatusText" class="font-bold text-emerald-700">LUNAS</span>
                         </div>
@@ -7881,6 +7884,22 @@ Akun ini tidak akan bisa login lagi.`)) {
                         </p>
                         <p class="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
                         <p class="font-bold text-slate-900 text-[9.5px] pt-0.5">Terima Kasih Atas Kepercayaannya! 🙏</p>
+                    </div>
+
+                    <!-- Tanda Tangan Penerima & Pengirim -->
+                    <div class="pt-3 pb-1 border-t border-dashed border-slate-300">
+                        <div class="grid grid-cols-2 text-center text-[11px]">
+                            <div>
+                                <p class="font-semibold text-slate-700">Penerima</p>
+                                <div class="h-9"></div>
+                                <p class="font-mono text-slate-500 text-[10px]">(____________)</p>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-700">Pengirim</p>
+                                <div class="h-9"></div>
+                                <p class="font-mono text-slate-500 text-[10px]">(____________)</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
