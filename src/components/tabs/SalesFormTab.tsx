@@ -21,8 +21,7 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
   const [productId, setProductId] = useState<string>('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [unitPrice, setUnitPrice] = useState<number | ''>('');
-  const [paymentType, setPaymentType] = useState<'LUNAS' | 'PENDING'>('LUNAS');
-  const [dueDate, setDueDate] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
 
   // Modals
   const [receiptData, setReceiptData] = useState<any | null>(null);
@@ -99,8 +98,9 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
         unit: productObj?.unit || 'krat',
         unit_price: priceNum,
         total_amount: totalAmount,
-        payment_type: paymentType,
-        due_date: dueDate || null,
+        payment_type: 'PENDING',
+        notes: notes.trim(),
+        due_date: null,
         pending_warning: data.pending_warning || null,
       };
 
@@ -111,7 +111,7 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
 
       // Reset form fields
       setQuantity('');
-      setDueDate('');
+      setNotes('');
       showToast('Transaksi berhasil diproses & stok terupdate!');
     },
     onError: (err: any) => {
@@ -133,8 +133,16 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
       product_id: Number(productId),
       quantity: qtyNum,
       unit_price: priceNum,
-      payment_type: paymentType,
-      due_date: paymentType === 'PENDING' && dueDate ? dueDate : null,
+      payment_type: 'PENDING',
+      notes: notes.trim(),
+      due_date: null,
+      items: [
+        {
+          product_id: Number(productId),
+          quantity: qtyNum,
+          unit_price: priceNum,
+        },
+      ],
     });
   };
 
@@ -274,32 +282,16 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-              Tipe Pembayaran (TOP)
+              Keterangan
             </label>
-            <select
-              value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value as 'LUNAS' | 'PENDING')}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-amber-500"
-            >
-              <option value="LUNAS">LUNAS</option>
-              <option value="PENDING">PENDING</option>
-            </select>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ketik keterangan (opsional)..."
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-medium"
+            />
           </div>
-
-          {paymentType === 'PENDING' && (
-            <div>
-              <label className="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
-                Jatuh Tempo (Due Date){' '}
-                <span className="text-[10px] lowercase font-normal text-slate-500">(opsional)</span>
-              </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-amber-50 border border-amber-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800"
-              />
-            </div>
-          )}
 
           <button
             type="submit"

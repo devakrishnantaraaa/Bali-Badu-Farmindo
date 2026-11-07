@@ -1245,20 +1245,11 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tipe Pembayaran (TOP)</label>
-                            <select id="orderPaymentType" onchange="toggleDueDate()"
-                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-amber-500">
-                                <option value="LUNAS">LUNAS</option>
-                                <option value="PENDING">PENDING</option>
-                            </select>
-                        </div>
-
-                        <div id="dueDateContainer" class="hidden">
-                            <label
-                                class="block text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Jatuh
-                                Tempo (Due Date) <span class="text-[10px] lowercase font-normal text-slate-500">(opsional)</span></label>
-                            <input type="date" id="orderDueDate"
-                                class="w-full bg-amber-50 border border-amber-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Keterangan</label>
+                            <input type="text" id="orderNotes" placeholder="Ketik keterangan (opsional)..."
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-amber-500 font-medium">
+                            <input type="hidden" id="orderPaymentType" value="PENDING">
+                            <input type="hidden" id="orderDueDate" value="">
                         </div>
 
                         <button type="button" onclick="submitSalesOrder()"
@@ -3228,8 +3219,9 @@
             const product_id = productSelect.value;
             const quantity = parseFloat(document.getElementById('orderQty').value);
             const unit_price = parseFloat(document.getElementById('orderPrice').value);
-            const payment_type = document.getElementById('orderPaymentType').value;
-            const due_date = document.getElementById('orderDueDate').value;
+            const payment_type = 'PENDING'; // Otomatis PENDING saat baru input order
+            const notes = document.getElementById('orderNotes') ? document.getElementById('orderNotes').value.trim() : '';
+            const due_date = null;
             const order_date = document.getElementById('orderDate').value;
 
             if (!order_date) {
@@ -3278,9 +3270,10 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
                         customer_id,
-                        payment_type,
-                        due_date: due_date || null,
+                        payment_type: 'PENDING',
+                        due_date: null,
                         order_date: order_date || undefined,
+                        notes: notes,
                         items: [{ product_id, quantity, unit_price }]
                     })
                 });
@@ -3289,6 +3282,7 @@
                 showAlert(`Order Penjualan Berhasil Disimpan! Invoice: ${data.invoice.invoice_number}`);
                 const orderForm = document.getElementById('orderForm');
                 if (orderForm) orderForm.reset();
+                if (document.getElementById('orderPaymentType')) document.getElementById('orderPaymentType').value = 'PENDING';
                 calculateOrderTotalLive();
                 loadInitialData();
 
@@ -3302,9 +3296,10 @@
                     quantity: quantity,
                     unit_price: unit_price,
                     total_amount: totalOrderAmount,
-                    payment_type: payment_type,
-                    due_date: due_date || null,
-                    status: data.invoice.status || (payment_type === 'LUNAS' ? 'LUNAS' : 'PENDING'),
+                    payment_type: 'PENDING',
+                    notes: notes,
+                    due_date: null,
+                    status: 'PENDING',
                     pending_warning: data.pending_warning || null
                 });
             } catch (err) {

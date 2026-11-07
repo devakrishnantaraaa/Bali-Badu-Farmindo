@@ -5,10 +5,21 @@ const { recalibrateProductStock } = require('./stockController');
 async function createOrder(req, res) {
     const client = await db.getClient();
     try {
-        const { customer_id, items, payment_type, due_date } = req.body;
+        const { customer_id, due_date } = req.body;
+        const payment_type = req.body.payment_type || 'PENDING';
+        const orderNotes = (req.body.notes || req.body.keterangan || '').trim();
 
-        if (!customer_id || !items || !Array.isArray(items) || items.length === 0 || !payment_type) {
-            return res.status(400).json({ error: 'Customer ID, items array, and payment_type are required' });
+        let items = req.body.items;
+        if ((!items || !Array.isArray(items) || items.length === 0) && req.body.product_id && req.body.quantity) {
+            items = [{
+                product_id: req.body.product_id,
+                quantity: req.body.quantity,
+                unit_price: req.body.unit_price
+            }];
+        }
+
+        if (!customer_id || !items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Customer ID and items array are required' });
         }
 
         await client.query('BEGIN');
@@ -114,15 +125,15 @@ async function createOrder(req, res) {
 
         const orderRes = await client.query(
             orderDateTimestamp 
-                ? `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, created_at)
-                   VALUES ($1, $2, $3, 'CONFIRMED', $4, $5)
+                ? `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, created_at, notes)
+                   VALUES ($1, $2, $3, 'CONFIRMED', $4, $5, $6)
                    RETURNING *`
-                : `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by)
-                   VALUES ($1, $2, $3, 'CONFIRMED', $4)
+                : `INSERT INTO orders (order_number, customer_id, total_amount, status, created_by, notes)
+                   VALUES ($1, $2, $3, 'CONFIRMED', $4, $5)
                    RETURNING *`,
             orderDateTimestamp 
-                ? [orderNum, customer_id, totalAmount, salesName, orderDateTimestamp]
-                : [orderNum, customer_id, totalAmount, salesName]
+                ? [orderNum, customer_id, totalAmount, salesName, orderDateTimestamp, orderNotes]
+                : [orderNum, customer_id, totalAmount, salesName, orderNotes]
         );
         const order = orderRes.rows[0];
 
@@ -141,7 +152,7 @@ async function createOrder(req, res) {
                 [newStock, pItem.product_id]
             );
 
-            // Log movement
+            // Log movement with notes
             await client.query(
                 orderDateTimestamp
                     ? `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes, created_at)
@@ -149,8 +160,8 @@ async function createOrder(req, res) {
                     : `INSERT INTO stock_movements (product_id, movement_type, quantity, balance_after, reference_id, notes)
                        VALUES ($1, 'PENJUALAN', $2, $3, $4, $5)`,
                 orderDateTimestamp
-                    ? [pItem.product_id, pItem.quantity, newStock, orderNum, '', orderDateTimestamp]
-                    : [pItem.product_id, pItem.quantity, newStock, orderNum, '']
+                    ? [pItem.product_id, pItem.quantity, newStock, orderNum, orderNotes, orderDateTimestamp]
+                    : [pItem.product_id, pItem.quantity, newStock, orderNum, orderNotes]
             );
 
             // Recalibrate stock movements chronologically
@@ -176,15 +187,15 @@ async function createOrder(req, res) {
 
         const invoiceRes = await client.query(
             orderDateTimestamp
-                ? `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id, created_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ? `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id, created_at, notes)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                    RETURNING *`
-                : `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                : `INSERT INTO invoices (invoice_number, order_id, customer_id, payment_type, amount_due, amount_paid, status, due_date, google_calendar_event_id, notes)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                    RETURNING *`,
             orderDateTimestamp
-                ? [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId, orderDateTimestamp]
-                : [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId]
+                ? [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId, orderDateTimestamp, orderNotes]
+                : [invoiceNum, order.id, customer_id, normalizedPaymentType, totalAmount, initialPaid, invoiceStatus, due_date || null, googleCalEventId, orderNotes]
         );
 
         // Jika transaksi langsung LUNAS, otomatis catat payment validated (metode CEK awal '-' sampai user memilih)
