@@ -142,21 +142,27 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   parts.push(encoder.encode('Transfer Bank BCA:\n'));
   parts.push([ESC, 0x45, 0x01]); // Bold ON
   parts.push(encoder.encode('1462719382\n'));
+  parts.push(encoder.encode('A.N Into\n'));
   parts.push(encoder.encode('(Dewata Jaya Supplier)\n'));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
 
   parts.push(encoder.encode(singleLine));
+
+  // Tanda Tangan Penerima & Pengirim (Tukar Posisi ke Sini)
+  parts.push([ESC, 0x61, 0x00]); // Left
+  parts.push(encoder.encode('    Penerima        Pengirim    \n\n\n\n'));
+  parts.push(encoder.encode(' (____________)   (____________) \n'));
+
+  parts.push(encoder.encode(singleLine));
+
+  // Ucapan Terima Kasih (Tukar Posisi ke Bagian Bawah)
+  parts.push([ESC, 0x61, 0x01]); // Center
   parts.push(encoder.encode('Simpan nota sbg bukti sah.\n'));
   parts.push([ESC, 0x45, 0x01]); // Bold ON
   parts.push(encoder.encode('Terima Kasih!\n'));
   parts.push(encoder.encode('Atas Kepercayaannya\n'));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
-  parts.push(encoder.encode(singleLine));
-
-  // Tanda Tangan Penerima & Pengirim
-  parts.push([ESC, 0x61, 0x00]); // Left
-  parts.push(encoder.encode('    Penerima        Pengirim    \n\n\n\n'));
-  parts.push(encoder.encode(' (____________)   (____________) \n\n'));
+  parts.push(encoder.encode('\n\n'));
 
   // Paper cut command: GS V 0x41 0x03
   parts.push([GS, 0x56, 0x41, 0x03]);

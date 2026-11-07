@@ -142,6 +142,7 @@
 
         // Reset printer ke initial state
         out += ESC + '@';
+        out += ESC + 'e\x02'; // Tarik mundur 2 baris (batas aman hardware TM-U220) agar spasi di atas tidak terlalu tinggi
 
         // 1. HEADER BRANDING (Center, Double Height & Double Width, Sama Persis Struk Thermal)
         out += ESC + 'a\x01'; // Align Center
@@ -205,26 +206,28 @@
         out += 'Transfer Bank BCA:\n';
         out += ESC + 'E\x01'; // Bold ON
         out += '1462719382\n';
+        out += 'A.N Into\n';
         out += '(Dewata Jaya Supplier)\n';
         out += ESC + 'E\x00'; // Bold OFF
         out += divider('-') + LF;
 
-        // 7. UCAPAN TERIMA KASIH (Center)
+        // 7. TANDA TANGAN PENERIMA & PENGIRIM (Align Left, 32 Kolom - Tukar Posisi ke Sini)
+        out += ESC + 'a\x00'; // Align Left
+        out += '    Penerima        Pengirim    \n';
+        out += LF + LF + LF;
+        out += ' (____________)   (____________) \n';
+        out += divider('-') + LF;
+
+        // 8. UCAPAN TERIMA KASIH (Center - Tukar Posisi ke Bagian Bawah)
+        out += ESC + 'a\x01'; // Align Center
         out += 'Simpan nota sbg bukti sah.\n';
         out += ESC + 'E\x01'; // Bold ON
         out += 'Terima Kasih!\n';
         out += 'Atas Kepercayaannya\n';
         out += ESC + 'E\x00'; // Bold OFF
-        out += divider('-') + LF;
 
-        // 8. TANDA TANGAN PENERIMA & PENGIRIM (Align Left, 32 Kolom)
-        out += ESC + 'a\x00'; // Align Left
-        out += '    Penerima        Pengirim    \n';
-        out += LF + LF + LF;
-        out += ' (____________)   (____________) \n';
-
-        // 9. FEED & CUT (TM-U220 butuh 8 baris feed agar ttd melewati pisau pemotong ~27mm di atas printhead)
-        out += LF.repeat(8);
+        // 9. FEED & CUT (6 baris feed agar teks ucapan tuntas melewati pisau pemotong TM-U220)
+        out += LF.repeat(6);
         out += GS + 'V\x01'; // Partial Cut
 
         return out;

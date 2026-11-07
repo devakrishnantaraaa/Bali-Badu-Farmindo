@@ -403,14 +403,12 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
               <div className="pt-2 text-center text-[9px] text-slate-500 space-y-1">
                 <p className="font-semibold text-slate-700">Pembayaran Transfer Bank BCA:</p>
                 <p className="font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 py-0.5 rounded">
-                  1462719382 (Dewata Jaya Supplier)
+                  1462719382 A.N Into (Dewata Jaya Supplier)
                 </p>
-                <p className="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
-                <p className="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
               </div>
 
-              {/* Tanda Tangan Penerima & Pengirim */}
-              <div className="pt-3 pb-1 border-t border-dashed border-slate-300">
+              {/* Tanda Tangan Penerima & Pengirim (Tukar Posisi ke Atas Simpan Nota) */}
+              <div className="pt-3 pb-2 border-t border-dashed border-slate-300">
                 <div className="grid grid-cols-2 text-center text-[11px]">
                   <div>
                     <p className="font-semibold text-slate-700">Penerima</p>
@@ -423,6 +421,12 @@ export default function SalesFormTab({ currentUser }: SalesFormTabProps) {
                     <p className="font-mono text-slate-500 text-[10px]">(____________)</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Ucapan Terima Kasih (Tukar Posisi ke Bawah TTD) */}
+              <div className="pt-2 text-center text-[9px] text-slate-500 space-y-0.5 border-t border-dashed border-slate-200">
+                <p className="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
+                <p className="font-bold text-slate-800 text-[9px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
               </div>
 
 

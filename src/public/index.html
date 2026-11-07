@@ -7611,21 +7611,27 @@ Akun ini tidak akan bisa login lagi.`)) {
             parts.push(encoder.encode('Transfer Bank BCA:\n'));
             parts.push([ESC, 0x45, 0x01]); // bold
             parts.push(encoder.encode('1462719382\n'));
+            parts.push(encoder.encode('A.N Into\n'));
             parts.push(encoder.encode('(Dewata Jaya Supplier)\n'));
             parts.push([ESC, 0x45, 0x00]); // unbold
 
             parts.push(encoder.encode(singleLine));
+
+            // Tanda Tangan Penerima & Pengirim (Tukar Posisi ke Sini)
+            parts.push([ESC, 0x61, 0x00]); // left
+            parts.push(encoder.encode('    Penerima        Pengirim    \n\n\n\n'));
+            parts.push(encoder.encode(' (____________)   (____________) \n'));
+
+            parts.push(encoder.encode(singleLine));
+
+            // Ucapan Terima Kasih (Tukar Posisi ke Bagian Bawah)
+            parts.push([ESC, 0x61, 0x01]); // center
             parts.push(encoder.encode('Simpan nota sbg bukti sah.\n'));
             parts.push([ESC, 0x45, 0x01]); // bold
             parts.push(encoder.encode('Terima Kasih!\n'));
             parts.push(encoder.encode('Atas Kepercayaannya\n'));
             parts.push([ESC, 0x45, 0x00]); // unbold
-            parts.push(encoder.encode(singleLine));
-
-            // Tanda Tangan Penerima & Pengirim
-            parts.push([ESC, 0x61, 0x00]); // left
-            parts.push(encoder.encode('    Penerima        Pengirim    \n\n\n\n'));
-            parts.push(encoder.encode(' (____________)   (____________) \n\n'));
+            parts.push(encoder.encode('\n\n'));
 
             // Potong Kertas
             parts.push([GS, 0x56, 0x41, 0x03]); // cut
@@ -7880,14 +7886,12 @@ Akun ini tidak akan bisa login lagi.`)) {
                     <div class="pt-2.5 text-center text-[9.5px] text-slate-500 space-y-1">
                         <p class="font-bold text-slate-700">Pembayaran Transfer Bank BCA:</p>
                         <p class="font-mono font-black text-slate-950 bg-slate-50 border border-slate-200 py-1 px-2 rounded text-[11px]">
-                            1462719382 <span class="font-sans font-medium text-[10px] text-slate-600">(Dewata Jaya Supplier)</span>
+                            1462719382 <span class="font-bold text-slate-800">A.N Into</span> <span class="font-sans font-medium text-[10px] text-slate-600">(Dewata Jaya Supplier)</span>
                         </p>
-                        <p class="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
-                        <p class="font-bold text-slate-900 text-[9.5px] pt-0.5">Terima Kasih Atas Kepercayaannya! 🙏</p>
                     </div>
 
-                    <!-- Tanda Tangan Penerima & Pengirim -->
-                    <div class="pt-3 pb-1 border-t border-dashed border-slate-300">
+                    <!-- Tanda Tangan Penerima & Pengirim (Tukar Posisi ke Atas Simpan Nota) -->
+                    <div class="pt-3 pb-2 border-t border-dashed border-slate-300">
                         <div class="grid grid-cols-2 text-center text-[11px]">
                             <div>
                                 <p class="font-semibold text-slate-700">Penerima</p>
@@ -7900,6 +7904,12 @@ Akun ini tidak akan bisa login lagi.`)) {
                                 <p class="font-mono text-slate-500 text-[10px]">(____________)</p>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Ucapan Terima Kasih (Tukar Posisi ke Bagian Bawah) -->
+                    <div class="pt-2 text-center text-[9.5px] text-slate-500 space-y-0.5 border-t border-dashed border-slate-200">
+                        <p class="italic text-[8.5px] text-slate-400">Simpan nota ini sebagai bukti transaksi yang sah.</p>
+                        <p class="font-bold text-slate-900 text-[9.5px]">Terima Kasih Atas Kepercayaannya! 🙏</p>
                     </div>
                 </div>
             </div>
