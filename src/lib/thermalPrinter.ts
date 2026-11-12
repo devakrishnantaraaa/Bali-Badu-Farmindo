@@ -19,6 +19,7 @@ export interface ReceiptData {
   payment_type?: string;
   status?: string;
   due_date?: string | null;
+  notes?: string;
   items?: Array<{
     name?: string;
     product_name?: string;
@@ -93,6 +94,15 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   parts.push(encoder.encode(formatTwoColumns('Tanggal  :', tgl, colWidth)));
   parts.push(encoder.encode(formatTwoColumns('Sales    :', sales, colWidth)));
   parts.push(encoder.encode(formatTwoColumns('Customer :', cust, colWidth)));
+
+  // Jika nama customer mengandung REGULER, cetak isi keterangan di baris berikutnya
+  const custUpper = cust.toUpperCase().trim();
+  if (custUpper.includes('REGULER') && data.notes && data.notes.trim()) {
+    const noteVal = data.notes.trim();
+    const noteLabel = '         ';
+    const noteLine = (noteLabel + noteVal).substring(0, colWidth);
+    parts.push(encoder.encode(noteLine + '\n'));
+  }
 
   if (!isLunas && data.due_date) {
     const dueStr = String(data.due_date).split('T')[0];

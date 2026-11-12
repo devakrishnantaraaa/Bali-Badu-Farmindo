@@ -3694,7 +3694,8 @@
                     quantity: qty,
                     price: harga,
                     total: total,
-                    product_name: item.product_name || 'Telur Ayam Ras'
+                    product_name: item.product_name || 'Telur Ayam Ras',
+                    notes: displayNote || ''
                 }).replace(/"/g, '&quot;');
 
                 const isAdmin = (currentUser && currentUser.role === 'ADMIN');
@@ -6134,6 +6135,21 @@
             document.getElementById('receiptSales').innerText = receiptData.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS');
             document.getElementById('receiptCust').innerText = receiptData.customer_name || 'Pelanggan';
 
+            // Jika nama customer mengandung "REGULER", tampilkan isi keterangan/notes di bawah nama pelanggan
+            const custNameUpper = (receiptData.customer_name || '').toUpperCase().trim();
+            const isReguler = custNameUpper.includes('REGULER');
+            const regulerNoteEl = document.getElementById('receiptRegulerNote');
+            if (regulerNoteEl) {
+                const noteContent = (receiptData.notes || '').trim();
+                if (isReguler && noteContent) {
+                    regulerNoteEl.innerText = noteContent;
+                    regulerNoteEl.classList.remove('hidden');
+                } else {
+                    regulerNoteEl.innerText = '';
+                    regulerNoteEl.classList.add('hidden');
+                }
+            }
+
             const rawPaymentType = (receiptData.payment_type || receiptData.status || 'LUNAS').toUpperCase();
             const isLunas = rawPaymentType.includes('LUNAS');
             const badgeEl = document.getElementById('receiptPaymentBadge');
@@ -7777,6 +7793,16 @@ Akun ini tidak akan bisa login lagi.`)) {
             parts.push(encoder.encode(pad2Col('Sales    :', sales)));
             parts.push(encoder.encode(pad2Col('Customer :', cust)));
 
+            // Jika nama customer mengandung REGULER, cetak isi keterangan di baris berikutnya
+            const custUpper = cust.toUpperCase().trim();
+            if (custUpper.includes('REGULER') && r.notes && r.notes.trim()) {
+                // Baris keterangan — tanpa label, langsung isi, rata kanan sejajar kolom Customer
+                const noteVal = String(r.notes).trim();
+                const noteLabel = '         ';
+                const noteLine = noteLabel + noteVal;
+                parts.push(encoder.encode(noteLine.substring(0, colWidth) + '\n'));
+            }
+
             if (!isLunas && r.due_date) {
                 const dueStr = String(r.due_date).split('T')[0];
                 parts.push(encoder.encode(pad2Col('Tempo s/d:', dueStr)));
@@ -8038,6 +8064,10 @@ Akun ini tidak akan bisa login lagi.`)) {
                         <div class="flex justify-between items-center">
                             <span class="text-slate-500">Pelanggan:</span>
                             <span id="receiptCust" class="font-black text-slate-950 text-xs">-</span>
+                        </div>
+                        <!-- Keterangan REGULER: hanya tampil jika nama customer mengandung REGULER -->
+                        <div id="receiptRegulerNote" class="hidden flex justify-end">
+                            <span class="font-semibold text-slate-700 text-xs italic text-right"></span>
                         </div>
                         <div class="flex justify-between items-center pt-0.5">
                             <span class="text-slate-500">Tipe Pembayaran:</span>
