@@ -1329,8 +1329,14 @@
                                 <input type="date" id="filterDailySalesEnd" onchange="loadDailySalesReport()"
                                     class="bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-700">
                             </div>
+                            <button onclick="setDailySalesMonthFilter()"
+                                class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 px-2.5 py-1.5 rounded-lg font-bold border border-amber-300 transition flex items-center gap-1"
+                                title="Tampilkan penjualan bulan yang sedang berjalan">
+                                <span>📅</span> Bulan Ini
+                            </button>
                             <button onclick="clearDailySalesFilter()"
-                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium border border-slate-200 transition">
+                                class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium border border-slate-200 transition"
+                                title="Tampilkan semua data penjualan tanpa batas tanggal">
                                 Semua Data
                             </button>
                             <button id="btnResetExcelFilter-dailySalesTable" onclick="resetAllExcelFilters('dailySalesTable')"
@@ -2108,6 +2114,75 @@
         let authToken = localStorage.getItem('token');
         let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
+        // Helper: Validasi masa aktif token JWT di client
+        function isTokenValid(token) {
+            if (!token || typeof token !== 'string') return false;
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) return false;
+                const payload = JSON.parse(atob(parts[1]));
+                if (payload.exp && (payload.exp * 1000) < Date.now()) {
+                    return false; // Token kadaluarsa
+                }
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Helper: Penanganan sesi habis / token expired terpadu
+        function handleSessionExpired() {
+            if (window._isHandlingSessionExpired) return;
+            window._isHandlingSessionExpired = true;
+            console.warn('Sesi login telah berakhir atau token tidak valid. Membersihkan sesi...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            authToken = null;
+            currentUser = null;
+            showAlert('Sesi login telah berakhir. Silakan login kembali.', true);
+            setTimeout(() => {
+                window._isHandlingSessionExpired = false;
+                checkAuthSession();
+            }, 600);
+        }
+
+        // Global Fetch Interceptor: otomatis deteksi respon 401/403 kadaluarsa sesi
+        const _nativeFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const res = await _nativeFetch.apply(this, args);
+            const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+            if ((res.status === 401 || res.status === 403) && !url.includes('/auth/login')) {
+                let isAuthError = (res.status === 401);
+                try {
+                    const clone = res.clone();
+                    const json = await clone.json();
+                    if (json && (json.error || json.message)) {
+                        const msg = (json.error || json.message).toLowerCase();
+                        if (msg.includes('token') || msg.includes('login') || msg.includes('unauthorized') || msg.includes('expired')) {
+                            isAuthError = true;
+                        }
+                    }
+                } catch (e) {}
+
+                if (isAuthError) {
+                    handleSessionExpired();
+                }
+            }
+            return res;
+        };
+
+        // Helper: Dapatkan rentang tanggal bulan yang sedang berjalan (YYYY-MM-DD)
+        function getCurrentMonthDateRange() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth(); // 0-based
+            const pad = (n) => String(n).padStart(2, '0');
+            const firstDay = `${y}-${pad(m + 1)}-01`;
+            const lastDate = new Date(y, m + 1, 0).getDate();
+            const lastDay = `${y}-${pad(m + 1)}-${pad(lastDate)}`;
+            return { firstDay, lastDay, year: y, monthIndex: m };
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             checkAuthSession();
 
@@ -2122,11 +2197,17 @@
                     topbarPrinterBtn.classList.add('flex');
                 }
             }
-            // Default date filters to today
+            
+            // Inisialisasi default filter Rincian Penjualan ke BULAN BERJALAN (agar loading cepat dan tidak berat)
+            const { firstDay, lastDay } = getCurrentMonthDateRange();
+            const filterSalesStart = document.getElementById('filterDailySalesStart');
+            const filterSalesEnd = document.getElementById('filterDailySalesEnd');
+            if (filterSalesStart && !filterSalesStart.value) filterSalesStart.value = firstDay;
+            if (filterSalesEnd && !filterSalesEnd.value) filterSalesEnd.value = lastDay;
+
+            // Default date filters Setoran to today
             const today = new Date().toISOString().split('T')[0];
-            const filterDaily = document.getElementById('filterDailySalesDate');
             const filterDep = document.getElementById('filterDepositDate');
-            if (filterDaily) filterDaily.value = today;
             if (filterDep) filterDep.value = today;
 
             // Pastikan tombol filter model Excel terpasang sejak awal di semua tabel rekap
@@ -2329,7 +2410,15 @@
             const loginScreen = document.getElementById('loginScreen');
             const appScreen = document.getElementById('appScreen');
 
-            if (!authToken || !currentUser) {
+            // Cek keberadaan token dan apakah masa aktifnya masih valid
+            if (!authToken || !currentUser || !isTokenValid(authToken)) {
+                if (authToken && !isTokenValid(authToken)) {
+                    console.warn('Token JWT di penyimpanan lokal telah kadaluarsa, mereset sesi...');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    authToken = null;
+                    currentUser = null;
+                }
                 loginScreen.classList.remove('hidden');
                 appScreen.classList.add('hidden');
             } else {
@@ -3366,10 +3455,21 @@
 
         // --- REPORTS LOGIC ---
         function clearDailySalesFilter() {
+            window._userClearedDailySalesFilter = true;
             const startEl = document.getElementById('filterDailySalesStart');
             const endEl = document.getElementById('filterDailySalesEnd');
             if (startEl) startEl.value = '';
             if (endEl) endEl.value = '';
+            loadDailySalesReport();
+        }
+
+        function setDailySalesMonthFilter() {
+            window._userClearedDailySalesFilter = false;
+            const { firstDay, lastDay } = getCurrentMonthDateRange();
+            const startEl = document.getElementById('filterDailySalesStart');
+            const endEl = document.getElementById('filterDailySalesEnd');
+            if (startEl) startEl.value = firstDay;
+            if (endEl) endEl.value = lastDay;
             loadDailySalesReport();
         }
 
@@ -3394,22 +3494,19 @@
         }
 
         async function loadDailySalesReport() {
-            const startDate = document.getElementById('filterDailySalesStart')?.value || '';
-            const endDate = document.getElementById('filterDailySalesEnd')?.value || '';
+            const startEl = document.getElementById('filterDailySalesStart');
+            const endEl = document.getElementById('filterDailySalesEnd');
 
-            // Tampilkan dari cache lokal terlebih dahulu jika ada agar data keluar instan tanpa jeda
-            if (!startDate && !endDate && !window._hasRenderedSalesCache) {
-                try {
-                    const cachedSales = localStorage.getItem('cache_daily_sales_data');
-                    if (cachedSales) {
-                        const parsed = JSON.parse(cachedSales);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            window._hasRenderedSalesCache = true;
-                            renderDailySalesData(parsed, 'Semua Penjualan');
-                        }
-                    }
-                } catch (e) {}
+            // Default ke bulan berjalan jika belum diset dan user tidak sengaja klik 'Semua Data'
+            if (startEl && endEl && !startEl.value && !endEl.value && !window._userClearedDailySalesFilter) {
+                const { firstDay, lastDay } = getCurrentMonthDateRange();
+                startEl.value = firstDay;
+                endEl.value = lastDay;
             }
+
+            const startDate = startEl?.value || '';
+            const endDate = endEl?.value || '';
+            const { firstDay, lastDay, monthIndex, year } = getCurrentMonthDateRange();
 
             let query = '';
             if (startDate && endDate) {
@@ -3426,7 +3523,23 @@
             if (!startDate && !endDate) {
                 try { localStorage.setItem('cache_daily_sales_data', JSON.stringify(data)); } catch (e) {}
             }
-            renderDailySalesData(data, (startDate && endDate) ? `${startDate} s/d ${endDate}` : (startDate ? `Mulai ${startDate}` : (endDate ? `Sampai ${endDate}` : 'Semua Penjualan')));
+
+            // Label keterangan periode yang informatif
+            let dateLabel = 'Semua Penjualan';
+            if (startDate && endDate) {
+                if (startDate === firstDay && endDate === lastDay) {
+                    const monthsIndo = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                    dateLabel = `Bulan Berjalan (${monthsIndo[monthIndex]} ${year})`;
+                } else {
+                    dateLabel = `${startDate} s/d ${endDate}`;
+                }
+            } else if (startDate) {
+                dateLabel = `Mulai ${startDate}`;
+            } else if (endDate) {
+                dateLabel = `Sampai ${endDate}`;
+            }
+
+            renderDailySalesData(data, dateLabel);
         }
 
         function renderDailySalesData(data, dateLabel) {

@@ -42,19 +42,58 @@ export default function HomePage() {
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [ledgerInitialProductId, setLedgerInitialProductId] = useState<number | undefined>();
 
-  // Initialize session from localStorage
+  // Initialize session from localStorage with expiration check
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
       if (storedToken && storedUser) {
-        setCurrentUser(JSON.parse(storedUser));
+        let isExpired = false;
+        try {
+          const parts = storedToken.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.exp && (payload.exp * 1000) < Date.now()) {
+              isExpired = true;
+            }
+          }
+        } catch (_) {}
+
+        if (isExpired) {
+          console.warn('Sesi expired, membersihkan token...');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(JSON.parse(storedUser));
+        }
       }
     } catch (e) {
       console.error('Session load error:', e);
     } finally {
       setIsInitializing(false);
     }
+  }, []);
+
+  // Global fetch interceptor to catch 401 Unauthorized across all tabs
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await originalFetch(...args);
+      if (res.status === 401) {
+        const url = typeof args[0] === 'string' ? args[0] : (args[0] as any)?.url || '';
+        if (!url.includes('/api/auth/login')) {
+          console.warn('Terdeteksi 401 Unauthorized dari API, mereset sesi...');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setCurrentUser(null);
+        }
+      }
+      return res;
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
   }, []);
 
   const handleLoginSuccess = (user: AuthUser, token: string) => {

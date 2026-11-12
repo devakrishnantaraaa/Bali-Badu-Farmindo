@@ -28,7 +28,7 @@ export function signToken(user: AuthUser): string {
       role: user.role,
     },
     JWT_SECRET,
-    { expiresIn: '12h' }
+    { expiresIn: '30d' }
   );
 }
 

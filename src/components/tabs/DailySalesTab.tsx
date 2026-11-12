@@ -35,9 +35,20 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
   const queryClient = useQueryClient();
   const [feedback, setFeedback] = useState<{ message: string; isError?: boolean } | null>(null);
 
-  // Date filters
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Helper rentang tanggal bulan yang sedang berjalan
+  const currentMonth = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const firstDay = `${y}-${pad(m + 1)}-01`;
+    const lastDay = `${y}-${pad(m + 1)}-${pad(new Date(y, m + 1, 0).getDate())}`;
+    return { firstDay, lastDay };
+  }, []);
+
+  // Date filters - default bulan berjalan agar memuat data instan dan ringan
+  const [startDate, setStartDate] = useState(() => currentMonth.firstDay);
+  const [endDate, setEndDate] = useState(() => currentMonth.lastDay);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected row for receipt / delete
@@ -65,6 +76,12 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
       if (startDate) params.set('start_date', startDate);
       if (endDate) params.set('end_date', endDate);
       const res = await fetch(`/api/reports/daily-sales?${params.toString()}`);
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload();
+        throw new Error('Sesi telah berakhir, silakan login kembali');
+      }
       if (!res.ok) throw new Error('Gagal memuat rekap penjualan');
       return res.json();
     },
@@ -279,6 +296,17 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
               />
             </div>
 
+            <button
+              onClick={() => {
+                setStartDate(currentMonth.firstDay);
+                setEndDate(currentMonth.lastDay);
+              }}
+              className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 px-2.5 py-1.5 rounded-lg font-bold border border-amber-300 transition flex items-center gap-1"
+              title="Tampilkan penjualan bulan yang sedang berjalan"
+            >
+              <span>📅</span> Bulan Ini
+            </button>
+
             {(startDate || endDate) && (
               <button
                 onClick={() => {
@@ -286,6 +314,7 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
                   setEndDate('');
                 }}
                 className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium border border-slate-200 transition"
+                title="Tampilkan semua data penjualan tanpa batas tanggal"
               >
                 Semua Data
               </button>

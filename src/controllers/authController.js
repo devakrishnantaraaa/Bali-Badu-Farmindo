@@ -106,11 +106,11 @@ async function loginUser(req, res) {
             return res.status(401).json({ error: 'Password salah. Silakan periksa kembali password Anda.' });
         }
 
-        // Generate JWT Token containing User ID & Role
+        // Generate JWT Token containing User ID & Role (30 Hari agar sesi di HP/APK tidak putus setiap hari)
         const token = jwt.sign(
             { id: user.id, username: user.username, full_name: user.full_name, role: user.role },
             JWT_SECRET,
-            { expiresIn: '12h' }
+            { expiresIn: '30d' }
         );
 
         return res.json({
