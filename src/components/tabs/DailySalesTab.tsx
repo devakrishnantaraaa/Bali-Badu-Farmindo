@@ -68,8 +68,8 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  // Fetch daily sales report
-  const { data: sales = [], isLoading, refetch } = useQuery<DailySalesRow[]>({
+  // Fetch daily sales report with real-time live sync
+  const { data: sales = [], isLoading, isFetching, refetch } = useQuery<DailySalesRow[]>({
     queryKey: ['daily-sales', startDate, endDate],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -85,6 +85,8 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
       if (!res.ok) throw new Error('Gagal memuat rekap penjualan');
       return res.json();
     },
+    refetchInterval: 25000, // Otomatis refresh data di latar belakang setiap 25 detik
+    refetchOnWindowFocus: true, // Otomatis refresh saat user kembali membuka tab browser
   });
 
   // Save invoice inline fields
@@ -319,6 +321,26 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
                 Semua Data
               </button>
             )}
+
+            <button
+              onClick={() => {
+                refetch();
+                showToast('Data penjualan berhasil disegarkan!');
+              }}
+              className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1.5 rounded-lg font-bold border border-emerald-300 transition flex items-center gap-1.5 shadow-2xs"
+              title="Segarkan data penjualan terbaru sekarang"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isFetching ? 'animate-spin' : ''}`} />
+              <span>Segarkan</span>
+            </button>
+
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
+              title="Sinkronisasi otomatis aktif setiap 25 detik"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live
+            </span>
 
             <button
               onClick={() => setIsImportModalOpen(true)}

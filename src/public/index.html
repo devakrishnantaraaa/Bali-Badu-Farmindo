@@ -942,8 +942,12 @@
                         🖨️ <span>Setting Printer</span>
                     </button>
                     <div
-                        class="text-[11px] text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-medium">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                        onclick="triggerRealtimeDataSync(true)"
+                        class="text-[11px] text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1.5 font-bold cursor-pointer transition shadow-2xs"
+                        title="Live Sync Otomatis Aktif (Klik untuk Segarkan Sekarang)">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Live</span>
+                        <span class="sync-rotate-icon inline-block text-[10px] text-slate-500">🔄</span>
                     </div>
                 </div>
             </header>
@@ -1339,6 +1343,16 @@
                                 title="Tampilkan semua data penjualan tanpa batas tanggal">
                                 Semua Data
                             </button>
+                            <button onclick="triggerRealtimeDataSync(true)"
+                                class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1.5 rounded-lg font-bold border border-emerald-300 transition flex items-center gap-1.5 shadow-2xs"
+                                title="Segarkan dan ambil data penjualan terbaru dari server sekarang">
+                                <span class="sync-rotate-icon inline-block text-emerald-700">🔄</span> Segarkan
+                            </button>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
+                                title="Sinkronisasi otomatis aktif setiap 25 detik">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Live
+                            </span>
                             <button id="btnResetExcelFilter-dailySalesTable" onclick="resetAllExcelFilters('dailySalesTable')"
                                 class="hidden text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1.5 rounded-lg font-bold border border-amber-300 transition items-center gap-1">
                                 <span>🧹</span> Reset Filter Excel
@@ -2431,6 +2445,79 @@
                 }
                 // 2. Muat pembaruan data terbaru dari server di background
                 loadInitialData();
+
+                // 3. Jalankan Live Auto-Sync setiap 25 detik di latar belakang
+                startRealtimeSync();
+            }
+        }
+
+        // --- LIVE AUTO-SYNC ENGINE ---
+        let _realtimeSyncInterval = null;
+        let _syncIconRotating = false;
+
+        function triggerRealtimeDataSync(manual = false) {
+            // Animasi icon berputar saat sync berlangsung
+            const syncIcons = document.querySelectorAll('.sync-rotate-icon');
+            syncIcons.forEach(el => {
+                el.style.transition = 'transform 0.4s ease';
+                el.style.transform = 'rotate(360deg)';
+                setTimeout(() => { el.style.transform = 'rotate(0deg)'; }, 450);
+            });
+
+            // Ambil data terbaru dari server untuk tab yang sedang aktif dan data utama
+            const activeTabs = document.querySelectorAll('[id^="tab-"]:not(.hidden)');
+            const activeTabId = activeTabs.length > 0
+                ? activeTabs[0].id.replace('tab-', '')
+                : 'dashboard';
+
+            // Selalu refresh data utama (customers, products, debts)
+            loadInitialData();
+
+            // Refresh data tab yang sedang terbuka
+            if (activeTabId === 'daily-sales') {
+                loadDailySalesReport();
+            } else if (activeTabId === 'daily-deposits') {
+                invalidateTabCache('daily-deposits');
+                loadDailyDepositsReport();
+            } else if (activeTabId === 'debts') {
+                invalidateTabCache('debts');
+                loadDebts();
+            } else if (activeTabId === 'monthly-recap') {
+                invalidateTabCache('monthly-recap');
+                loadMonthlyRecapReport();
+            } else if (activeTabId === 'ledger') {
+                invalidateTabCache('ledger');
+                loadStockLedger();
+            } else if (activeTabId === 'inventory') {
+                invalidateTabCache('inventory');
+                loadGlobalInventoryReport();
+            }
+
+            if (manual) {
+                showAlert('Data berhasil disegarkan! Menampilkan data penjualan terbaru.');
+            }
+        }
+
+        function startRealtimeSync() {
+            // Hentikan jika sudah berjalan agar tidak double
+            if (_realtimeSyncInterval) clearInterval(_realtimeSyncInterval);
+            // Jalankan auto-sync setiap 25 detik
+            _realtimeSyncInterval = setInterval(() => {
+                if (!authToken || !currentUser) {
+                    clearInterval(_realtimeSyncInterval);
+                    _realtimeSyncInterval = null;
+                    return;
+                }
+                triggerRealtimeDataSync(false);
+            }, 25000);
+            console.log('[LiveSync] Auto-refresh aktif setiap 25 detik.');
+        }
+
+        function stopRealtimeSync() {
+            if (_realtimeSyncInterval) {
+                clearInterval(_realtimeSyncInterval);
+                _realtimeSyncInterval = null;
+                console.log('[LiveSync] Auto-refresh dihentikan.');
             }
         }
 
@@ -2513,6 +2600,7 @@
         }
 
         function handleLogout() {
+            stopRealtimeSync(); // Hentikan auto-sync saat logout
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             authToken = null;

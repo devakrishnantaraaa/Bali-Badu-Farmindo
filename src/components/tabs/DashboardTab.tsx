@@ -22,6 +22,7 @@ export default function DashboardTab({ onNavigateTab }: DashboardTabProps) {
       if (!res.ok) throw new Error('Gagal memuat customer');
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   // 2. Fetch Products
@@ -35,6 +36,7 @@ export default function DashboardTab({ onNavigateTab }: DashboardTabProps) {
       if (!res.ok) throw new Error('Gagal memuat produk');
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   // 3. Fetch Outstanding Debts
@@ -48,6 +50,7 @@ export default function DashboardTab({ onNavigateTab }: DashboardTabProps) {
       if (!res.ok) throw new Error('Gagal memuat piutang');
       return res.json();
     },
+    refetchInterval: 30000,
   });
 
   const totalDebts = debts.reduce(
