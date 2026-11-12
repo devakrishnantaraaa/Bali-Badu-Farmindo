@@ -3465,6 +3465,7 @@
 
                 // Tampilkan Popup Struk Nota Otomatis (Format Gambar JPG) untuk Sales
                 openSalesReceiptModal({
+                    invoice_id: data.invoice?.id,
                     invoice_number: data.invoice.invoice_number,
                     order_date: order_date,
                     customer_name: customerName,
@@ -3687,6 +3688,7 @@
                 const displayNote = savedNote !== null ? savedNote : (item.notes || '');
 
                 const printPayload = JSON.stringify({
+                    invoice_id: item.invoice_id,
                     invoice_number: item.invoice_number || `INV-${item.id}`,
                     date: tglStr,
                     customer_name: item.customer_name,
@@ -6072,6 +6074,7 @@
                     salesName: inv.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS'),
                     paymentType: inv.status || 'CONFIRMED',
                     dueDate: inv.due_date,
+                    notes: (inv.notes || (inv.id ? localStorage.getItem('sales_note_' + inv.id) : '') || '').trim(),
                     items: itemsList,
                     total: total,
                     paid: isLunas ? total : 0,
@@ -6115,6 +6118,12 @@
             currentReceiptData = receiptData;
             queuedPendingWarning = receiptData.pending_warning || null;
 
+            // Pastikan jika ada catatan lokal dari sales_note_<invoice_id>, simpan ke receiptData.notes jika belum ada
+            if (!receiptData.notes && receiptData.invoice_id) {
+                const localNote = localStorage.getItem(`sales_note_${receiptData.invoice_id}`);
+                if (localNote) receiptData.notes = localNote.trim();
+            }
+
             document.getElementById('receiptInvNo').innerText = receiptData.invoice_number || 'INV-001';
             
             // Format Tanggal
@@ -6141,11 +6150,12 @@
             const regulerNoteEl = document.getElementById('receiptRegulerNote');
             if (regulerNoteEl) {
                 const noteContent = (receiptData.notes || '').trim();
+                const noteSpan = regulerNoteEl.querySelector('span') || regulerNoteEl;
                 if (isReguler && noteContent) {
-                    regulerNoteEl.innerText = noteContent;
+                    noteSpan.innerText = noteContent;
                     regulerNoteEl.classList.remove('hidden');
                 } else {
-                    regulerNoteEl.innerText = '';
+                    noteSpan.innerText = '';
                     regulerNoteEl.classList.add('hidden');
                 }
             }
@@ -7795,12 +7805,10 @@ Akun ini tidak akan bisa login lagi.`)) {
 
             // Jika nama customer mengandung REGULER, cetak isi keterangan di baris berikutnya
             const custUpper = cust.toUpperCase().trim();
-            if (custUpper.includes('REGULER') && r.notes && r.notes.trim()) {
-                // Baris keterangan — tanpa label, langsung isi, rata kanan sejajar kolom Customer
-                const noteVal = String(r.notes).trim();
-                const noteLabel = '         ';
-                const noteLine = noteLabel + noteVal;
-                parts.push(encoder.encode(noteLine.substring(0, colWidth) + '\n'));
+            const noteText = String(r.notes || (r.invoice_id ? localStorage.getItem('sales_note_' + r.invoice_id) : '') || '').trim();
+            if (custUpper.includes('REGULER') && noteText) {
+                const cleanNote = noteText.length > 32 ? noteText.substring(0, 32) : noteText;
+                parts.push(encoder.encode(pad2Col('', cleanNote)));
             }
 
             if (!isLunas && r.due_date) {
@@ -7934,6 +7942,7 @@ Akun ini tidak akan bisa login lagi.`)) {
             const price = Number(r.unit_price || r.price || 0);
             const total = Number(r.total_amount || r.total || (qty * price));
             const isLunas = (r.payment_type || r.status || 'LUNAS').toUpperCase().includes('LUNAS');
+            const noteText = String(r.notes || (r.invoice_id ? localStorage.getItem('sales_note_' + r.invoice_id) : '') || '').trim();
 
             const payload = {
                 customerName: r.customer_name || 'Pelanggan',
@@ -7942,6 +7951,7 @@ Akun ini tidak akan bisa login lagi.`)) {
                 salesName: r.sales_name || (currentUser && currentUser.full_name ? currentUser.full_name : 'Sales DJS'),
                 paymentType: r.payment_type || r.status || 'LUNAS',
                 dueDate: r.due_date,
+                notes: noteText,
                 items: [
                     {
                         name: pName,

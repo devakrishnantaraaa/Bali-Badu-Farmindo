@@ -162,6 +162,14 @@
         out += pad2Col('Sales    :', salesName) + LF;
         out += pad2Col('Customer :', customerName) + LF;
 
+        // Cetak Keterangan untuk Customer REGULER di baris bawahnya
+        const custUpper = customerName.toUpperCase().trim();
+        const noteVal = String(notaData.notes || notaData.keterangan || '').trim();
+        if (custUpper.includes('REGULER') && noteVal) {
+            const cleanNote = noteVal.length > 32 ? noteVal.substring(0, 32) : noteVal;
+            out += pad2Col('', cleanNote) + LF;
+        }
+
         if (!isLunas && notaData.dueDate) {
             let dueStr = String(notaData.dueDate);
             if (dueStr.includes('T')) dueStr = dueStr.split('T')[0];
