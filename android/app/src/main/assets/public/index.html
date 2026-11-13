@@ -7825,16 +7825,15 @@ Akun ini tidak akan bisa login lagi.`)) {
             const price = Number(r.unit_price || r.price || 0);
             const total = Number(r.total_amount || r.total || (qty * price));
 
-            parts.push(encoder.encode(pName + '\n'));
-            parts.push(encoder.encode(pad2Col('  ' + qty + ' ' + unit + ' x Rp ' + price.toLocaleString('id-ID'), 'Rp ' + total.toLocaleString('id-ID'))));
+            const line1 = pName + ' ' + qty + ' ' + unit;
+            parts.push(encoder.encode(line1 + '\n'));
+            parts.push(encoder.encode(pad2Col('x ' + price.toLocaleString('id-ID'), total.toLocaleString('id-ID'))));
             parts.push(encoder.encode(singleLine));
 
             // Total Section (Bold) - Status Bayar Dihapus Sesuai Revisi
             parts.push([ESC, 0x45, 0x01]); // bold
             parts.push(encoder.encode(pad2Col('TOTAL NOTA   :', 'Rp ' + total.toLocaleString('id-ID'))));
             parts.push([ESC, 0x45, 0x00]); // unbold
-
-            parts.push(encoder.encode(doubleLine));
 
             // Info Transfer Bank BCA (rapi tanpa terpotong / ke-enter aneh)
             parts.push([ESC, 0x61, 0x01]); // center
@@ -7861,7 +7860,7 @@ Akun ini tidak akan bisa login lagi.`)) {
             parts.push(encoder.encode('Terima Kasih!\n'));
             parts.push(encoder.encode('Atas Kepercayaannya\n'));
             parts.push([ESC, 0x45, 0x00]); // unbold
-            parts.push(encoder.encode('\n\n'));
+            parts.push(encoder.encode('\n'.repeat(9)));
 
             // Potong Kertas
             parts.push([GS, 0x56, 0x41, 0x03]); // cut

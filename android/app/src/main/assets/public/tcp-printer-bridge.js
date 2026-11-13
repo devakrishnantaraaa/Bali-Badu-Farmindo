@@ -109,6 +109,10 @@
         return 'Rp ' + Number(amount || 0).toLocaleString('id-ID');
     }
 
+    function formatNum(amount) {
+        return Number(amount || 0).toLocaleString('id-ID');
+    }
+
     /**
      * Generate ESC/POS string untuk nota penjualan Epson TM-U220
      * Diformat presisi 32 kolom, identik dengan struk thermal Bluetooth / RawBT
@@ -178,7 +182,7 @@
 
         out += divider('-') + LF;
 
-        // 4. RINCIAN PRODUK
+        // 4. RINCIAN PRODUK (Format 2 Baris: Baris 1 nama produk + qty, Baris 2 harga satuan & subtotal agar nominal jutaan tidak terpotong)
         if (items.length > 0) {
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
@@ -188,8 +192,9 @@
                 const harga = Number(item.harga || item.unit_price || item.price || 0);
                 const sub   = Number(item.subtotal || item.total || (qty * harga));
 
-                out += pName + LF;
-                out += pad2Col('  ' + qty + ' ' + unit + ' x ' + formatRp(harga), formatRp(sub)) + LF;
+                const line1 = pName + ' ' + qty + ' ' + unit;
+                out += line1 + LF;
+                out += pad2Col('x ' + formatNum(harga), formatNum(sub)) + LF;
             }
         } else {
             // Fallback jika dikirim objek single-product
@@ -197,8 +202,9 @@
             const qty   = Number(notaData.quantity || 1);
             const unit  = notaData.unit || 'krat';
             const harga = Number(notaData.unit_price || notaData.price || 0);
-            out += pName + LF;
-            out += pad2Col('  ' + qty + ' ' + unit + ' x ' + formatRp(harga), formatRp(total)) + LF;
+            const line1 = pName + ' ' + qty + ' ' + unit;
+            out += line1 + LF;
+            out += pad2Col('x ' + formatNum(harga), formatNum(total)) + LF;
         }
 
         out += divider('-') + LF;
@@ -234,8 +240,8 @@
         out += 'Atas Kepercayaannya\n';
         out += ESC + 'E\x00'; // Bold OFF
 
-        // 9. FEED & CUT (6 baris feed agar teks ucapan tuntas melewati pisau pemotong TM-U220)
-        out += LF.repeat(6);
+        // 9. FEED & CUT (9 baris feed agar teks ucapan tuntas melewati pisau pemotong TM-U220 dan tidak mepet di ujung kertas)
+        out += LF.repeat(9);
         out += GS + 'V\x01'; // Partial Cut
 
         return out;

@@ -121,10 +121,8 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
       const u = it.unit || 'krat';
       const pr = Number(it.price || it.unit_price || 0);
       const sub = Number(it.subtotal || q * pr);
-      parts.push(encoder.encode(`${pName}\n`));
-      const leftStr = `  ${q} ${u} x Rp ${pr.toLocaleString('id-ID')}`;
-      const rightStr = `Rp ${sub.toLocaleString('id-ID')}`;
-      parts.push(encoder.encode(formatTwoColumns(leftStr, rightStr, colWidth)));
+      parts.push(encoder.encode(`${pName} ${q} ${u}\n`));
+      parts.push(encoder.encode(formatTwoColumns(`x ${pr.toLocaleString('id-ID')}`, sub.toLocaleString('id-ID'), colWidth)));
     }
   } else {
     const pName = data.product_name || 'Telur Ayam Ras';
@@ -132,10 +130,8 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
     const u = data.unit || 'krat';
     const pr = Number(data.unit_price || data.price || 0);
     const tot = grandTotal || q * pr;
-    parts.push(encoder.encode(`${pName}\n`));
-    const leftStr = `  ${q} ${u} x Rp ${pr.toLocaleString('id-ID')}`;
-    const rightStr = `Rp ${tot.toLocaleString('id-ID')}`;
-    parts.push(encoder.encode(formatTwoColumns(leftStr, rightStr, colWidth)));
+    parts.push(encoder.encode(`${pName} ${q} ${u}\n`));
+    parts.push(encoder.encode(formatTwoColumns(`x ${pr.toLocaleString('id-ID')}`, tot.toLocaleString('id-ID'), colWidth)));
   }
 
   parts.push(encoder.encode(singleLine));
@@ -172,7 +168,7 @@ export function buildEscPosBytes(data: ReceiptData, paperWidth: 58 | 80 = 58): U
   parts.push(encoder.encode('Terima Kasih!\n'));
   parts.push(encoder.encode('Atas Kepercayaannya\n'));
   parts.push([ESC, 0x45, 0x00]); // Bold OFF
-  parts.push(encoder.encode('\n\n'));
+  parts.push(encoder.encode('\n'.repeat(9)));
 
   // Paper cut command: GS V 0x41 0x03
   parts.push([GS, 0x56, 0x41, 0x03]);
