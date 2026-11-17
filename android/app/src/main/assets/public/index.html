@@ -18,6 +18,27 @@
             font-family: 'Inter', sans-serif;
         }
 
+        /* Highlighting Baris Terpilih di Rekap Penjualan Harian */
+        tr.selected-sales-row {
+            background-color: #dbeafe !important; /* Soft Sky Blue */
+        }
+        tr.selected-sales-row > td {
+            background-color: #dbeafe !important;
+            border-top: 2px solid #2563eb !important;
+            border-bottom: 2px solid #2563eb !important;
+            color: #0f172a !important;
+        }
+        tr.selected-sales-row > td:first-child {
+            border-left: 4px solid #2563eb !important;
+        }
+        tr.selected-sales-row > td:last-child {
+            border-right: 4px solid #2563eb !important;
+        }
+        tr.selected-sales-row button {
+            box-shadow: 0 0 0 2px #2563eb, 0 2px 5px rgba(37, 99, 235, 0.4) !important;
+            transform: scale(1.04);
+        }
+
         /* Custom Styled Select Dropdown Container */
         .custom-select-wrapper {
             position: relative;
@@ -3650,6 +3671,30 @@
             renderDailySalesData(data, dateLabel);
         }
 
+        function selectDailySalesRow(trEl, invoiceId, event) {
+            if (!trEl) return;
+
+            const targetTag = event && event.target ? event.target.tagName.toUpperCase() : '';
+            const isInteractive = targetTag === 'INPUT' || targetTag === 'SELECT' || targetTag === 'BUTTON';
+
+            const isAlreadySelected = trEl.classList.contains('selected-sales-row');
+
+            if (isAlreadySelected && !isInteractive) {
+                // Klik ulang di baris yang sama (di luar input/tombol): batalkan blok warna
+                trEl.classList.remove('selected-sales-row');
+                window.selectedDailySalesInvoiceId = null;
+                return;
+            }
+
+            // Hapus blok warna dari semua baris lain
+            const allRows = document.querySelectorAll('#dailySalesTable tbody tr.selected-sales-row');
+            allRows.forEach(r => r.classList.remove('selected-sales-row'));
+
+            // Aktifkan blok warna pada baris yang diklik
+            trEl.classList.add('selected-sales-row');
+            window.selectedDailySalesInvoiceId = invoiceId;
+        }
+
         function renderDailySalesData(data, dateLabel) {
             document.getElementById('dailySalesCount').innerText = `${data.length} Nota`;
             updateDailySalesFilterCounter(data.length, data.length);
@@ -3721,9 +3766,12 @@
                 }).replace(/"/g, '&quot;');
 
                 const isAdmin = (currentUser && currentUser.role === 'ADMIN');
+                const isSelected = (window.selectedDailySalesInvoiceId && Number(window.selectedDailySalesInvoiceId) === Number(item.invoice_id));
 
                 return `
-                    <tr class="hover:bg-amber-50/40 text-[11px] font-medium border-b border-slate-200">
+                    <tr onclick="selectDailySalesRow(this, ${item.invoice_id}, event)"
+                        data-invoice-id="${item.invoice_id}"
+                        class="daily-sales-table-row ${isSelected ? 'selected-sales-row' : ''} hover:bg-blue-50/60 cursor-pointer text-[11px] font-medium border-b border-slate-200 transition-colors">
                                                 <td class="p-2 border border-slate-300 font-semibold text-slate-700">${periode}</td>
                         <td class="p-2 border border-slate-300 text-slate-700 whitespace-nowrap">${tglStr}</td>
                         <td class="p-2 border border-slate-300 font-bold text-slate-900">${item.customer_name}</td>
@@ -6137,6 +6185,17 @@
             if (!receiptData) return;
             currentReceiptData = receiptData;
             queuedPendingWarning = receiptData.pending_warning || null;
+
+            // Highlight baris di tabel sesuai invoice yang sedang dibuka/dicetak
+            if (receiptData.invoice_id) {
+                window.selectedDailySalesInvoiceId = receiptData.invoice_id;
+                const tr = document.querySelector(`#dailySalesTable tbody tr[data-invoice-id="${receiptData.invoice_id}"]`);
+                if (tr) {
+                    const allRows = document.querySelectorAll('#dailySalesTable tbody tr.selected-sales-row');
+                    allRows.forEach(r => r.classList.remove('selected-sales-row'));
+                    tr.classList.add('selected-sales-row');
+                }
+            }
 
             // Pastikan jika ada catatan lokal dari sales_note_<invoice_id>, simpan ke receiptData.notes jika belum ada
             if (!receiptData.notes && receiptData.invoice_id) {

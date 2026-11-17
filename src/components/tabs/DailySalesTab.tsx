@@ -51,7 +51,8 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
   const [endDate, setEndDate] = useState(() => currentMonth.lastDay);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Selected row for receipt / delete
+  // Selected row for receipt / delete / highlight
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [printRow, setPrintRow] = useState<DailySalesRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DailySalesRow | null>(null);
 
@@ -433,9 +434,18 @@ export default function DailySalesTab({ currentUser }: DailySalesTabProps) {
                   const tglStr = `${String(dt.getDate()).padStart(2, '0')}-${dt.toLocaleString('id-ID', { month: 'short' })}`;
 
                   const isLunas = item.invoice_status === 'LUNAS';
+                  const isSelected = selectedRowId === item.invoice_id;
 
                   return (
-                    <tr key={`${item.id}-${item.invoice_id}`} className="hover:bg-amber-50/40 transition-colors">
+                    <tr
+                      key={`${item.id}-${item.invoice_id}`}
+                      onClick={() => setSelectedRowId(isSelected ? null : item.invoice_id)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-blue-100/90 border-y-2 border-blue-500'
+                          : 'hover:bg-amber-50/40'
+                      }`}
+                    >
                       <td className="p-2 border border-slate-200 font-semibold text-slate-700">{periodeStr}</td>
                       <td className="p-2 border border-slate-200 whitespace-nowrap">{tglStr}</td>
                       <td className="p-2 border border-slate-200 font-bold text-slate-900">{item.customer_name}</td>
