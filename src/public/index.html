@@ -1321,7 +1321,15 @@
                     <div
                         class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-slate-100 pb-3">
                         <div>
-                            <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Harian</h3>
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <h3 class="text-base font-bold text-slate-900">Rekap Penjualan Harian</h3>
+                                <div id="dailySalesHeaderRowCountBadge"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs"
+                                    title="Jumlah baris data penjualan yang tampil sesuai filter">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                    <span id="dailySalesHeaderRowCountText">0 Baris</span>
+                                </div>
+                            </div>
                             <p class="text-[11px] text-slate-500">Filter rentang periode atau gunakan filter kolom Excel (klik tanda <span class="inline-block px-1 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-700 border border-slate-300">▼</span> di setiap judul kolom).</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -1353,6 +1361,17 @@
                                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                 Live
                             </span>
+
+                            <!-- INDIKATOR JUMLAH BARIS HASIL FILTER (RAPI & MUDAH DILIHAT) -->
+                            <div id="dailySalesToolbarCountBadge"
+                                class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs transition"
+                                title="Jumlah baris data yang masuk ke dalam filter saat ini">
+                                <span class="text-[11px] text-slate-500 font-semibold">Hasil Filter:</span>
+                                <span id="dailySalesRowCountValue" class="text-xs font-black text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300 shadow-2xs">0</span>
+                                <span class="text-slate-600 font-medium">Baris</span>
+                                <span id="dailySalesRowCountTotalSuffix" class="text-[10px] text-slate-500 font-normal hidden">(dari 0)</span>
+                            </div>
+
                             <button id="btnResetExcelFilter-dailySalesTable" onclick="resetAllExcelFilters('dailySalesTable')"
                                 class="hidden text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1.5 rounded-lg font-bold border border-amber-300 transition items-center gap-1">
                                 <span>🧹</span> Reset Filter Excel
@@ -3633,6 +3652,7 @@
 
         function renderDailySalesData(data, dateLabel) {
             document.getElementById('dailySalesCount').innerText = `${data.length} Nota`;
+            updateDailySalesFilterCounter(data.length, data.length);
             const totalRev = data.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
             document.getElementById('dailySalesRevenue').innerText = `Rp ${totalRev.toLocaleString('id-ID')}`;
             document.getElementById('dailySalesDateLabel').innerText = dateLabel || 'Semua Penjualan';
@@ -7189,6 +7209,41 @@ Akun ini tidak akan bisa login lagi.`)) {
             recalculateExcelTableTotals(tableId);
         }
 
+        function updateDailySalesFilterCounter(visibleCount, totalCount) {
+            const numEl = document.getElementById('dailySalesRowCountValue');
+            const suffixEl = document.getElementById('dailySalesRowCountTotalSuffix');
+            const headerBadgeText = document.getElementById('dailySalesHeaderRowCountText');
+            const toolbarBadge = document.getElementById('dailySalesToolbarCountBadge');
+
+            const isFiltered = (totalCount > 0 && visibleCount < totalCount);
+
+            if (numEl) numEl.innerText = Number(visibleCount || 0).toLocaleString('id-ID');
+            if (suffixEl) {
+                if (isFiltered) {
+                    suffixEl.innerText = `(dari ${Number(totalCount || 0).toLocaleString('id-ID')})`;
+                    suffixEl.classList.remove('hidden');
+                } else {
+                    suffixEl.classList.add('hidden');
+                }
+            }
+
+            if (headerBadgeText) {
+                if (isFiltered) {
+                    headerBadgeText.innerText = `${Number(visibleCount || 0).toLocaleString('id-ID')} dari ${Number(totalCount || 0).toLocaleString('id-ID')} Baris`;
+                } else {
+                    headerBadgeText.innerText = `${Number(visibleCount || 0).toLocaleString('id-ID')} Baris`;
+                }
+            }
+
+            if (toolbarBadge) {
+                if (isFiltered) {
+                    toolbarBadge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-950 border border-amber-400 shadow-sm transition';
+                } else {
+                    toolbarBadge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs transition';
+                }
+            }
+        }
+
         function recalculateExcelTableTotals(tableId) {
             const table = document.getElementById(tableId);
             if (!table) return;
@@ -7196,6 +7251,9 @@ Akun ini tidak akan bisa login lagi.`)) {
             const rows = Array.from(table.querySelectorAll('tbody tr')).filter(r => r.style.display !== 'none' && !r.querySelector('td[colspan]'));
 
             if (tableId === 'dailySalesTable') {
+                const allRows = Array.from(table.querySelectorAll('tbody tr')).filter(r => !r.querySelector('td[colspan]'));
+                updateDailySalesFilterCounter(rows.length, allRows.length);
+
                 let totalQty = 0, totalAmount = 0, totalPaid = 0, totalSisa = 0;
                 rows.forEach(r => {
                     const c = r.querySelectorAll('td');
