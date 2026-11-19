@@ -2838,8 +2838,8 @@
                 const navInvText = document.getElementById('navInvoiceText');
                 if (navInvText) navInvText.innerText = 'Cetak Invoice / Tagihan';
 
-                // Sembunyikan tombol input audit di kartu stok untuk role Admin
-                if (btnOpenStockAudit) btnOpenStockAudit.classList.add('hidden');
+                // Buka tombol input audit di kartu stok untuk role Admin (sama seperti Super Admin)
+                if (btnOpenStockAudit) btnOpenStockAudit.classList.remove('hidden');
 
                 // Tampilan khusus Rekap Penjualan untuk Admin: sembunyikan Tarik Excel, Cards Omset/Total, & Footer Total
                 if (btnExportDailySales) btnExportDailySales.classList.add('hidden');

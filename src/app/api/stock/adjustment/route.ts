@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const client = await getClient();
   try {
     const authUser = getAuthUserFromRequest(req);
-    if (!authUser || authUser.role !== 'SUPER_ADMIN') {
+    if (!authUser || (authUser.role !== 'SUPER_ADMIN' && authUser.role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
